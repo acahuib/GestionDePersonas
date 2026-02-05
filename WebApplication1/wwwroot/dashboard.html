@@ -6,6 +6,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="css/styles.css">
@@ -63,35 +64,41 @@
             </table>
 
         </div>
+
         <hr>
 
         <!-- =========================
-             SECCIÓN: HISTORIAL
+             SECCIÓN: HISTORIAL ANALÍTICO
         ========================== -->
         <div class="container">
 
             <h2>Historial diario</h2>
 
-            <label>Fecha</label>
-            <input type="date" id="fechaHistorial">
+            <div class="filtros">
 
-            <label>Punto de control</label>
-            <select id="puntoHistorial">
-                <option value="">Todos</option>
-                <option value="1">Garita</option>
-                <option value="2">Comedor</option>
-            </select>
+                <label>Fecha</label>
+                <input type="date" id="fechaHistorial">
 
-            <label>Tipo</label>
-            <select id="tipoHistorial">
-                <option value="">Todos</option>
-                <option value="Entrada">Entrada</option>
-                <option value="Salida">Salida</option>
-            </select>
+                <label>Punto de control</label>
+                <select id="puntoHistorial">
+                    <option value="">Todos</option>
+                    <option value="1">Garita</option>
+                    <option value="2">Comedor</option>
+                </select>
 
-            <button onclick="cargarHistorial()">Ver historial</button>
+                <label>Tipo</label>
+                <select id="tipoHistorial">
+                    <option value="">Todos</option>
+                    <option value="Entrada">Entrada</option>
+                    <option value="Salida">Salida</option>
+                </select>
+
+                <button onclick="cargarHistorial()">Ver historial</button>
+
+            </div>
 
             <canvas id="graficoHistorial" height="120"></canvas>
+
             <table id="tablaHistorial">
                 <thead>
                     <tr>
@@ -104,14 +111,19 @@
                 </thead>
                 <tbody></tbody>
             </table>
+
+            <p style="font-size: 0.9em; color: #555;">
+                 Haz clic en una fila para ver el detalle de personas por hora.
+            </p>
+
         </div>
 
     </main>
 
 </div>
-
 <script src="js/api.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/historial.js"></script>
 
 </body>
 </html>
