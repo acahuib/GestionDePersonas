@@ -46,55 +46,105 @@ function filtrarDashboard() {
 
     renderTabla(filtrados);
 }
-let grafico;
+let graficoHistorial;
 
 async function cargarHistorial() {
-    console.log(" cargarHistorial ejecutado");
-
+    
     const fecha = document.getElementById("fechaHistorial").value;
-    console.log("Fecha seleccionada:", fecha);
-
     if (!fecha) {
         alert("Seleccione una fecha");
         return;
     }
 
-    const punto = document.getElementById("puntoHistorial").value;
-    const tipo = document.getElementById("tipoHistorial").value;
-
-    let url = `${API_BASE}/historial?fecha=${fecha}`;
-    if (punto) url += `&puntoControlId=${punto}`;
-    if (tipo) url += `&tipoMovimiento=${tipo}`;
+    const url = `${API_BASE}/historial/avanzado?fecha=${fecha}`;
 
     const res = await fetch(url);
     const data = await res.json();
 
-    const horas = data.map(x => `${x.hora}:00`);
-    const cantidades = data.map(x => x.cantidad);
+    if (data.length === 0) {
+        alert("No hay datos para la fecha seleccionada");
+        return;
+    }
 
-    if (grafico) grafico.destroy();
+    // =========================
+    // PREPARAR DATOS
+    // =========================
+    const horas = data.map(x => `${x.hora}:00`);
+
+    const garitaEntrada = data.map(x => x.garitaEntrada);
+    const garitaSalida = data.map(x => x.garitaSalida);
+    const comedorEntrada = data.map(x => x.comedorEntrada);
+    const comedorSalida = data.map(x => x.comedorSalida);
+
+    // =========================
+    // GRAFICO
+    // =========================
+    if (graficoHistorial) graficoHistorial.destroy();
 
     const ctx = document.getElementById("graficoHistorial");
 
-    grafico = new Chart(ctx, {
+    graficoHistorial = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: horas,
-            datasets: [{
-                label: 'Cantidad de movimientos',
-                data: cantidades,
-                borderWidth: 1
-            }]
+            datasets: [
+                {
+                    label: 'Garita - Entrada',
+                    data: garitaEntrada
+                },
+                {
+                    label: 'Garita - Salida',
+                    data: garitaSalida
+                },
+                {
+                    label: 'Comedor - Entrada',
+                    data: comedorEntrada
+                },
+                {
+                    label: 'Comedor - Salida',
+                    data: comedorSalida
+                }
+            ]
         },
         options: {
+            responsive: true,
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad de movimientos'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hora del día'
+                    }
                 }
             }
         }
     });
+
+    // =========================
+    // TABLA RESUMEN
+    // =========================
+    const tbody = document.querySelector("#tablaHistorial tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(x => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${x.hora}:00</td>
+                <td>${x.garitaEntrada}</td>
+                <td>${x.garitaSalida}</td>
+                <td>${x.comedorEntrada}</td>
+                <td>${x.comedorSalida}</td>
+            </tr>
+        `;
+    });
 }
+
 
 cargarDashboard();
 
