@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Control de Accesos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="layout">
+
+    <aside class="sidebar">
+        <h3>Control Accesos</h3>
+        <a href="index.html"> Registro</a>
+        <a href="dashboard.html"> Dashboard</a>
+        <a href="alertas.html"> Alertas</a>
+    </aside>
+
+    <main class="content">
+
+        <div class="container">
+            <h2>Registro de Movimientos</h2>
+
+            <label>DNI</label>
+            <input type="text" id="dni" maxlength="8">
+
+            <label>Punto de Control</label>
+            <select id="punto">
+                <option value="1">Garita</option>
+                <option value="2">Comedor</option>
+            </select>
+
+            <label>Tipo de Movimiento</label>
+            <select id="tipo">
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+            </select>
+
+            <button onclick="registrarMovimiento()">Registrar</button>
+
+            <p id="mensaje"></p>
+        </div>
+
+    </main>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/movimientos.js"></script>
+</body>
+</html>

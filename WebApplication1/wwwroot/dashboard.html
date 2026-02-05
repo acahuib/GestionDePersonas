@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="layout">
+
+    <aside class="sidebar">
+        <h3>Control Accesos</h3>
+        <a href="index.html"> Registro</a>
+        <a href="dashboard.html"> Dashboard</a>
+        <a href="alertas.html"> Alertas</a>
+    </aside>
+
+    <main class="content">
+
+        <div class="container">
+
+            <h2>Personas dentro de la planta</h2>
+
+            <label>Buscar (DNI o Nombre)</label>
+            <input 
+                type="text" 
+                id="buscador" 
+                placeholder="Ej: 12345678 o Juan"
+                onkeyup="filtrarDashboard()"
+            >
+
+        <div class="card">
+            <strong>Total dentro de planta:</strong>
+            <span id="totalPlanta"></span><br>
+
+            <strong>Total dentro de comedor:</strong>
+            <span id="totalComedor"></span>
+        </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Ubicación</th>
+                        <th>Último movimiento</th>
+                        <th>Fecha / Hora</th>
+                        <th>Tiempo dentro</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaDashboard"></tbody>
+            </table>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
