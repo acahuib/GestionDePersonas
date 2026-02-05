@@ -113,15 +113,50 @@ async function verDetalleHora(hora) {
     const data = await res.json();
 
     if (data.length === 0) {
-        alert("No hay personas en este horario");
+        mostrarModal("Detalle", "<p>No hay personas registradas</p>");
         return;
     }
 
-    let texto = `Personas registradas a las ${hora}:00\n\n`;
+    // =========================
+    // AGRUPAR DATOS
+    // =========================
+    const grupos = {
+        "Garita - Entrada": [],
+        "Garita - Salida": [],
+        "Comedor - Entrada": [],
+        "Comedor - Salida": []
+    };
+
     data.forEach(p => {
-        texto += `${p.dni} - ${p.nombre}\n`;
+        const lugar = p.puntoControlId == 1 ? "Garita" : "Comedor";
+        const clave = `${lugar} - ${p.tipoMovimiento}`;
+        grupos[clave].push(p);
     });
 
-    alert(texto);
+    // =========================
+    // CONSTRUIR HTML
+    // =========================
+    let html = "";
+
+    for (const grupo in grupos) {
+        if (grupos[grupo].length > 0) {
+            html += `<h4>${grupo}</h4><ul>`;
+            grupos[grupo].forEach(p => {
+                html += `<li>${p.dni} - ${p.nombre}</li>`;
+            });
+            html += `</ul>`;
+        }
+    }
+
+    mostrarModal(`Personas registradas a las ${hora}:00`, html);
+}
+function mostrarModal(titulo, contenido) {
+    document.getElementById("modalTitulo").innerText = titulo;
+    document.getElementById("modalCuerpo").innerHTML = contenido;
+    document.getElementById("modalDetalle").style.display = "block";
+}
+
+function cerrarModal() {
+    document.getElementById("modalDetalle").style.display = "none";
 }
 
