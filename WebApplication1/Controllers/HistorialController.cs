@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
+using WebApplication1.DTOs;
 
 namespace WebApplication1.Controllers
 {
@@ -15,34 +16,37 @@ namespace WebApplication1.Controllers
             _context = context;
         }
 
-        // GET: api/historial?fecha=2026-02-05
-        [HttpGet]
-        public async Task<IActionResult> GetHistorialPorDia(
-            DateTime fecha,
-            int? puntoControlId,
-            string? tipoMovimiento)
+        // GET: api/historial/avanzado?fecha=2026-02-05
+        [HttpGet("avanzado")]
+        public async Task<IActionResult> GetHistorialAvanzadoPorDia(DateTime fecha)
         {
             var inicio = fecha.Date;
             var fin = inicio.AddDays(1);
 
-            var query = _context.Movimientos
-                .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
+            var movimientos = await _context.Movimientos
+                .Where(m => m.FechaHora >= inicio && m.FechaHora < fin)
+                .ToListAsync();
 
-            if (puntoControlId.HasValue)
-                query = query.Where(m => m.PuntoControlId == puntoControlId.Value);
-
-            if (!string.IsNullOrEmpty(tipoMovimiento))
-                query = query.Where(m => m.TipoMovimiento == tipoMovimiento);
-
-            var resultado = await query
+            var resultado = movimientos
                 .GroupBy(m => m.FechaHora.Hour)
-                .Select(g => new
+                .Select(g => new HistorialHoraDto
                 {
                     Hora = g.Key,
-                    Cantidad = g.Count()
+
+                    GaritaEntrada = g.Count(m =>
+                        m.PuntoControlId == 1 && m.TipoMovimiento == "Entrada"),
+
+                    GaritaSalida = g.Count(m =>
+                        m.PuntoControlId == 1 && m.TipoMovimiento == "Salida"),
+
+                    ComedorEntrada = g.Count(m =>
+                        m.PuntoControlId == 2 && m.TipoMovimiento == "Entrada"),
+
+                    ComedorSalida = g.Count(m =>
+                        m.PuntoControlId == 2 && m.TipoMovimiento == "Salida"),
                 })
                 .OrderBy(x => x.Hora)
-                .ToListAsync();
+                .ToList();
 
             return Ok(resultado);
         }
