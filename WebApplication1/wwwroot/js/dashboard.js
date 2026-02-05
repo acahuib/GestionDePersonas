@@ -46,6 +46,55 @@ function filtrarDashboard() {
 
     renderTabla(filtrados);
 }
+let grafico;
+
+async function cargarHistorial() {
+    console.log(" cargarHistorial ejecutado");
+
+    const fecha = document.getElementById("fechaHistorial").value;
+    console.log("Fecha seleccionada:", fecha);
+
+    if (!fecha) {
+        alert("Seleccione una fecha");
+        return;
+    }
+
+    const punto = document.getElementById("puntoHistorial").value;
+    const tipo = document.getElementById("tipoHistorial").value;
+
+    let url = `${API_BASE}/historial?fecha=${fecha}`;
+    if (punto) url += `&puntoControlId=${punto}`;
+    if (tipo) url += `&tipoMovimiento=${tipo}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const horas = data.map(x => `${x.hora}:00`);
+    const cantidades = data.map(x => x.cantidad);
+
+    if (grafico) grafico.destroy();
+
+    const ctx = document.getElementById("graficoHistorial");
+
+    grafico = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: horas,
+            datasets: [{
+                label: 'Cantidad de movimientos',
+                data: cantidades,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
 
 cargarDashboard();
 

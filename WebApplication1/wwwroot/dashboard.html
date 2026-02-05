@@ -1,43 +1,53 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <title>Dashboard</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <div class="layout">
 
+    <!-- ===== MENÚ LATERAL ===== -->
     <aside class="sidebar">
         <h3>Control Accesos</h3>
-        <a href="index.html"> Registro</a>
-        <a href="dashboard.html"> Dashboard</a>
-        <a href="alertas.html"> Alertas</a>
+        <a href="index.html">Registro</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="alertas.html">Alertas</a>
     </aside>
 
+    <!-- ===== CONTENIDO ===== -->
     <main class="content">
 
+        <!-- =========================
+             SECCIÓN: DASHBOARD EN TIEMPO REAL
+        ========================== -->
         <div class="container">
 
             <h2>Personas dentro de la planta</h2>
 
             <label>Buscar (DNI o Nombre)</label>
             <input 
-                type="text" 
-                id="buscador" 
+                type="text"
+                id="buscador"
                 placeholder="Ej: 12345678 o Juan"
                 onkeyup="filtrarDashboard()"
             >
 
-        <div class="card">
-            <strong>Total dentro de planta:</strong>
-            <span id="totalPlanta"></span><br>
+            <div class="card">
+                <strong>Total dentro de planta:</strong>
+                <span id="totalPlanta"></span><br>
 
-            <strong>Total dentro de comedor:</strong>
-            <span id="totalComedor"></span>
-        </div>
+                <strong>Total dentro de comedor:</strong>
+                <span id="totalComedor"></span>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -53,6 +63,37 @@
             </table>
 
         </div>
+        <hr>
+
+        <!-- =========================
+             SECCIÓN: HISTORIAL
+        ========================== -->
+        <div class="container">
+
+            <h2>Historial diario</h2>
+
+            <label>Fecha</label>
+            <input type="date" id="fechaHistorial">
+
+            <label>Punto de control</label>
+            <select id="puntoHistorial">
+                <option value="">Todos</option>
+                <option value="1">Garita</option>
+                <option value="2">Comedor</option>
+            </select>
+
+            <label>Tipo</label>
+            <select id="tipoHistorial">
+                <option value="">Todos</option>
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+            </select>
+
+            <button onclick="cargarHistorial()">Ver historial</button>
+
+            <canvas id="graficoHistorial" height="120"></canvas>
+
+        </div>
 
     </main>
 
@@ -60,5 +101,6 @@
 
 <script src="js/api.js"></script>
 <script src="js/dashboard.js"></script>
+
 </body>
 </html>
