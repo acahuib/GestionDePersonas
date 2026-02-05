@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<PuntoControl> PuntosControl { get; set; }
     public DbSet<Movimiento> Movimientos { get; set; }
     public DbSet<Alerta> Alertas { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
 }
 
     

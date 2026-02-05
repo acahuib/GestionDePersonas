@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -21,6 +22,7 @@ namespace WebApplication1.Controllers
         // GET: api/reportes
         // Reporte histórico paginado (uso administrativo)
         // ======================================================
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> ObtenerReporte(
             [FromQuery] DateTime fecha,
@@ -76,6 +78,7 @@ namespace WebApplication1.Controllers
         // GET: api/reportes/export/excel
         // Exportación oficial a Excel
         // ======================================================
+        [Authorize(Roles = "Admin")]
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportarExcel(
             [FromQuery] DateTime fecha,

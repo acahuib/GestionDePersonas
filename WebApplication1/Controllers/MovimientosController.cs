@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -43,6 +44,7 @@ namespace WebApplication1.Controllers
         // =========================
         // POST: api/movimientos
         // =========================
+        [Authorize(Roles = "Admin,Guardia")]
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimiento(MovimientoCreateDto dto)
         {

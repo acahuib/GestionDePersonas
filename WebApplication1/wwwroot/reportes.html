@@ -30,21 +30,22 @@
 
             <!-- ===== FILTROS ===== -->
             <label>Fecha</label>
-            <input type="date" id="fechaReporte">
+            <input type="date" id="fechaReporte" onchange="paginaActual=1">
 
             <label>Punto de control</label>
-            <select id="puntoReporte">
+            <select id="puntoReporte" onchange="paginaActual=1">
                 <option value="">Todos</option>
                 <option value="1">Garita</option>
                 <option value="2">Comedor</option>
             </select>
 
-            <label>Tipo de movimiento</label>
-            <select id="tipoReporte">
+            <label>Tipo</label>
+            <select id="tipoReporte" onchange="paginaActual=1">
                 <option value="">Todos</option>
                 <option value="Entrada">Entrada</option>
                 <option value="Salida">Salida</option>
             </select>
+
 
             <button onclick="buscarReporte()">Buscar</button>
 
@@ -67,6 +68,17 @@
                 </thead>
                 <tbody></tbody>
             </table>
+            <div class="paginacion">
+                <button id="btnPrev" onclick="cambiarPagina(-1)">⬅ Anterior</button>
+
+                <span id="infoPagina">
+                    Página <strong id="paginaActual">1</strong>
+                    de <strong id="totalPaginas">1</strong>
+                </span>
+
+                <button id="btnNext" onclick="cambiarPagina(1)">Siguiente ➡</button>
+            </div>
+
 
         </div>
 

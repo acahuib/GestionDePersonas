@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -16,6 +17,7 @@ namespace WebApplication1.Controllers
         }
 
         // GET: api/alertas
+        [Authorize(Roles = "Admin,Guardia")]
         [HttpGet]
         public async Task<IActionResult> GetAlertas()
         {

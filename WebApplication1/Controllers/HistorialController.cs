@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -17,6 +18,7 @@ namespace WebApplication1.Controllers
         }
 
         // GET: api/historial/avanzado?fecha=2026-02-05
+        [Authorize(Roles = "Admin")]
         [HttpGet("detalle")]
         public async Task<IActionResult> GetDetallePorHora(
             DateTime fecha,
@@ -51,6 +53,7 @@ namespace WebApplication1.Controllers
 
             return Ok(resultado);
         }
+        [Authorize(Roles = "Admin")]
         [HttpGet("avanzado")]
         public async Task<IActionResult> GetHistorialAvanzadoPorDia(DateTime fecha)
         {

@@ -362,3 +362,29 @@ table td {
     margin: 0 10px;
     font-weight: 600;
 }
+.paginacion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.paginacion button {
+    padding: 8px 14px;
+    background: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.paginacion button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+#infoPagina {
+    font-weight: 600;
+    color: #334155;
+}
