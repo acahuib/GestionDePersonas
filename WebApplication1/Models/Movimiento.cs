@@ -6,18 +6,18 @@ namespace WebApplication1.Models
     {
         public int Id { get; set; }
 
-        public string Dni { get; set; }
+        public required string Dni { get; set; }
         public int PuntoControlId { get; set; }
 
-        public string TipoMovimiento { get; set; }
+        public required string TipoMovimiento { get; set; }
         public DateTime FechaHora { get; set; }
 
         // ===== RELACIONES =====
 
         [ForeignKey(nameof(Dni))]
-        public Persona Persona { get; set; }
+        public Persona? Persona { get; set; }
 
         [ForeignKey(nameof(PuntoControlId))]
-        public PuntoControl PuntoControl { get; set; }
+        public PuntoControl? PuntoControl { get; set; }
     }
 }

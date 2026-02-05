@@ -13,49 +13,39 @@ inputDni.addEventListener("keydown", (e) => {
 
 // Función principal de registro
 async function registrarMovimiento() {
-
-    const dni = inputDni.value.trim();
+    const dni = document.getElementById("dni").value;
     const punto = document.getElementById("punto").value;
     const tipo = document.getElementById("tipo").value;
+    const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
 
-    // Validación mínima
-    if (!dni) {
+    const response = await fetchAuth(`${API_BASE}/movimientos`, {
+        method: "POST",
+        body: JSON.stringify({
+            dni,
+            puntoControlId: parseInt(punto),
+            tipoMovimiento: tipo
+        })
+    });
+
+    if (!response) {
         mensaje.className = "error";
-        mensaje.innerText = "Ingrese o escanee un DNI";
-        inputDni.focus();
+        mensaje.innerText = "Sesión no iniciada o expiró";
         return;
     }
 
-    try {
-
-        const response = await fetch(`${API_BASE}/movimientos`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                dni,
-                puntoControlId: parseInt(punto),
-                tipoMovimiento: tipo
-            })
-        });
-
-        if (response.ok) {
-            mensaje.className = "success";
-            mensaje.innerText = "Movimiento registrado correctamente";
-            limpiarFormulario();
-        } else {
-            mensaje.className = "error";
-            mensaje.innerText = await response.text();
-            inputDni.focus();
-        }
-
-    } catch (error) {
+    if (response.ok) {
+        mensaje.className = "success";
+        mensaje.innerText = "Movimiento registrado correctamente";
+        document.getElementById("dni").value = "";
+        document.getElementById("dni").focus();
+    } else {
         mensaje.className = "error";
-        mensaje.innerText = "Error de conexión con el servidor";
-        inputDni.focus();
+        mensaje.innerText = await response.text();
     }
 }
+
 
 // Limpia y enfoca (flujo tipo escáner)
 function limpiarFormulario() {

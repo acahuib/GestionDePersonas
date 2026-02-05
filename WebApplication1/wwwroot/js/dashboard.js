@@ -3,7 +3,8 @@ let paginaActual = 1;
 const filasPorPagina = 10;
 
 async function cargarDashboard() {
-    const response = await fetch(`${API_BASE}/dashboard`);
+    const response = await fetchAuth(`${API_BASE}/dashboard`);
+
     const data = await response.json();
 
     personasDashboard = data.personas;

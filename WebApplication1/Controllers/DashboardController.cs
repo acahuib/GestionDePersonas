@@ -8,6 +8,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class DashboardController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,7 +19,6 @@ namespace WebApplication1.Controllers
         }
 
         // GET: api/dashboard
-        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetDashboard()
         {

@@ -13,13 +13,22 @@ async function buscarReporte() {
         return;
     }
 
-    let url = `${API_BASE}/reportes?fecha=${fecha}`;
+    let url = `${API_BASE}/reportes?fecha=${encodeURIComponent(fecha)}`;
 
     if (punto) url += `&puntoControlId=${punto}`;
     if (tipo) url += `&tipoMovimiento=${tipo}`;
 
-    const res = await fetch(url);
-    const result = await res.json();
+    const res = await fetchAuth(url);
+    if (!res) return;
+
+    let result = { data: [], total: 0 };
+    try {
+        const text = await res.text();
+        result = text ? JSON.parse(text) : { data: [], total: 0 };
+    } catch (err) {
+        console.error('Error parseando reportes JSON:', err, 'status:', res.status);
+        return;
+    }
 
     renderTablaReporte(result.data);
 }
@@ -64,13 +73,36 @@ function exportarExcel() {
         return;
     }
 
-    let url = `${API_BASE}/reportes/export/excel?fecha=${fecha}`;
+    let url = `${API_BASE}/reportes/export/excel?fecha=${encodeURIComponent(fecha)}`;
 
     if (punto) url += `&puntoControlId=${punto}`;
     if (tipo) url += `&tipoMovimiento=${tipo}`;
 
-    // Abrir descarga directa
-    window.open(url, "_blank");
+    // Descargar usando fetch con token (fetchAuth) y crear enlace de descarga
+    (async () => {
+        const res = await fetchAuth(url);
+        if (!res) return;
+
+        try {
+            const blob = await res.blob();
+            // nombre de archivo desde header o fallback
+            const cd = res.headers.get('content-disposition') || '';
+            let filename = `Reporte_${fecha.replace(/-/g, '')}.xlsx`;
+            const match = /filename="?(.*?)"?(;|$)/i.exec(cd);
+            if (match && match[1]) filename = match[1];
+
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Error descargando Excel:', err);
+        }
+    })();
 }
 let paginaActual = 1;
 const pageSize = 20;
@@ -90,18 +122,27 @@ async function buscarReporte() {
         return;
     }
 
-    let url = `${API_BASE}/reportes?fecha=${fecha}&page=${paginaActual}&pageSize=${pageSize}`;
+    let url = `${API_BASE}/reportes?fecha=${encodeURIComponent(fecha)}&page=${paginaActual}&pageSize=${pageSize}`;
 
     if (punto) url += `&puntoControlId=${punto}`;
     if (tipo) url += `&tipoMovimiento=${tipo}`;
 
-    const res = await fetch(url);
-    const result = await res.json();
+    const res = await fetchAuth(url);
+    if (!res) return;
+
+    let result = { data: [], total: 0 };
+    try {
+        const text = await res.text();
+        result = text ? JSON.parse(text) : { data: [], total: 0 };
+    } catch (err) {
+        console.error('Error parseando reportes JSON:', err, 'status:', res.status);
+        return;
+    }
 
     renderTablaReporte(result.data);
 
     // calcular páginas
-    totalPaginas = Math.ceil(result.total / pageSize);
+    totalPaginas = Math.ceil((result.total || 0) / pageSize);
 
     document.getElementById("paginaActual").innerText = paginaActual;
     document.getElementById("totalPaginas").innerText = totalPaginas;

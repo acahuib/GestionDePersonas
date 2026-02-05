@@ -38,7 +38,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes("CLAVE_SUPER_SECRETA_123"))
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty)),
+            // Optional: reduce default clock skew if you need stricter expiry checks
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
@@ -60,11 +62,10 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
+// IMPORTANT: Authentication must run before Authorization and before routing to controllers
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.Run();

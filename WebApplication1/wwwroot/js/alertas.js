@@ -1,6 +1,23 @@
 async function cargarAlertas() {
-    const response = await fetch(`${API_BASE}/alertas`);
-    const alertas = await response.json();
+    console.log('cargarAlertas — client JS loaded');
+
+    const response = await fetchAuth(`${API_BASE}/alertas`);
+    if (!response) return;
+
+    // Evitar parsear JSON vacío (causa: body vacío devuelve error de JSON)
+    let alertas = [];
+    try {
+        const text = await response.text();
+        if (text) {
+            alertas = JSON.parse(text);
+        } else {
+            // null body -> lista vacía
+            alertas = [];
+        }
+    } catch (err) {
+        console.error('Error parseando alertas JSON:', err, 'status:', response.status);
+        return;
+    }
 
     const lista = document.getElementById("listaAlertas");
     lista.innerHTML = "";
@@ -25,7 +42,14 @@ async function cargarAlertas() {
 }
 
 async function atenderAlerta(id) {
-    await fetch(`${API_BASE}/alertas/${id}/atender`, { method: "PUT" });
+
+    const response = await fetchAuth(
+        `${API_BASE}/alertas/${id}/atender`,
+        { method: "PUT" }
+    );
+
+    if (!response) return;
+
     cargarAlertas();
 }
 

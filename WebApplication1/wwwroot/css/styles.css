@@ -167,6 +167,7 @@ table td {
     background-color: #cf3d38; /* Rojo principal */
     color: white;
     padding: 20px;
+    position: relative;
 }
 
 .sidebar h3 {
@@ -186,6 +187,24 @@ table td {
 
 .sidebar a:hover {
     background-color: #2980b9;
+}
+
+/* Botón de logout en la esquina inferior izquierda del sidebar */
+.logout-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: #1f2937;
+    color: #fff;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: #111827;
 }
 
 /* ===============================

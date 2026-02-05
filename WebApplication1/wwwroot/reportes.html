@@ -15,11 +15,15 @@
     <!-- ===== MENÚ LATERAL ===== -->
     <aside class="sidebar">
         <h3>Control Accesos</h3>
+
         <a href="index.html">Registro</a>
-        <a href="dashboard.html">Dashboard</a>
         <a href="alertas.html">Alertas</a>
-        <a href="reportes.html">Reportes</a>
+
+        <a id="menuDashboard" href="dashboard.html">Dashboard</a>
+        <a id="menuReportes" href="reportes.html">Reportes</a>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
     </aside>
+
 
     <!-- ===== CONTENIDO ===== -->
     <main class="content">
@@ -88,6 +92,25 @@
 
 <script src="js/api.js"></script>
 <script src="js/reportes.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("token");
+    const rol = localStorage.getItem("rol");
+
+    // Sin sesión → login
+    if (!token || !rol) {
+        window.location.href = "login.html";
+        return;
+    }
+
+    // Solo Admin puede estar aquí
+    if (rol !== "Admin") {
+        alert("Acceso no autorizado");
+        window.location.href = "index.html";
+        return;
+    }
+});
+</script>
 
 </body>
 </html>

@@ -8,6 +8,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class HistorialController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,7 +19,6 @@ namespace WebApplication1.Controllers
         }
 
         // GET: api/historial/avanzado?fecha=2026-02-05
-        [Authorize(Roles = "Admin")]
         [HttpGet("detalle")]
         public async Task<IActionResult> GetDetallePorHora(
             DateTime fecha,
@@ -53,7 +53,6 @@ namespace WebApplication1.Controllers
 
             return Ok(resultado);
         }
-        [Authorize(Roles = "Admin")]
         [HttpGet("avanzado")]
         public async Task<IActionResult> GetHistorialAvanzadoPorDia(DateTime fecha)
         {

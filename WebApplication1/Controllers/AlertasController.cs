@@ -7,6 +7,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Guardia")] 
     public class AlertasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -17,7 +18,6 @@ namespace WebApplication1.Controllers
         }
 
         // GET: api/alertas
-        [Authorize(Roles = "Admin,Guardia")]
         [HttpGet]
         public async Task<IActionResult> GetAlertas()
         {
@@ -36,7 +36,8 @@ namespace WebApplication1.Controllers
 
             return Ok(alertas);
         }
-        // PUT: api/alertas/atender
+
+        // PUT: api/alertas/{id}/atender
         [HttpPut("{id}/atender")]
         public async Task<IActionResult> AtenderAlerta(int id)
         {

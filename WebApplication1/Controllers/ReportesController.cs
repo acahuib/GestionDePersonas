@@ -9,6 +9,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class ReportesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -22,7 +23,6 @@ namespace WebApplication1.Controllers
         // GET: api/reportes
         // Reporte histórico paginado (uso administrativo)
         // ======================================================
-        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> ObtenerReporte(
             [FromQuery] DateTime fecha,
@@ -78,7 +78,6 @@ namespace WebApplication1.Controllers
         // GET: api/reportes/export/excel
         // Exportación oficial a Excel
         // ======================================================
-        [Authorize(Roles = "Admin")]
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportarExcel(
             [FromQuery] DateTime fecha,

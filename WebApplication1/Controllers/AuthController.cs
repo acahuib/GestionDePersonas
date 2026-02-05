@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Data;
+using WebApplication1.DTOs;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using WebApplication1.Data;
-using WebApplication1.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -13,43 +14,54 @@ namespace WebApplication1.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _config;
 
-        public AuthController(AppDbContext context)
+        public AuthController(AppDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
+        // POST: api/auth/login
+        [AllowAnonymous]
         [HttpPost("login")]
         public IActionResult Login(LoginDto dto)
         {
-            var user = _context.Usuarios
+            var usuario = _context.Usuarios
                 .FirstOrDefault(u =>
                     u.UsuarioLogin == dto.Usuario &&
-                    u.PasswordHash == dto.Password &&
-                    u.Activo);
+                    u.PasswordHash == dto.Password);
 
-            if (user == null)
-                return Unauthorized("Credenciales inválidas");
+            if (usuario == null)
+                return Unauthorized("Credenciales incorrectas");
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, user.UsuarioLogin),
-                new Claim(ClaimTypes.Role, user.Rol)
+                new Claim(ClaimTypes.Name, usuario.UsuarioLogin),
+                new Claim(ClaimTypes.Role, usuario.Rol)
             };
 
+            var jwtKey = _config["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+                return StatusCode(500, "JWT Key no configurada");
+
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes("CLAVE_SUPER_SECRETA_123"));
+                Encoding.UTF8.GetBytes(jwtKey));
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(8),
-                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+                expires: DateTime.Now.AddHours(4),
+                signingCredentials: creds
             );
 
             return Ok(new
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
-                rol = user.Rol
+                rol = usuario.Rol
             });
         }
     }

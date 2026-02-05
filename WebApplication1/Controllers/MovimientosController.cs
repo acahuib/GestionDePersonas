@@ -9,6 +9,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,Guardia")]
     public class MovimientosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -44,7 +45,6 @@ namespace WebApplication1.Controllers
         // =========================
         // POST: api/movimientos
         // =========================
-        [Authorize(Roles = "Admin,Guardia")]
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimiento(MovimientoCreateDto dto)
         {

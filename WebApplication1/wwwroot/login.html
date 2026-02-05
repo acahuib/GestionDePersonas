@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container" style="max-width: 400px; margin-top: 100px;">
+
+    <h2>Iniciar sesión</h2>
+
+    <label>Usuario</label>
+    <input type="text" id="usuario" placeholder="Ingrese usuario">
+
+    <label>Contraseña</label>
+    <input type="password" id="password" placeholder="Ingrese contraseña">
+
+    <button onclick="login()">Ingresar</button>
+
+    <p id="mensaje"></p>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/login.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("token");
+    const rol = localStorage.getItem("rol");
+
+    // Si ya está logueado, redirigir
+    if (token && rol) {
+        window.location.href = "index.html";
+    }
+});
+</script>
+
+</body>
+</html>

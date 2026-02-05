@@ -18,11 +18,15 @@
     <!-- ===== MENÚ LATERAL ===== -->
     <aside class="sidebar">
         <h3>Control Accesos</h3>
+
         <a href="index.html">Registro</a>
-        <a href="dashboard.html">Dashboard</a>
         <a href="alertas.html">Alertas</a>
-        <a href="reportes.html"> Reportes</a>
+
+        <a id="menuDashboard" href="dashboard.html">Dashboard</a>
+        <a id="menuReportes" href="reportes.html">Reportes</a>
+        <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
     </aside>
+
 
     <!-- ===== CONTENIDO ===== -->
     <main class="content">
@@ -140,8 +144,20 @@
 <script src="js/api.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/historial.js"></script>
+<script src="js/auth.js"></script>
 
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const rol = localStorage.getItem("rol");
+
+    if (rol !== "Admin") {
+        alert("Acceso no autorizado");
+        window.location.href = "index.html";
+        return;
+    }
+});
+</script>
 
 </body>
 </html>

@@ -11,8 +11,18 @@ async function cargarHistorial() {
         return;
     }
 
-    const res = await fetch(`${API_BASE}/historial/avanzado?fecha=${fecha}`);
-    const data = await res.json();
+    const res = await fetchAuth(`${API_BASE}/historial/avanzado?fecha=${encodeURIComponent(fecha)}`);
+    if (!res) return;
+
+    let data = [];
+    try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text);
+        else data = [];
+    } catch (err) {
+        console.error('Error parseando historial JSON:', err, 'status:', res.status);
+        return;
+    }
 
     if (data.length === 0) {
         alert("No hay datos para esa fecha");
@@ -105,12 +115,22 @@ async function verDetalleHora(hora) {
     const punto = document.getElementById("puntoHistorial").value;
     const tipo = document.getElementById("tipoHistorial").value;
 
-    let url = `${API_BASE}/historial/detalle?fecha=${fecha}&hora=${hora}`;
+    let url = `${API_BASE}/historial/detalle?fecha=${encodeURIComponent(fecha)}&hora=${hora}`;
     if (punto) url += `&punto=${punto}`;
     if (tipo) url += `&tipo=${tipo}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+    const res = await fetchAuth(url);
+    if (!res) return;
+
+    let data = [];
+    try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text);
+        else data = [];
+    } catch (err) {
+        console.error('Error parseando detalle historial JSON:', err, 'status:', res.status);
+        return;
+    }
 
     if (data.length === 0) {
         mostrarModal("Detalle", "<p>No hay personas registradas</p>");
