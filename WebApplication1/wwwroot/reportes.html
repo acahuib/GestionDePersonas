@@ -46,26 +46,26 @@
                 <option value="Salida">Salida</option>
             </select>
 
-            <button onclick="cargarReporte()">Buscar</button>
+            <button onclick="buscarReporte()">Buscar</button>
 
             <!-- ===== ACCIONES ===== -->
             <div style="margin-top:15px;">
                 <button disabled> Exportar PDF</button>
-                <button disabled> Exportar Excel</button>
+                <button onclick="exportarExcel()">Exportar Excel</button>
             </div>
 
             <!-- ===== TABLA ===== -->
-            <table>
+            <table id="tablaReporte">
                 <thead>
                     <tr>
                         <th>Fecha / Hora</th>
                         <th>DNI</th>
                         <th>Nombre</th>
-                        <th>Punto de control</th>
+                        <th>Punto</th>
                         <th>Movimiento</th>
                     </tr>
                 </thead>
-                <tbody id="tablaReportes"></tbody>
+                <tbody></tbody>
             </table>
 
         </div>
