@@ -337,3 +337,28 @@ table td {
     font-weight: 600;
     color: #0f172a;
 }
+/* ===== PAGINACIÓN ===== */
+.paginacion {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.paginacion button {
+    margin: 0 5px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background-color: #2980b9;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.paginacion button:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.paginacion span {
+    margin: 0 10px;
+    font-weight: 600;
+}

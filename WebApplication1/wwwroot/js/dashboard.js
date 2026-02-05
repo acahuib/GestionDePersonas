@@ -1,4 +1,6 @@
 let personasDashboard = [];
+let paginaActual = 1;
+const filasPorPagina = 10;
 
 async function cargarDashboard() {
     const response = await fetch(`${API_BASE}/dashboard`);
@@ -14,10 +16,16 @@ async function cargarDashboard() {
 }
 
 function renderTabla(personas) {
+
     const tabla = document.getElementById("tablaDashboard");
     tabla.innerHTML = "";
 
-    personas.forEach(p => {
+    const inicio = (paginaActual - 1) * filasPorPagina;
+    const fin = inicio + filasPorPagina;
+
+    const paginaDatos = personas.slice(inicio, fin);
+
+    paginaDatos.forEach(p => {
         const fecha = new Date(p.fechaHora).toLocaleString();
 
         tabla.innerHTML += `
@@ -28,12 +36,48 @@ function renderTabla(personas) {
                 <td>${p.tipoMovimiento}</td>
                 <td>${fecha}</td>
                 <td>${p.tiempoDentro}</td>
-            </tr>   
+            </tr>
         `;
     });
+
+    renderPaginacion(personas.length);
+}
+function renderPaginacion(totalFilas) {
+
+    const totalPaginas = Math.ceil(totalFilas / filasPorPagina);
+    const contenedor = document.getElementById("paginacion");
+
+    contenedor.innerHTML = "";
+
+    if (totalPaginas <= 1) return;
+
+    const btnPrev = document.createElement("button");
+    btnPrev.innerText = "◀";
+    btnPrev.disabled = paginaActual === 1;
+    btnPrev.onclick = () => {
+        paginaActual--;
+        renderTabla(personasDashboard);
+    };
+
+    const btnNext = document.createElement("button");
+    btnNext.innerText = "▶";
+    btnNext.disabled = paginaActual === totalPaginas;
+    btnNext.onclick = () => {
+        paginaActual++;
+        renderTabla(personasDashboard);
+    };
+
+    const info = document.createElement("span");
+    info.innerText = ` Página ${paginaActual} de ${totalPaginas} `;
+
+    contenedor.appendChild(btnPrev);
+    contenedor.appendChild(info);
+    contenedor.appendChild(btnNext);
 }
 
+
 function filtrarDashboard() {
+
     const texto = document
         .getElementById("buscador")
         .value
@@ -44,6 +88,7 @@ function filtrarDashboard() {
         p.nombre.toLowerCase().includes(texto)
     );
 
+    paginaActual = 1; // reset
     renderTabla(filtrados);
 }
 
