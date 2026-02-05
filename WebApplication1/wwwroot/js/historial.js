@@ -142,8 +142,23 @@ async function verDetalleHora(hora) {
         if (grupos[grupo].length > 0) {
             html += `<h4>${grupo}</h4><ul>`;
             grupos[grupo].forEach(p => {
-                html += `<li>${p.dni} - ${p.nombre}</li>`;
+                const fecha = new Date(p.fechaHora);
+                const horaExacta = fecha.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                html += `
+                    <li>
+                        <strong>${horaExacta}</strong>
+                        &nbsp;|&nbsp;
+                        ${p.dni}
+                        &nbsp;|&nbsp;
+                        ${p.nombre}
+                    </li>
+                `;
             });
+
             html += `</ul>`;
         }
     }

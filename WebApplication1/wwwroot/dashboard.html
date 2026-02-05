@@ -41,13 +41,20 @@
                 onkeyup="filtrarDashboard()"
             >
 
-            <div class="card">
-                <strong>Total dentro de planta:</strong>
-                <span id="totalPlanta"></span><br>
+        <div class="kpi-grid">
 
-                <strong>Total dentro de comedor:</strong>
-                <span id="totalComedor"></span>
+            <div class="kpi-card">
+                <span class="kpi-title">Personas en planta</span>
+                <span class="kpi-value" id="totalPlanta">0</span>
             </div>
+
+            <div class="kpi-card">
+                <span class="kpi-title">Personas en comedor</span>
+                <span class="kpi-value" id="totalComedor">0</span>
+            </div>
+
+        </div>
+
 
             <table>
                 <thead>
@@ -65,7 +72,7 @@
 
         </div>
 
-        <hr>
+        
 
         <!-- =========================
              SECCIÓN: HISTORIAL ANALÍTICO

@@ -1,23 +1,32 @@
+/* ===============================
+   ESTILOS GENERALES
+   =============================== */
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    background-color: #f4f6f9;
+    font-family: Arial, Helvetica, sans-serif; /* Fuente base */
+    background-color: #f4f6f9;                 /* Fondo general */
     margin: 0;
     padding: 20px;
 }
 
 h2 {
-    color: #2c3e50;
+    color: #2c3e50; /* Títulos principales */
 }
 
+/* ===============================
+   CONTENEDOR PRINCIPAL
+   =============================== */
 .container {
-    max-width: 900px;
-    margin: auto;
-    background: white;
+    max-width: 900px;          /* Ancho máximo */
+    margin: auto;              /* Centrado */
+    background: white;         /* Fondo */
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;        /* Bordes suaves */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Sombra */
 }
 
+/* ===============================
+   FORMULARIOS
+   =============================== */
 label {
     display: block;
     margin-top: 10px;
@@ -30,10 +39,17 @@ input, select {
     margin-top: 5px;
 }
 
+input[type="text"] {
+    margin-bottom: 15px;
+}
+
+/* ===============================
+   BOTONES
+   =============================== */
 button {
     margin-top: 15px;
     padding: 10px 20px;
-    background-color: #2980b9;
+    background-color: #2980b9; /* Azul principal */
     color: white;
     border: none;
     border-radius: 5px;
@@ -41,9 +57,12 @@ button {
 }
 
 button:hover {
-    background-color: #1f6391;
+    background-color: #1f6391; /* Azul oscuro */
 }
 
+/* ===============================
+   MENSAJES
+   =============================== */
 .success {
     color: green;
 }
@@ -52,6 +71,9 @@ button:hover {
     color: red;
 }
 
+/* ===============================
+   TABLAS GENERALES
+   =============================== */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -70,6 +92,9 @@ table td {
     text-align: center;
 }
 
+/* ===============================
+   NAVEGACIÓN ANTIGUA (si se usa)
+   =============================== */
 .nav {
     margin-bottom: 20px;
 }
@@ -77,14 +102,14 @@ table td {
 .nav a {
     margin-right: 15px;
     text-decoration: none;
-    color: #2980
-}
-input[type="text"] {
-    margin-bottom: 15px;
+    color: #2980b9;
 }
 
-
+/* ===============================
+   RESPONSIVE (MÓVILES)
+   =============================== */
 @media (max-width: 600px) {
+
     .container {
         padding: 10px;
     }
@@ -117,6 +142,7 @@ input[type="text"] {
         white-space: nowrap;
     }
 
+    /* Etiquetas por columna */
     table td:nth-of-type(1)::before { content: "DNI"; }
     table td:nth-of-type(2)::before { content: "Nombre"; }
     table td:nth-of-type(3)::before { content: "Ubicación"; }
@@ -125,14 +151,20 @@ input[type="text"] {
     table td:nth-of-type(6)::before { content: "Tiempo"; }
 }
 
+/* ===============================
+   LAYOUT GENERAL
+   =============================== */
 .layout {
     display: flex;
     min-height: 100vh;
 }
 
+/* ===============================
+   SIDEBAR / MENÚ LATERAL
+   =============================== */
 .sidebar {
     width: 220px;
-    background-color: #cf3d38;
+    background-color: #cf3d38; /* Rojo principal */
     color: white;
     padding: 20px;
 }
@@ -156,33 +188,41 @@ input[type="text"] {
     background-color: #2980b9;
 }
 
+/* ===============================
+   CONTENIDO PRINCIPAL
+   =============================== */
 .content {
     flex: 1;
     padding: 20px;
     background-color: #f4f6f9;
 }
-/* ===== TABLA HISTORIAL ===== */
+
+/* ===============================
+   TABLA HISTORIAL (HOVER)
+   =============================== */
 #tablaHistorial tbody tr {
     transition: background 0.2s ease, transform 0.1s ease;
 }
 
 #tablaHistorial tbody tr:hover {
-    background: #f1f5f9;        /* gris claro */
+    background: #f1f5f9;     /* Gris claro */
     cursor: pointer;
-    transform: scale(1.005);    /* leve efecto */
+    transform: scale(1.005);
 }
 
-/* ===== MODAL DETALLE ===== */
+/* ===============================
+   MODAL DETALLE
+   =============================== */
 .modal {
     display: none;
     position: fixed;
     z-index: 2000;
     inset: 0;
-    background: rgba(15, 23, 42, 0.65); /* oscuro elegante */
+    background: rgba(15, 23, 42, 0.65); /* Fondo oscuro */
     backdrop-filter: blur(3px);
 }
 
-/* Caja principal */
+/* Caja del modal */
 .modal-content {
     background: #ffffff;
     margin: 4% auto;
@@ -196,7 +236,7 @@ input[type="text"] {
     animation: modalFadeIn 0.25s ease-out;
 }
 
-/* Animación */
+/* Animación modal */
 @keyframes modalFadeIn {
     from {
         opacity: 0;
@@ -208,7 +248,7 @@ input[type="text"] {
     }
 }
 
-/* Título */
+/* Título del modal */
 #modalTitulo {
     margin-top: 0;
     margin-bottom: 16px;
@@ -219,7 +259,7 @@ input[type="text"] {
     padding-bottom: 8px;
 }
 
-/* Cuerpo */
+/* Contenido del modal */
 #modalCuerpo h4 {
     margin-top: 18px;
     margin-bottom: 8px;
@@ -232,11 +272,17 @@ input[type="text"] {
 }
 
 #modalCuerpo li {
-    padding: 4px 0;
+    padding: 6px 0;
+    font-size: 0.95rem;
     color: #334155;
 }
 
-/* Botón cerrar */
+#modalCuerpo li strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* Botón cerrar modal */
 .close {
     position: absolute;
     right: 22px;
@@ -250,4 +296,44 @@ input[type="text"] {
 
 .close:hover {
     color: #ff0000;
+}
+
+/* ===============================
+   KPI CARDS (TARJETAS)
+   =============================== */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 16px 0 24px;
+}
+
+.kpi-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+.kpi-title {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.kpi-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #0f172a;
 }
