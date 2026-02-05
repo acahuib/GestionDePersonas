@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reportes - Control de Accesos</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="layout">
+
+    <!-- ===== MENÚ LATERAL ===== -->
+    <aside class="sidebar">
+        <h3>Control Accesos</h3>
+        <a href="index.html">Registro</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="alertas.html">Alertas</a>
+        <a href="reportes.html">Reportes</a>
+    </aside>
+
+    <!-- ===== CONTENIDO ===== -->
+    <main class="content">
+
+        <div class="container">
+
+            <h2>Reportes históricos</h2>
+
+            <!-- ===== FILTROS ===== -->
+            <label>Fecha</label>
+            <input type="date" id="fechaReporte">
+
+            <label>Punto de control</label>
+            <select id="puntoReporte">
+                <option value="">Todos</option>
+                <option value="1">Garita</option>
+                <option value="2">Comedor</option>
+            </select>
+
+            <label>Tipo de movimiento</label>
+            <select id="tipoReporte">
+                <option value="">Todos</option>
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+            </select>
+
+            <button onclick="cargarReporte()">Buscar</button>
+
+            <!-- ===== ACCIONES ===== -->
+            <div style="margin-top:15px;">
+                <button disabled> Exportar PDF</button>
+                <button disabled> Exportar Excel</button>
+            </div>
+
+            <!-- ===== TABLA ===== -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha / Hora</th>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Punto de control</th>
+                        <th>Movimiento</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaReportes"></tbody>
+            </table>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/reportes.js"></script>
+
+</body>
+</html>
