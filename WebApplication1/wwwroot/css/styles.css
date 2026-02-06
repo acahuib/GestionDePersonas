@@ -192,19 +192,30 @@ table td {
 /* Botón de logout en la esquina inferior izquierda del sidebar */
 .logout-btn {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background: #1f2937;
+    bottom: 60px;
+    left: 16px;
+    right: 16px;
+    background: linear-gradient(90deg, #ff6b6b, #cf3d38);
     color: #fff;
     border: none;
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    box-shadow: 0 6px 14px rgba(203, 44, 44, 0.25);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    font-weight: 600;
+    text-align: center;
 }
 
 .logout-btn:hover {
-    background: #111827;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(203, 44, 44, 0.3);
+    background: linear-gradient(90deg, #ff4c4c, #bf2e2e);
+}
+
+.logout-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 75, 75, 0.18);
 }
 
 /* ===============================
