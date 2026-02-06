@@ -1,15 +1,8 @@
 const inputDni = document.getElementById("dni");
 const mensaje = document.getElementById("mensaje");
 
-// Detecta ENTER (teclado o escáner)
-inputDni.addEventListener("keydown", (e) => {
-
-    if (e.key === "Enter") {
-        e.preventDefault(); // evita recarga del formulario
-        registrarMovimiento();
-    }
-
-});
+// Detecta ENTER (teclado o escáner) - usa función reutilizable de api.js
+addEnterListener("dni", registrarMovimiento);
 
 // Función principal de registro
 async function registrarMovimiento() {

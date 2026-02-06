@@ -38,3 +38,18 @@ async function fetchAuth(url, options = {}) {
 
     return response;
 }
+
+// ===============================
+// DETECTAR ENTER EN INPUTS
+// ===============================
+function addEnterListener(elementId, callback) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                callback();
+            }
+        });
+    }
+}
