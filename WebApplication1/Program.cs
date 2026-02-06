@@ -62,7 +62,6 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-// IMPORTANT: Authentication must run before Authorization and before routing to controllers
 app.UseAuthentication();
 app.UseAuthorization();
 
