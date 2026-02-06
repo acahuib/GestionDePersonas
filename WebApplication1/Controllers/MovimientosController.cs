@@ -43,6 +43,54 @@ namespace WebApplication1.Controllers
         }
 
         // =========================
+        // SALIDA IMPLÍCITA AUTOMÁTICA (Zonas Internas)
+        // =========================
+        /// <summary>
+        /// Detecta si la persona está dentro de una zona interna (Comedor).
+        /// Si intenta salir de Garita o entrar a otra zona, registra automáticamente
+        /// una "Salida" de la zona interna anterior.
+        /// </summary>
+        private async Task ProcesarSalidaImplicitaAutomatica(
+            string dni,
+            int puntoControlActual,
+            string tipoMovimientoActual,
+            bool estaDentroComedor)
+        {
+            // Solo aplicar si:
+            // 1. Está dentro de una zona interna (comedor)
+            // 2. Intenta salir de Garita O entrar a otra zona interna
+            bool debeAplicarSalida =
+                estaDentroComedor &&
+                ((puntoControlActual == 1 && tipoMovimientoActual == "Salida") ||
+                 (puntoControlActual != 1 && puntoControlActual != 2 && tipoMovimientoActual == "Entrada"));
+
+            if (!debeAplicarSalida)
+                return;
+
+            // ===== REGISTRAR SALIDA IMPLÍCITA DEL COMEDOR =====
+            var salidaImplicita = new Movimiento
+            {
+                Dni = dni,
+                PuntoControlId = 2, // Comedor
+                TipoMovimiento = "Salida",
+                FechaHora = DateTime.Now.AddSeconds(-1) // 1 segundo antes del nuevo movimiento
+            };
+
+            _context.Movimientos.Add(salidaImplicita);
+            await _context.SaveChangesAsync();
+
+            // Registrar alerta de salida implícita
+            await RegistrarAlerta(
+                dni,
+                2, // Comedor
+                "Salida implícita",
+                "Salida automática del comedor para permitir " +
+                (puntoControlActual == 1 ? "salida de la planta." : "movimiento a otra zona.")
+            );
+        }
+
+
+        // =========================
         // POST: api/movimientos
         // =========================
         [HttpPost]
@@ -99,7 +147,37 @@ namespace WebApplication1.Controllers
                  ultimaEntradaComedor.FechaHora > ultimaSalidaComedor.FechaHora);
 
             // =========================
-            // VALIDACIONES
+            // SALIDA IMPLÍCITA AUTOMÁTICA (antes de validaciones)
+            // =========================
+            await ProcesarSalidaImplicitaAutomatica(
+                dto.Dni,
+                dto.PuntoControlId,
+                dto.TipoMovimiento,
+                estaDentroComedor
+            );
+
+            // Recargar datos después de posible salida implícita
+            ultimaEntradaComedor = await _context.Movimientos
+                .Where(m => m.Dni == dto.Dni &&
+                            m.PuntoControlId == 2 &&
+                            m.TipoMovimiento == "Entrada")
+                .OrderByDescending(m => m.FechaHora)
+                .FirstOrDefaultAsync();
+
+            ultimaSalidaComedor = await _context.Movimientos
+                .Where(m => m.Dni == dto.Dni &&
+                            m.PuntoControlId == 2 &&
+                            m.TipoMovimiento == "Salida")
+                .OrderByDescending(m => m.FechaHora)
+                .FirstOrDefaultAsync();
+
+            estaDentroComedor =
+                ultimaEntradaComedor != null &&
+                (ultimaSalidaComedor == null ||
+                 ultimaEntradaComedor.FechaHora > ultimaSalidaComedor.FechaHora);
+
+            // =========================
+            // VALIDACIONES (después de salida implícita)
             // =========================
 
             // -------- GARITA --------
@@ -141,7 +219,7 @@ namespace WebApplication1.Controllers
                         return BadRequest("No se puede salir sin haber ingresado previamente a la planta.");
                     }
 
-                    // Sigue dentro del comedor
+                    // Sigue dentro del comedor (esto ya debería estar manejado por salida implícita)
                     if (estaDentroComedor)
                     {
                         await RegistrarAlerta(
