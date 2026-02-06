@@ -16,7 +16,7 @@ namespace WebApplication1.Controllers
 
         public MovimientosController(AppDbContext context)
         {
-            _context = context;
+            _context = context;                     
         }
 
         // =========================
