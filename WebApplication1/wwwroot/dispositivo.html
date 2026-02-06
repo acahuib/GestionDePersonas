@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba Dispositivo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container" style="max-width:400px;margin-top:50px;">
+    <h2>Simulación de Dispositivo</h2>
+
+    <label>DNI</label>
+    <input type="text" id="dni" placeholder="Escanee DNI">
+
+    <label>Código del dispositivo</label>
+    <input type="text" id="codigo" value="COMEDOR-001">
+
+    <button onclick="registrarAutomatico()">Enviar</button>
+
+    <p id="mensaje"></p>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/dispositivo.js"></script>
+
+</body>
+</html>

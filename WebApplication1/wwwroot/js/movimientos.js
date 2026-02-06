@@ -1,17 +1,29 @@
 const inputDni = document.getElementById("dni");
 const mensaje = document.getElementById("mensaje");
 
-// Detecta ENTER (teclado o escáner) - usa función reutilizable de api.js
+// ======================================
+// ENTER (teclado o escáner)
+// reutiliza helper existente de api.js
+// ======================================
 addEnterListener("dni", registrarMovimiento);
 
-// Función principal de registro
+// ======================================
+// FUNCIÓN PRINCIPAL DE REGISTRO
+// ======================================
 async function registrarMovimiento() {
-    const dni = document.getElementById("dni").value;
+
+    const dni = inputDni.value.trim();
     const punto = document.getElementById("punto").value;
     const tipo = document.getElementById("tipo").value;
-    const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
+
+    if (!dni) {
+        mensaje.className = "error";
+        mensaje.innerText = "Ingrese o escanee DNI";
+        inputDni.focus();
+        return;
+    }
 
     const response = await fetchAuth(`${API_BASE}/movimientos`, {
         method: "POST",
@@ -24,27 +36,38 @@ async function registrarMovimiento() {
 
     if (!response) {
         mensaje.className = "error";
-        mensaje.innerText = "Sesión no iniciada o expiró";
+        mensaje.innerText = "Sesión no iniciada o expirada";
+        inputDni.focus();
         return;
     }
 
     if (response.ok) {
         mensaje.className = "success";
         mensaje.innerText = "Movimiento registrado correctamente";
-        document.getElementById("dni").value = "";
-        document.getElementById("dni").focus();
+        limpiarFormulario();
     } else {
         mensaje.className = "error";
         mensaje.innerText = await response.text();
+        inputDni.focus();
     }
 }
 
-
-// Limpia y enfoca (flujo tipo escáner)
+// ======================================
+// LIMPIAR Y ENFOCAR (FLUJO ESCÁNER)
+// ======================================
 function limpiarFormulario() {
     inputDni.value = "";
     inputDni.focus();
 }
+
+// ======================================
+// FOCO PERMANENTE (ESCÁNER REAL)
+// ======================================
+setInterval(() => {
+    if (document.activeElement !== inputDni) {
+        inputDni.focus();
+    }
+}, 1000);
 
 /*
 NOTA FUTURA:
@@ -53,4 +76,3 @@ NOTA FUTURA:
   - El tipo (Entrada / Salida) se puede inferir automáticamente
   - El operador no necesita usar mouse ni teclado
 */
-

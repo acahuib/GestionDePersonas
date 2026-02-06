@@ -162,9 +162,10 @@ namespace WebApplication1.Controllers
                 // ENTRADA COMEDOR
                 if (dto.TipoMovimiento == "Entrada")
                 {
+                    // 1️ Debe estar dentro de la planta
                     if (ultimaEntradaGarita == null ||
                         (ultimaSalidaGarita != null &&
-                         ultimaSalidaGarita.FechaHora > ultimaEntradaGarita.FechaHora))
+                        ultimaSalidaGarita.FechaHora > ultimaEntradaGarita.FechaHora))
                     {
                         await RegistrarAlerta(
                             dto.Dni,
@@ -175,14 +176,27 @@ namespace WebApplication1.Controllers
 
                         return BadRequest("Debe ingresar a la planta antes de entrar al comedor.");
                     }
+
+                    // 2️ Si ya está dentro del comedor, rechazar entrada
+                    if (estaDentroComedor)
+                    {
+                        await RegistrarAlerta(
+                            dto.Dni,
+                            dto.PuntoControlId,
+                            "Ingreso duplicado",
+                            $"Intento de ingresar al comedor cuando ya se encuentra dentro. LastEntry: {ultimaEntradaComedor?.FechaHora:yyyy-MM-dd HH:mm:ss}, LastExit: {ultimaSalidaComedor?.FechaHora:yyyy-MM-dd HH:mm:ss}"
+                        );
+
+                        return BadRequest("La persona ya se encuentra dentro del comedor.");
+                    }
                 }
+
 
                 // SALIDA COMEDOR
                 if (dto.TipoMovimiento == "Salida")
                 {
-                    if (ultimoMovimiento == null ||
-                        ultimoMovimiento.PuntoControlId != 2 ||
-                        ultimoMovimiento.TipoMovimiento != "Entrada")
+                    // 1️ Debe haber entrado al comedor primero
+                    if (ultimaEntradaComedor == null)
                     {
                         await RegistrarAlerta(
                             dto.Dni,
@@ -192,6 +206,20 @@ namespace WebApplication1.Controllers
                         );
 
                         return BadRequest("No se puede salir del comedor sin haber ingresado.");
+                    }
+
+                    // 2️ El último movimiento debe ser entrada (no puede haber dos salidas seguidas)
+                    if (ultimaSalidaComedor != null &&
+                        ultimaSalidaComedor.FechaHora > ultimaEntradaComedor.FechaHora)
+                    {
+                        await RegistrarAlerta(
+                            dto.Dni,
+                            dto.PuntoControlId,
+                            "Salida duplicada",
+                            "Intento de salir del comedor cuando ya se encuentra fuera."
+                        );
+
+                        return BadRequest("La persona ya se encuentra fuera del comedor.");
                     }
                 }
             }
@@ -212,5 +240,51 @@ namespace WebApplication1.Controllers
 
             return Ok("Movimiento registrado correctamente.");
         }
+        [HttpPost("automatico")]
+        public async Task<IActionResult> RegistrarMovimientoAutomatico(
+            MovimientoAutomaticoDto dto)
+        {
+            // 1️ Buscar dispositivo
+            var dispositivo = await _context.Dispositivos
+                .FirstOrDefaultAsync(d =>
+                    d.Codigo == dto.CodigoDispositivo &&
+                    d.Activo);
+
+            if (dispositivo == null)
+                return BadRequest("Dispositivo no válido.");
+
+            // 2️ Verificar persona
+            var persona = await _context.Personas.FindAsync(dto.Dni);
+            if (persona == null)
+                return BadRequest("DNI no registrado.");
+
+            int puntoControlId = dispositivo.PuntoControlId;
+
+            // 3️ Último movimiento en ese punto
+            var ultimoMovimiento = await _context.Movimientos
+                .Where(m =>
+                    m.Dni == dto.Dni &&
+                    m.PuntoControlId == puntoControlId)
+                .OrderByDescending(m => m.FechaHora)
+                .FirstOrDefaultAsync();
+
+            // 4️ Decidir Entrada / Salida automáticamente
+            string tipoMovimiento =
+                ultimoMovimiento == null ||
+                ultimoMovimiento.TipoMovimiento == "Salida"
+                    ? "Entrada"
+                    : "Salida";
+
+            // 5 Reutilizar lógica existente
+            var dtoNormal = new MovimientoCreateDto
+            {
+                Dni = dto.Dni,
+                PuntoControlId = puntoControlId,
+                TipoMovimiento = tipoMovimiento
+            };
+
+            return await RegistrarMovimiento(dtoNormal);
+        }
+
     }
 }
