@@ -22,7 +22,7 @@ namespace WebApplication1.Controllers
         // ======================================================
         // GET: api/reportes
         // Reporte histórico paginado (uso administrativo)
-        // ======================================================
+        // ======================================================||
         [HttpGet]
         public async Task<IActionResult> ObtenerReporte(
             [FromQuery] DateTime fecha,
