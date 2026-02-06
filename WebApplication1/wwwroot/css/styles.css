@@ -35,12 +35,23 @@ label {
 
 input, select {
     width: 100%;
-    padding: 8px;
+    padding: 10px 12px;
     margin-top: 5px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
 }
 
-input[type="text"] {
+input[type="text"], input[type="password"] {
     margin-bottom: 15px;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #2980b9;
+    box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
 }
 
 /* ===============================
@@ -167,7 +178,10 @@ table td {
     background-color: #cf3d38; /* Rojo principal */
     color: white;
     padding: 20px;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
 }
 
 .sidebar h3 {
@@ -191,16 +205,9 @@ table td {
 
 /* Botón de logout en la esquina inferior izquierda del sidebar */
 .logout-btn {
-    position: absolute;
-    bottom: 60px;
-    left: 16px;
-    right: 16px;
-    background: linear-gradient(90deg, #ff6b6b, #cf3d38);
-    color: #fff;
-    border: none;
-    padding: 10px 12px;
-    border-radius: 8px;
-    cursor: pointer;
+    position: relative;
+    margin-top: 12px;
+    align-self: stretch;
     box-shadow: 0 6px 14px rgba(203, 44, 44, 0.25);
     transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
     font-weight: 600;
@@ -210,7 +217,7 @@ table td {
 .logout-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(203, 44, 44, 0.3);
-    background: linear-gradient(90deg, #ff4c4c, #bf2e2e);
+    background: linear-gradient(90deg, #3aa3ff, #233093);
 }
 
 .logout-btn:focus {
