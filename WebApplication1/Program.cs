@@ -13,6 +13,10 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
+// Validators de movimientos (Garita / Comedor)
+builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.GaritaValidator>();
+builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.ComedorValidator>();
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

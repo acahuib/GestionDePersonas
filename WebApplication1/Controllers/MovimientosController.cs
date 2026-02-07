@@ -13,12 +13,14 @@ namespace WebApplication1.Controllers
     public class MovimientosController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IEnumerable<WebApplication1.Services.Validators.IMovimientoValidator> _validators;
         private const int GARITA_ID = 1;
         private const int COMEDOR_ID = 2;
 
-        public MovimientosController(AppDbContext context)
+        public MovimientosController(AppDbContext context, IEnumerable<WebApplication1.Services.Validators.IMovimientoValidator> validators)
         {
-            _context = context;                     
+            _context = context;                    
+            _validators = validators;
         }
 
         private async Task<Movimiento?> GetLastMovimiento(string dni, int? puntoControlId = null, string? tipo = null)
@@ -159,126 +161,18 @@ namespace WebApplication1.Controllers
             // =========================
             // VALIDACIONES (después de salida implícita)
             // =========================
-
-            // -------- GARITA --------
-            if (dto.PuntoControlId == GARITA_ID)
+            var validator = _validators.FirstOrDefault(v => v.PuntoControlId == dto.PuntoControlId);
+            if (validator != null)
             {
-                // ENTRADA GARITA
-                if (dto.TipoMovimiento == "Entrada")
+                var res = await validator.ValidateAsync(dto);
+                if (!res.IsValid)
                 {
-                    if (ultimaEntradaGarita != null &&
-                        (ultimaSalidaGarita == null ||
-                         ultimaEntradaGarita.FechaHora > ultimaSalidaGarita.FechaHora))
+                    if (!string.IsNullOrEmpty(res.AlertaTipo))
                     {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Ingreso duplicado",
-                            "Intento de ingresar a la planta cuando ya se encuentra dentro."
-                        );
-
-                        return BadRequest("La persona ya se encuentra dentro de la planta.");
-                    }
-                }
-
-                // SALIDA GARITA
-                if (dto.TipoMovimiento == "Salida")
-                {
-                    // No ingresó a la planta
-                    if (ultimaEntradaGarita == null ||
-                        (ultimaSalidaGarita != null &&
-                         ultimaSalidaGarita.FechaHora > ultimaEntradaGarita.FechaHora))
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Salida no autorizada",
-                            "Intento de salida de la planta sin ingreso previo."
-                        );
-
-                        return BadRequest("No se puede salir sin haber ingresado previamente a la planta.");
+                        await RegistrarAlerta(dto.Dni, dto.PuntoControlId, res.AlertaTipo, res.AlertaMensaje ?? string.Empty);
                     }
 
-                    // Sigue dentro del comedor (esto ya debería estar manejado por salida implícita)
-                    if (estaDentroComedor)
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Salida no autorizada",
-                            "Intento de salida de la planta sin haber salido previamente del comedor."
-                        );
-
-                        return BadRequest("Debe salir del comedor antes de salir de la planta.");
-                    }
-                }
-            }
-
-            // -------- COMEDOR --------
-            if (dto.PuntoControlId == COMEDOR_ID)
-            {
-                // ENTRADA COMEDOR
-                if (dto.TipoMovimiento == "Entrada")
-                {
-                    // 1️ Debe estar dentro de la planta
-                    if (ultimaEntradaGarita == null ||
-                        (ultimaSalidaGarita != null &&
-                        ultimaSalidaGarita.FechaHora > ultimaEntradaGarita.FechaHora))
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Ingreso no autorizado",
-                            "Intento de ingreso a comedor sin haber ingresado por garita."
-                        );
-
-                        return BadRequest("Debe ingresar a la planta antes de entrar al comedor.");
-                    }
-
-                    // 2️ Si ya está dentro del comedor, rechazar entrada
-                    if (estaDentroComedor)
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Ingreso duplicado",
-                            $"Intento de ingresar al comedor cuando ya se encuentra dentro. LastEntry: {ultimaEntradaComedor?.FechaHora:yyyy-MM-dd HH:mm:ss}, LastExit: {ultimaSalidaComedor?.FechaHora:yyyy-MM-dd HH:mm:ss}"
-                        );
-
-                        return BadRequest("La persona ya se encuentra dentro del comedor.");
-                    }
-                }
-
-
-                // SALIDA COMEDOR
-                if (dto.TipoMovimiento == "Salida")
-                {
-                    // 1️ Debe haber entrado al comedor primero
-                    if (ultimaEntradaComedor == null)
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Salida no autorizada",
-                            "Intento de salir del comedor sin haber ingresado."
-                        );
-
-                        return BadRequest("No se puede salir del comedor sin haber ingresado.");
-                    }
-
-                    // 2️ El último movimiento debe ser entrada (no puede haber dos salidas seguidas)
-                    if (ultimaSalidaComedor != null &&
-                        ultimaSalidaComedor.FechaHora > ultimaEntradaComedor.FechaHora)
-                    {
-                        await RegistrarAlerta(
-                            dto.Dni,
-                            dto.PuntoControlId,
-                            "Salida duplicada",
-                            "Intento de salir del comedor cuando ya se encuentra fuera."
-                        );
-
-                        return BadRequest("La persona ya se encuentra fuera del comedor.");
-                    }
+                    return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
                 }
             }
 
