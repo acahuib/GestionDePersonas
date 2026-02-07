@@ -67,7 +67,7 @@ setInterval(() => {
     if (document.activeElement !== inputDni) {
         inputDni.focus();
     }
-}, 1000);
+}, 10000);
 
 /*
 NOTA FUTURA:

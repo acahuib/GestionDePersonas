@@ -39,10 +39,8 @@ namespace WebApplication1.Controllers
         // =========================
         // DETECTAR ZONA INTERNA ACTUAL
         // =========================
-        /// <summary>
-        /// Detecta en qué zona interna (Comedor, Quimico) se encuentra la persona.
-        /// Retorna el ID de la zona interna o null si no está en ninguna.
-        /// </summary>
+        // Detecta en qué zona interna (Comedor, Quimico) se encuentra la persona.
+        // Retorna el ID de la zona interna o null si no está en ninguna.
         private async Task<int?> DetectarZonaInternaActual(string dni)
         {
             foreach (var zonaId in ZONAS_INTERNAS)
@@ -82,11 +80,9 @@ namespace WebApplication1.Controllers
         // =========================
         // SALIDA IMPLÍCITA AUTOMÁTICA (Zonas Internas)
         // =========================
-        /// <summary>
-        /// Detecta si la persona está dentro de una zona interna.
-        /// Si intenta salir de Garita o entrar a otra zona, registra automáticamente
-        /// una "Salida" de la zona interna anterior.
-        /// </summary>
+        // Detecta si la persona está dentro de una zona interna.
+        // Si intenta salir de Garita o entrar a otra zona, registra automáticamente
+        // una "Salida" de la zona interna anterior.
         private async Task ProcesarSalidaImplicitaAutomatica(
             string dni,
             int puntoControlActual,
