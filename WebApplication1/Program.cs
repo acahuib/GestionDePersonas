@@ -18,6 +18,9 @@ builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValida
 builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.ComedorValidator>();
 builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.QuimicoValidator>();
 
+// Servicio compartido de movimientos
+builder.Services.AddScoped<WebApplication1.Services.MovimientosService>();
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

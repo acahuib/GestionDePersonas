@@ -6,7 +6,7 @@ async function registrarAutomatico() {
 
     mensaje.innerText = "";
 
-    const response = await fetchAuth(`${API_BASE}/movimientos/automatico`, {
+    const response = await fetchAuth(`${API_BASE}/dispositivos-movimientos`, {
         method: "POST",
         body: JSON.stringify({
             dni: dni,

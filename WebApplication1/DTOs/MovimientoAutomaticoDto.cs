@@ -2,7 +2,7 @@ namespace WebApplication1.DTOs
 {
     public class MovimientoAutomaticoDto
     {
-        public string Dni { get; set; }
-        public string CodigoDispositivo { get; set; }
+        public required string Dni { get; set; }
+        public required string CodigoDispositivo { get; set; }
     }
 }
