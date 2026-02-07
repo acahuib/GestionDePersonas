@@ -17,6 +17,16 @@ async function cargarDashboard() {
     renderTabla(personasDashboard);
 }
 
+// Inicialización: cargar puntos y dashboard
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        await generarOpcionesPuntos("puntoHistorial", true);
+    } catch (err) {
+        console.error("Error cargando puntos de control:", err);
+    }
+    cargarDashboard();
+});
+
 function renderTabla(personas) {
 
     const tabla = document.getElementById("tablaDashboard");
@@ -93,8 +103,4 @@ function filtrarDashboard() {
     paginaActual = 1; // reset
     renderTabla(filtrados);
 }
-
-
-
-cargarDashboard();
 

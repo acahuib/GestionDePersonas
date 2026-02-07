@@ -38,10 +38,7 @@
 
             <label>Punto de control</label>
             <select id="puntoReporte" onchange="paginaActual=1">
-                <option value="">Todos</option>
-                <option value="1">Garita</option>
-                <option value="2">Comedor</option>
-                <option value="9">Quimico</option>
+                <!-- Se genera dinámicamente desde puntos.js -->
             </select>
 
             <label>Tipo</label>
@@ -92,9 +89,11 @@
 </div>
 
 <script src="js/api.js"></script>
+<script src="js/puntos.js"></script>
 <script src="js/reportes.js"></script>
+<script src="js/auth.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const token = localStorage.getItem("token");
     const rol = localStorage.getItem("rol");
 
@@ -109,6 +108,13 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Acceso no autorizado");
         window.location.href = "index.html";
         return;
+    }
+
+    // Generar opciones de puntos de control dinámicamente
+    try {
+        await generarOpcionesPuntos("puntoReporte", true);
+    } catch (err) {
+        console.error("Error cargando puntos de control:", err);
     }
 });
 </script>

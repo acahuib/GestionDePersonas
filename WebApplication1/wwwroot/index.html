@@ -38,9 +38,7 @@
 
             <label>Punto de Control</label>
             <select id="punto">
-                <option value="1">Garita</option>
-                <option value="2">Comedor</option>
-                <option value="9">Quimico</option>
+                <!-- Se genera dinámicamente desde puntos.js -->
             </select>
 
             <label>Tipo de Movimiento</label>
@@ -59,10 +57,11 @@
 </div>
 
 <script src="js/api.js"></script>
+<script src="js/puntos.js"></script>
 <script src="js/movimientos.js"></script>
 <script src="js/auth.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const token = localStorage.getItem("token");
     const rol = localStorage.getItem("rol");
 
@@ -70,6 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!token || !rol) {
         window.location.href = "login.html";
         return;
+    }
+
+    // Generar opciones de puntos de control dinámicamente
+    try {
+        await generarOpcionesPuntos("punto", false);
+    } catch (err) {
+        console.error("Error cargando puntos de control:", err);
     }
 
     // Si es Guardia, ocultar opciones administrativas
