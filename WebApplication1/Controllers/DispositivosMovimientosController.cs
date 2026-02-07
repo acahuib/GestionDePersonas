@@ -37,19 +37,18 @@ namespace WebApplication1.Controllers
             _movimientosService = movimientosService;
         }
 
-        // =========================
-        // POST: api/dispositivos-movimientos
-        // =========================
-        /// <summary>
-        /// Registra un movimiento automático basado en un dispositivo (escaner).
-        /// El dispositivo envía su código único y el DNI de la persona.
-        /// El tipo de movimiento (Entrada/Salida) se determina automáticamente.
-        /// 
-        /// En el futuro, este endpoint incluirá:
-        /// - Autenticación del dispositivo (token, API key, etc.)
-        /// - Validación de que el escaner está activo y autorizado
-        /// - Registro de intentos de acceso no autorizados
-        /// </summary>
+        //  =========================
+        //  POST: api/dispositivos-movimientos
+        //  =========================
+        //  Registra un movimiento automático basado en un dispositivo (escaner).
+        //  El dispositivo envía su código único y el DNI de la persona.
+        //  El tipo de movimiento (Entrada/Salida) se determina automáticamente.
+        // 
+        //  En el futuro, este endpoint incluirá:
+        //  - Autenticación del dispositivo (token, API key, etc.)
+        //  - Validación de que el escaner está activo y autorizado
+        //  - Registro de intentos de acceso no autorizados
+
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimientoAutomatico(MovimientoAutomaticoDto dto)
         {
