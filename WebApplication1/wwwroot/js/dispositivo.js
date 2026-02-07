@@ -2,23 +2,29 @@ async function registrarAutomatico() {
 
     const dni = document.getElementById("dni").value;
     const codigo = document.getElementById("codigo").value;
+    const apiKey = document.getElementById("apiKey").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
 
-    const response = await fetchAuth(`${API_BASE}/dispositivos-movimientos`, {
-        method: "POST",
-        body: JSON.stringify({
-            dni: dni,
-            codigoDispositivo: codigo
-        })
-    });
-
-    if (!response) {
+    if (!apiKey) {
         mensaje.className = "error";
-        mensaje.innerText = "Sesión inválida";
+        mensaje.innerText = "API Key es requerida";
         return;
     }
+
+    // Usar fetch normal, NO fetchAuth (no necesita token de usuario, usa API Key)
+    const response = await fetch(`${API_BASE}/dispositivos-movimientos`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            dni: dni,
+            codigoDispositivo: codigo,
+            apiKey: apiKey
+        })
+    });
 
     if (response.ok) {
         mensaje.className = "success";

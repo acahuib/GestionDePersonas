@@ -4,8 +4,11 @@ namespace WebApplication1.Models
     {
         public int Id { get; set; }
 
-        // Código único (QR, texto, API KEY)
-        public string Codigo { get; set; }
+        // Código único (QR, texto, etc.)
+        public required string Codigo { get; set; }
+
+        // API Key para autenticación del dispositivo
+        public required string ApiKey { get; set; }
 
         // Zona fija donde está instalado
         public int PuntoControlId { get; set; }

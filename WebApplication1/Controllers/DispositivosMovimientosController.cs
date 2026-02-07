@@ -41,25 +41,26 @@ namespace WebApplication1.Controllers
         //  POST: api/dispositivos-movimientos
         //  =========================
         //  Registra un movimiento automático basado en un dispositivo (escaner).
-        //  El dispositivo envía su código único y el DNI de la persona.
+        //  El dispositivo envía su código único, API key y el DNI de la persona.
         //  El tipo de movimiento (Entrada/Salida) se determina automáticamente.
         // 
-        //  En el futuro, este endpoint incluirá:
-        //  - Autenticación del dispositivo (token, API key, etc.)
-        //  - Validación de que el escaner está activo y autorizado
-        //  - Registro de intentos de acceso no autorizados
+        //  Requiere:
+        //  - codigoDispositivo: Identificador único del escaner
+        //  - apiKey: Clave secreta del dispositivo para autenticación
+        //  - dni: DNI de la persona
 
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimientoAutomatico(MovimientoAutomaticoDto dto)
         {
-            // 1️ Buscar dispositivo
+            // 1️ Buscar dispositivo y validar API key
             var dispositivo = await _context.Dispositivos
                 .FirstOrDefaultAsync(d =>
                     d.Codigo == dto.CodigoDispositivo &&
+                    d.ApiKey == dto.ApiKey &&
                     d.Activo);
 
             if (dispositivo == null)
-                return BadRequest("Dispositivo no válido o inactivo.");
+                return Unauthorized("Dispositivo no válido, inactivo o API key incorrecta.");
 
             // 2️ Verificar persona
             var persona = await _context.Personas.FindAsync(dto.Dni);
