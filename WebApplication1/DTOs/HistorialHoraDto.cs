@@ -9,5 +9,8 @@ namespace WebApplication1.DTOs
 
         public int ComedorEntrada { get; set; }
         public int ComedorSalida { get; set; }
+
+        public int QuimicoEntrada { get; set; }
+        public int QuimicoSalida { get; set; }
     }
 }

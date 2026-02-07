@@ -11,6 +11,7 @@ async function cargarDashboard() {
 
     document.getElementById("totalPlanta").innerText = data.totalDentroPlanta;
     document.getElementById("totalComedor").innerText = data.totalDentroComedor;
+    document.getElementById("totalQuimico").innerText = data.totalDentroQuimico || 0;
 
 
     renderTabla(personasDashboard);

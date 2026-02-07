@@ -71,6 +71,30 @@ namespace WebApplication1.Controllers
                 .ToList();
 
             // =========================
+            // MOVIMIENTOS QUIMICO
+            // =========================
+            var entradasQuimico = await _context.Movimientos
+                .Where(m => m.PuntoControlId == 9 && m.TipoMovimiento == "Entrada")
+                .GroupBy(m => m.Dni)
+                .Select(g => g.OrderByDescending(m => m.FechaHora).First())
+                .ToListAsync();
+
+            var salidasQuimico = await _context.Movimientos
+                .Where(m => m.PuntoControlId == 9 && m.TipoMovimiento == "Salida")
+                .GroupBy(m => m.Dni)
+                .Select(g => g.OrderByDescending(m => m.FechaHora).First())
+                .ToListAsync();
+
+            // Personas dentro del quimico
+            var dentroQuimico = entradasQuimico
+                .Where(e =>
+                {
+                    var salida = salidasQuimico.FirstOrDefault(s => s.Dni == e.Dni);
+                    return salida == null || e.FechaHora > salida.FechaHora;
+                })
+                .ToList();
+
+            // =========================
             // ÚLTIMO MOVIMIENTO GENERAL
             // =========================
             var ultimosMovimientos = await _context.Movimientos
@@ -99,6 +123,7 @@ namespace WebApplication1.Controllers
             {
                 TotalDentroPlanta = dentroPlanta.Count,
                 TotalDentroComedor = dentroComedor.Count,
+                TotalDentroQuimico = dentroQuimico.Count,
                 Personas = personasDashboard
             });
         }

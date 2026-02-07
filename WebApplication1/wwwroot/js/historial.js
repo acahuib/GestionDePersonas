@@ -64,6 +64,22 @@ async function cargarHistorial() {
         }
     }
 
+    // QUIMICO
+    if (!punto || punto == "9") {
+        if (!tipo || tipo == "Entrada") {
+            datasets.push({
+                label: "Quimico - Entrada",
+                data: data.map(x => x.quimicoEntrada)
+            });
+        }
+        if (!tipo || tipo == "Salida") {
+            datasets.push({
+                label: "Quimico - Salida",
+                data: data.map(x => x.quimicoSalida)
+            });
+        }
+    }
+
     if (graficoHistorial) graficoHistorial.destroy();
 
     graficoHistorial = new Chart(
@@ -92,6 +108,7 @@ function renderTablaHistorial(data, punto, tipo) {
         // Filtrado visual (coherente con el gráfico)
         const mostrarGarita = (!punto || punto == "1");
         const mostrarComedor = (!punto || punto == "2");
+        const mostrarQuimico = (!punto || punto == "9");
 
         const mostrarEntrada = (!tipo || tipo == "Entrada");
         const mostrarSalida = (!tipo || tipo == "Salida");
@@ -105,6 +122,9 @@ function renderTablaHistorial(data, punto, tipo) {
 
                 <td>${mostrarComedor && mostrarEntrada ? x.comedorEntrada : "-"}</td>
                 <td>${mostrarComedor && mostrarSalida ? x.comedorSalida : "-"}</td>
+
+                <td>${mostrarQuimico && mostrarEntrada ? x.quimicoEntrada : "-"}</td>
+                <td>${mostrarQuimico && mostrarSalida ? x.quimicoSalida : "-"}</td>
             </tr>
         `;
     });
@@ -144,11 +164,16 @@ async function verDetalleHora(hora) {
         "Garita - Entrada": [],
         "Garita - Salida": [],
         "Comedor - Entrada": [],
-        "Comedor - Salida": []
+        "Comedor - Salida": [],
+        "Quimico - Entrada": [],
+        "Quimico - Salida": []
     };
 
     data.forEach(p => {
-        const lugar = p.puntoControlId == 1 ? "Garita" : "Comedor";
+        let lugar = "Garita";
+        if (p.puntoControlId == 2) lugar = "Comedor";
+        if (p.puntoControlId == 9) lugar = "Quimico";
+        
         const clave = `${lugar} - ${p.tipoMovimiento}`;
         grupos[clave].push(p);
     });

@@ -80,6 +80,12 @@ namespace WebApplication1.Controllers
 
                     ComedorSalida = g.Count(m =>
                         m.PuntoControlId == 2 && m.TipoMovimiento == "Salida"),
+
+                    QuimicoEntrada = g.Count(m =>
+                        m.PuntoControlId == 9 && m.TipoMovimiento == "Entrada"),
+
+                    QuimicoSalida = g.Count(m =>
+                        m.PuntoControlId == 9 && m.TipoMovimiento == "Salida"),
                 })
                 .OrderBy(x => x.Hora)
                 .ToList();
