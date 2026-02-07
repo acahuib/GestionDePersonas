@@ -21,18 +21,21 @@ namespace WebApplication1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAlertas()
         {
-            var alertas = await _context.Alertas
-                .Where(a => !a.Atendida)
-                .OrderByDescending(a => a.FechaHora)
-                .Select(a => new
-                {
-                    a.Id,
-                    a.Dni,
-                    a.TipoAlerta,
-                    a.Mensaje,
-                    a.FechaHora
-                })
-                .ToListAsync();
+            var alertas = await (from a in _context.Alertas
+                                  where !a.Atendida
+                                  join p in _context.Personas on a.Dni equals p.Dni into gp
+                                  from persona in gp.DefaultIfEmpty()
+                                  orderby a.FechaHora descending
+                                  select new
+                                  {
+                                      a.Id,
+                                      a.Dni,
+                                      Persona = persona == null ? null : new { persona.Dni, persona.Nombre },
+                                      a.TipoAlerta,
+                                      a.Mensaje,
+                                      a.FechaHora
+                                  })
+                                 .ToListAsync();
 
             return Ok(alertas);
         }

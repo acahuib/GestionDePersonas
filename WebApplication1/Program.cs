@@ -7,7 +7,11 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Controladores
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

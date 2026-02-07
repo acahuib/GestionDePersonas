@@ -13,10 +13,23 @@ namespace WebApplication1.Controllers
     public class MovimientosController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private const int GARITA_ID = 1;
+        private const int COMEDOR_ID = 2;
 
         public MovimientosController(AppDbContext context)
         {
             _context = context;                     
+        }
+
+        private async Task<Movimiento?> GetLastMovimiento(string dni, int? puntoControlId = null, string? tipo = null)
+        {
+            var query = _context.Movimientos.Where(m => m.Dni == dni);
+            if (puntoControlId.HasValue)
+                query = query.Where(m => m.PuntoControlId == puntoControlId.Value);
+            if (!string.IsNullOrEmpty(tipo))
+                query = query.Where(m => m.TipoMovimiento == tipo);
+
+            return await query.OrderByDescending(m => m.FechaHora).FirstOrDefaultAsync();
         }
 
         // =========================
@@ -61,8 +74,8 @@ namespace WebApplication1.Controllers
             // 2. Intenta salir de Garita O entrar a otra zona interna
             bool debeAplicarSalida =
                 estaDentroComedor &&
-                ((puntoControlActual == 1 && tipoMovimientoActual == "Salida") ||
-                 (puntoControlActual != 1 && puntoControlActual != 2 && tipoMovimientoActual == "Entrada"));
+                ((puntoControlActual == GARITA_ID && tipoMovimientoActual == "Salida") ||
+                 (puntoControlActual != GARITA_ID && puntoControlActual != COMEDOR_ID && tipoMovimientoActual == "Entrada"));
 
             if (!debeAplicarSalida)
                 return;
@@ -71,7 +84,7 @@ namespace WebApplication1.Controllers
             var salidaImplicita = new Movimiento
             {
                 Dni = dni,
-                PuntoControlId = 2, // Comedor
+                PuntoControlId = COMEDOR_ID, // Comedor
                 TipoMovimiento = "Salida",
                 FechaHora = DateTime.Now.AddSeconds(-1) // 1 segundo antes del nuevo movimiento
             };
@@ -82,10 +95,10 @@ namespace WebApplication1.Controllers
             // Registrar alerta de salida implícita
             await RegistrarAlerta(
                 dni,
-                2, // Comedor
+                COMEDOR_ID, // Comedor
                 "Salida implícita",
                 "Salida automática del comedor para permitir " +
-                (puntoControlActual == 1 ? "salida de la planta." : "movimiento a otra zona.")
+                (puntoControlActual == GARITA_ID ? "salida de la planta." : "movimiento a otra zona.")
             );
         }
 
@@ -102,44 +115,21 @@ namespace WebApplication1.Controllers
                 return BadRequest("El DNI no está registrado.");
 
             // 2️ Último movimiento general
-            var ultimoMovimiento = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni)
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            var ultimoMovimiento = await GetLastMovimiento(dto.Dni);
 
             // =========================
             // GARITA (ID = 1)
             // =========================
-            var ultimaEntradaGarita = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 1 &&
-                            m.TipoMovimiento == "Entrada")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            var ultimaEntradaGarita = await GetLastMovimiento(dto.Dni, GARITA_ID, "Entrada");
 
-            var ultimaSalidaGarita = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 1 &&
-                            m.TipoMovimiento == "Salida")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            var ultimaSalidaGarita = await GetLastMovimiento(dto.Dni, GARITA_ID, "Salida");
 
             // =========================
             // COMEDOR (ID = 2)
             // =========================
-            var ultimaEntradaComedor = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 2 &&
-                            m.TipoMovimiento == "Entrada")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            var ultimaEntradaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Entrada");
 
-            var ultimaSalidaComedor = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 2 &&
-                            m.TipoMovimiento == "Salida")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            var ultimaSalidaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Salida");
 
             bool estaDentroComedor =
                 ultimaEntradaComedor != null &&
@@ -157,19 +147,9 @@ namespace WebApplication1.Controllers
             );
 
             // Recargar datos después de posible salida implícita
-            ultimaEntradaComedor = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 2 &&
-                            m.TipoMovimiento == "Entrada")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            ultimaEntradaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Entrada");
 
-            ultimaSalidaComedor = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni &&
-                            m.PuntoControlId == 2 &&
-                            m.TipoMovimiento == "Salida")
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
+            ultimaSalidaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Salida");
 
             estaDentroComedor =
                 ultimaEntradaComedor != null &&
@@ -181,7 +161,7 @@ namespace WebApplication1.Controllers
             // =========================
 
             // -------- GARITA --------
-            if (dto.PuntoControlId == 1)
+            if (dto.PuntoControlId == GARITA_ID)
             {
                 // ENTRADA GARITA
                 if (dto.TipoMovimiento == "Entrada")
@@ -235,7 +215,7 @@ namespace WebApplication1.Controllers
             }
 
             // -------- COMEDOR --------
-            if (dto.PuntoControlId == 2)
+            if (dto.PuntoControlId == COMEDOR_ID)
             {
                 // ENTRADA COMEDOR
                 if (dto.TipoMovimiento == "Entrada")

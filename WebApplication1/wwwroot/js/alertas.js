@@ -28,10 +28,12 @@ async function cargarAlertas() {
     }
 
     alertas.forEach(a => {
+        console.log('alerta raw:', a);
         const item = document.createElement("li");
         item.innerHTML = `
             <div class="card">
                 <strong>${a.tipoAlerta}</strong><br>
+                <em>${(a.persona && a.persona.nombre) ? a.persona.nombre : (a.nombre || 'Sin nombre')} - ${a.dni}</em><br>
                 ${a.mensaje}<br>
                 <small>${new Date(a.fechaHora).toLocaleString()}</small><br>
                 <button onclick="atenderAlerta(${a.id})">Atender</button>
