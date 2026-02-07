@@ -16,6 +16,8 @@ namespace WebApplication1.Controllers
         private readonly IEnumerable<WebApplication1.Services.Validators.IMovimientoValidator> _validators;
         private const int GARITA_ID = 1;
         private const int COMEDOR_ID = 2;
+        private const int QUIMICO_ID = 9;
+        private static readonly int[] ZONAS_INTERNAS = { 2, 9 }; // Comedor, Quimico
 
         public MovimientosController(AppDbContext context, IEnumerable<WebApplication1.Services.Validators.IMovimientoValidator> validators)
         {
@@ -32,6 +34,26 @@ namespace WebApplication1.Controllers
                 query = query.Where(m => m.TipoMovimiento == tipo);
 
             return await query.OrderByDescending(m => m.FechaHora).FirstOrDefaultAsync();
+        }
+
+        // =========================
+        // DETECTAR ZONA INTERNA ACTUAL
+        // =========================
+        /// <summary>
+        /// Detecta en qué zona interna (Comedor, Quimico) se encuentra la persona.
+        /// Retorna el ID de la zona interna o null si no está en ninguna.
+        /// </summary>
+        private async Task<int?> DetectarZonaInternaActual(string dni)
+        {
+            foreach (var zonaId in ZONAS_INTERNAS)
+            {
+                var entrada = await GetLastMovimiento(dni, zonaId, "Entrada");
+                var salida = await GetLastMovimiento(dni, zonaId, "Salida");
+                
+                if (entrada != null && (salida == null || entrada.FechaHora > salida.FechaHora))
+                    return zonaId;
+            }
+            return null;
         }
 
         // =========================
@@ -61,7 +83,7 @@ namespace WebApplication1.Controllers
         // SALIDA IMPLÍCITA AUTOMÁTICA (Zonas Internas)
         // =========================
         /// <summary>
-        /// Detecta si la persona está dentro de una zona interna (Comedor).
+        /// Detecta si la persona está dentro de una zona interna.
         /// Si intenta salir de Garita o entrar a otra zona, registra automáticamente
         /// una "Salida" de la zona interna anterior.
         /// </summary>
@@ -69,24 +91,25 @@ namespace WebApplication1.Controllers
             string dni,
             int puntoControlActual,
             string tipoMovimientoActual,
-            bool estaDentroComedor)
+            int? zonaInternaActual)
         {
             // Solo aplicar si:
-            // 1. Está dentro de una zona interna (comedor)
-            // 2. Intenta salir de Garita O entrar a otra zona interna
+            // 1. Está dentro de una zona interna (comedor o quimico)
+            // 2. Intenta salir de Garita O entrar a otra zona diferente
             bool debeAplicarSalida =
-                estaDentroComedor &&
+                zonaInternaActual.HasValue &&
                 ((puntoControlActual == GARITA_ID && tipoMovimientoActual == "Salida") ||
-                 (puntoControlActual != GARITA_ID && puntoControlActual != COMEDOR_ID && tipoMovimientoActual == "Entrada"));
+                 (puntoControlActual != GARITA_ID && !ZONAS_INTERNAS.Contains(puntoControlActual) && tipoMovimientoActual == "Entrada") ||
+                 (ZONAS_INTERNAS.Contains(puntoControlActual) && puntoControlActual != zonaInternaActual && tipoMovimientoActual == "Entrada"));
 
             if (!debeAplicarSalida)
                 return;
 
-            // ===== REGISTRAR SALIDA IMPLÍCITA DEL COMEDOR =====
+            // ===== REGISTRAR SALIDA IMPLÍCITA DE LA ZONA INTERNA =====
             var salidaImplicita = new Movimiento
             {
                 Dni = dni,
-                PuntoControlId = COMEDOR_ID, // Comedor
+                PuntoControlId = zonaInternaActual.Value,
                 TipoMovimiento = "Salida",
                 FechaHora = DateTime.Now.AddSeconds(-1) // 1 segundo antes del nuevo movimiento
             };
@@ -95,12 +118,16 @@ namespace WebApplication1.Controllers
             await _context.SaveChangesAsync();
 
             // Registrar alerta de salida implícita
+            var nombreZona = zonaInternaActual.Value == COMEDOR_ID ? "comedor" : "quimico";
+            var razonSalida = puntoControlActual == GARITA_ID 
+                ? "salida de la planta." 
+                : $"movimiento a otra zona.";
+
             await RegistrarAlerta(
                 dni,
-                COMEDOR_ID, // Comedor
+                zonaInternaActual.Value,
                 "Salida implícita",
-                "Salida automática del comedor para permitir " +
-                (puntoControlActual == GARITA_ID ? "salida de la planta." : "movimiento a otra zona.")
+                $"Salida automática del {nombreZona} para permitir {razonSalida}"
             );
         }
 
@@ -133,10 +160,10 @@ namespace WebApplication1.Controllers
 
             var ultimaSalidaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Salida");
 
-            bool estaDentroComedor =
-                ultimaEntradaComedor != null &&
-                (ultimaSalidaComedor == null ||
-                 ultimaEntradaComedor.FechaHora > ultimaSalidaComedor.FechaHora);
+            // =========================
+            // DETECTAR ZONA INTERNA ACTUAL
+            // =========================
+            var zonaInternaActual = await DetectarZonaInternaActual(dto.Dni);
 
             // =========================
             // SALIDA IMPLÍCITA AUTOMÁTICA (antes de validaciones)
@@ -145,18 +172,11 @@ namespace WebApplication1.Controllers
                 dto.Dni,
                 dto.PuntoControlId,
                 dto.TipoMovimiento,
-                estaDentroComedor
+                zonaInternaActual
             );
 
-            // Recargar datos después de posible salida implícita
-            ultimaEntradaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Entrada");
-
-            ultimaSalidaComedor = await GetLastMovimiento(dto.Dni, COMEDOR_ID, "Salida");
-
-            estaDentroComedor =
-                ultimaEntradaComedor != null &&
-                (ultimaSalidaComedor == null ||
-                 ultimaEntradaComedor.FechaHora > ultimaSalidaComedor.FechaHora);
+            // Recargar zona interna después de posible salida implícita
+            zonaInternaActual = await DetectarZonaInternaActual(dto.Dni);
 
             // =========================
             // VALIDACIONES (después de salida implícita)
@@ -167,10 +187,11 @@ namespace WebApplication1.Controllers
                 var res = await validator.ValidateAsync(dto);
                 if (!res.IsValid)
                 {
-                    if (!string.IsNullOrEmpty(res.AlertaTipo))
-                    {
-                        await RegistrarAlerta(dto.Dni, dto.PuntoControlId, res.AlertaTipo, res.AlertaMensaje ?? string.Empty);
-                    }
+                    // Registrar alerta SIEMPRE que la validación falla
+                    var alertaTipo = res.AlertaTipo ?? "Movimiento no autorizado";
+                    var alertaMensaje = res.AlertaMensaje ?? res.ErrorMessage ?? "Intento de movimiento inválido";
+                    
+                    await RegistrarAlerta(dto.Dni, dto.PuntoControlId, alertaTipo, alertaMensaje);
 
                     return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
                 }
