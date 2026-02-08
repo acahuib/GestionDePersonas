@@ -13,15 +13,14 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// Validators de movimientos (Garita / Comedor / Quimico)
-builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.GaritaValidator>();
-builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.ComedorValidator>();
-builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.QuimicoValidator>();
+// Validators de movimientos
+// Nota: Solo para garita. Comedor y Quimico se eliminaron
+// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.GaritaValidator>();
+// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.ComedorValidator>();
+// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.QuimicoValidator>();
 
-// Servicio compartido de movimientos
+// Servicios compartidos
 builder.Services.AddScoped<WebApplication1.Services.MovimientosService>();
-
-// Servicio para detalles de salidas
 builder.Services.AddScoped<WebApplication1.Services.SalidasService>();
 
 // Swagger

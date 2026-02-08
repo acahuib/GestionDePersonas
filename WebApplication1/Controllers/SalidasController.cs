@@ -70,7 +70,9 @@ namespace WebApplication1.Controllers
 
         // ======================================================
         // POST: /api/salidas/vehiculo
-        // Registra salida de Vehículo empresarial con sus datos
+        // Registra SALIDA de Vehículo empresarial
+        // Los datos de ingreso (horaIngreso, kmIngreso) son opcionales
+        // Se actualizarán después con PUT cuando el vehículo regrese
         // ======================================================
         [HttpPost("vehiculo")]
         public async Task<IActionResult> RegistrarSalidaVehiculo(SalidaVehiculoDto dto)
@@ -85,6 +87,7 @@ namespace WebApplication1.Controllers
                 return BadRequest("No existe movimiento de salida en garita para este DNI.");
 
             // 2️ Crear SalidaDetalle con los datos del vehículo
+            // Nota: kmIngreso y horaIngreso son opcionales, se llenan al actualizar (PUT)
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
                 "Vehiculo",
@@ -93,11 +96,11 @@ namespace WebApplication1.Controllers
                     conductor = dto.Conductor,
                     placa = dto.Placa,
                     kmSalida = dto.KmSalida,
-                    kmIngreso = dto.KmIngreso,
+                    kmIngreso = dto.KmIngreso, // null si no se proporciona
                     origen = dto.Origen,
                     destino = dto.Destino,
                     horaSalida = dto.HoraSalida,
-                    horaIngreso = dto.HoraIngreso,
+                    horaIngreso = dto.HoraIngreso, // null si no se proporciona
                     observacion = dto.Observacion
                 }
             );
@@ -106,7 +109,8 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Salida de vehículo registrada",
                 salidaId = salida.Id,
-                tipoSalida = "Vehiculo"
+                tipoSalida = "Vehiculo",
+                estado = "Pendiente de ingreso"
             });
         }
 
@@ -179,22 +183,45 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // PUT: /api/salidas/{id}
-        // Actualiza los datos de una salida existente
+        // PUT: /api/salidas/vehiculo/{id}/ingreso
+        // Actualiza datos de INGRESO de un vehículo
+        // Se ejecuta cuando el vehículo regresa a la mina
         // ======================================================
-        [HttpPut("{id}")]
-        public async Task<IActionResult> ActualizarSalida(int id, [FromBody] JsonElement datosObj)
+        [HttpPut("vehiculo/{id}/ingreso")]
+        public async Task<IActionResult> ActualizarIngresoVehiculo(int id, ActualizarIngresoVehiculoDto dto)
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
                 return NotFound("SalidaDetalle no encontrada");
 
-            var salidaActualizada = await _salidasService.ActualizarSalidaDetalle(id, datosObj);
+            if (salida.TipoSalida != "Vehiculo")
+                return BadRequest("Este endpoint es solo para vehículos");
+
+            // Deserializar JSON actual
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            // Crear nuevo JSON con datos de ingreso actualizados
+            var datosActualizados = new
+            {
+                conductor = datosActuales.GetProperty("conductor").GetString(),
+                placa = datosActuales.GetProperty("placa").GetString(),
+                kmSalida = datosActuales.GetProperty("kmSalida").GetInt32(),
+                kmIngreso = dto.KmIngreso, // ✅ Nuevo
+                origen = datosActuales.GetProperty("origen").GetString(),
+                destino = datosActuales.GetProperty("destino").GetString(),
+                horaSalida = datosActuales.GetProperty("horaSalida").GetDateTime(),
+                horaIngreso = dto.HoraIngreso, // ✅ Nuevo
+                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+            };
+
+            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados);
 
             return Ok(new
             {
-                mensaje = "Salida actualizada",
-                salidaId = salidaActualizada.Id
+                mensaje = "Ingreso de vehículo registrado",
+                salidaId = id,
+                tipoSalida = "Vehiculo",
+                estado = "Ingreso completado"
             });
         }
 

@@ -46,7 +46,7 @@ namespace WebApplication1.Controllers
             var query = _context.Movimientos
                 .AsNoTracking()
                 .Include(m => m.Persona)
-                .Include(m => m.PuntoControl)
+                // .Include(m => m.PuntoControl) // Eliminado
                 .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
 
             if (puntoControlId.HasValue)
@@ -66,7 +66,7 @@ namespace WebApplication1.Controllers
                     FechaHora = m.FechaHora,
                     Dni = m.Dni,
                     Nombre = m.Persona.Nombre,
-                    PuntoControl = m.PuntoControl.Nombre,
+                    PuntoControl = m.PuntoControlId.ToString(), // ID en lugar de nombre
                     TipoMovimiento = m.TipoMovimiento
                 })
                 .ToListAsync();
@@ -100,7 +100,7 @@ namespace WebApplication1.Controllers
             var query = _context.Movimientos
                 .AsNoTracking()
                 .Include(m => m.Persona)
-                .Include(m => m.PuntoControl)
+                // .Include(m => m.PuntoControl) // Eliminado
                 .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
 
             if (puntoControlId.HasValue)
@@ -116,7 +116,7 @@ namespace WebApplication1.Controllers
                     m.FechaHora,
                     m.Dni,
                     Nombre = m.Persona.Nombre,
-                    PuntoControl = m.PuntoControl.Nombre,
+                    PuntoControl = m.PuntoControlId.ToString(), // ID en lugar de nombre
                     m.TipoMovimiento
                 })
                 .ToListAsync();

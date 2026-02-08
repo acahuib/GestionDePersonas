@@ -7,9 +7,9 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Persona> Personas { get; set; }
-    public DbSet<PuntoControl> PuntosControl { get; set; }
+    // public DbSet<PuntoControl> PuntosControl { get; set; } // Eliminado
     public DbSet<Movimiento> Movimientos { get; set; }
-    public DbSet<Alerta> Alertas { get; set; }
+    // public DbSet<Alerta> Alertas { get; set; } // Eliminado
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Dispositivo> Dispositivos { get; set; }
     public DbSet<SalidaDetalle> SalidasDetalle { get; set; }

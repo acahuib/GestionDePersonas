@@ -85,12 +85,7 @@ namespace WebApplication1.Controllers
                 var res = await validator.ValidateAsync(dto);
                 if (!res.IsValid)
                 {
-                    // Registrar alerta SIEMPRE que la validación falla
-                    var alertaTipo = res.AlertaTipo ?? "Movimiento no autorizado";
-                    var alertaMensaje = res.AlertaMensaje ?? res.ErrorMessage ?? "Intento de movimiento inválido";
-                    
-                    await _movimientosService.RegistrarAlerta(dto.Dni, dto.PuntoControlId, alertaTipo, alertaMensaje);
-
+                    // Alerta eliminada
                     return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
                 }
             }

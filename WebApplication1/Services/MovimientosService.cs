@@ -47,29 +47,7 @@ namespace WebApplication1.Services
             }
             return null;
         }
-
-        // =========================
-        // REGISTRAR ALERTA
-        // =========================
-        public async Task RegistrarAlerta(
-            string dni,
-            int puntoControlId,
-            string tipo,
-            string mensaje)
-        {
-            var alerta = new Alerta
-            {
-                Dni = dni,
-                PuntoControlId = puntoControlId,
-                TipoAlerta = tipo,
-                Mensaje = mensaje,
-                FechaHora = DateTime.Now,
-                Atendida = false
-            };
-
-            _context.Alertas.Add(alerta);
-            await _context.SaveChangesAsync();
-        }
+        // Alerta eliminada - ya no se usa
 
         // =========================
         // SALIDA IMPLÍCITA AUTOMÁTICA (Zonas Internas)
@@ -106,18 +84,7 @@ namespace WebApplication1.Services
             _context.Movimientos.Add(salidaImplicita);
             await _context.SaveChangesAsync();
 
-            // Registrar alerta de salida implícita
-            var nombreZona = zonaInternaActual.Value == COMEDOR_ID ? "comedor" : "quimico";
-            var razonSalida = puntoControlActual == GARITA_ID 
-                ? "salida de la planta." 
-                : $"movimiento a otra zona.";
-
-            await RegistrarAlerta(
-                dni,
-                zonaInternaActual.Value,
-                "Salida implícita",
-                $"Salida automática del {nombreZona} para permitir {razonSalida}"
-            );
+            // Alerta eliminada
         }
 
         // =========================

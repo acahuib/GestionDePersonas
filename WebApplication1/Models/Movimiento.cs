@@ -17,7 +17,6 @@ namespace WebApplication1.Models
         [ForeignKey(nameof(Dni))]
         public Persona? Persona { get; set; }
 
-        [ForeignKey(nameof(PuntoControlId))]
-        public PuntoControl? PuntoControl { get; set; }
+        // PuntoControl eliminado - ya no se usa
     }
 }
