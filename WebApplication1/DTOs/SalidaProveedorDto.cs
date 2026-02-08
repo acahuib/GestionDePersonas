@@ -1,8 +1,12 @@
 namespace WebApplication1.DTOs
 {
     /// <summary>
-    /// DTO para registrar salida de Proveedor
+    /// DTO para registrar INGRESO de Proveedor
     /// Incluye datos del cuaderno de ingreso de proveedores
+    /// 
+    /// Flujo:
+    /// 1. POST con datos de INGRESO (horaIngreso requerida, horaSalida opcional)
+    /// 2. PUT posterior con horaSalida cuando el proveedor se va
     /// </summary>
     public class SalidaProveedorDto
     {
@@ -12,7 +16,10 @@ namespace WebApplication1.DTOs
         public required string Procedencia { get; set; }
         public required string Destino { get; set; }
         public required DateTime HoraIngreso { get; set; }
-        public required DateTime HoraSalida { get; set; }
+        
+        // Opcional: Se llena cuando el proveedor se va (via PUT)
+        public DateTime? HoraSalida { get; set; }
+        
         public string? Observacion { get; set; }
     }
 }

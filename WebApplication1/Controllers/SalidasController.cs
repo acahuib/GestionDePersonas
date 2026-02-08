@@ -29,7 +29,8 @@ namespace WebApplication1.Controllers
 
         // ======================================================
         // POST: /api/salidas/proveedor
-        // Registra salida de Proveedor con todos sus datos
+        // Registra INGRESO de Proveedor
+        // La hora de salida se registra después (via PUT)
         // ======================================================
         [HttpPost("proveedor")]
         public async Task<IActionResult> RegistrarSalidaProveedor(SalidaProveedorDto dto)
@@ -43,7 +44,7 @@ namespace WebApplication1.Controllers
             if (ultimoMovimiento == null)
                 return BadRequest("No existe movimiento de salida en garita para este DNI.");
 
-            // 2️ Crear SalidaDetalle con los datos del proveedor
+            // 2️ Crear SalidaDetalle con los datos del proveedor (solo ingreso por ahora)
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
                 "Proveedor",
@@ -55,16 +56,59 @@ namespace WebApplication1.Controllers
                     procedencia = dto.Procedencia,
                     destino = dto.Destino,
                     horaIngreso = dto.HoraIngreso,
-                    horaSalida = dto.HoraSalida,
+                    horaSalida = dto.HoraSalida, // null si no se proporciona
                     observacion = dto.Observacion
                 }
             );
 
             return Ok(new
             {
-                mensaje = "Salida de proveedor registrada",
+                mensaje = "Ingreso de proveedor registrado",
                 salidaId = salida.Id,
-                tipoSalida = "Proveedor"
+                tipoSalida = "Proveedor",
+                estado = "Pendiente de salida"
+            });
+        }
+
+        // ======================================================
+        // PUT: /api/salidas/proveedor/{id}/salida
+        // Actualiza hora de SALIDA de un proveedor
+        // Se ejecuta cuando el proveedor se va de la mina
+        // ======================================================
+        [HttpPut("proveedor/{id}/salida")]
+        public async Task<IActionResult> ActualizarSalidaProveedor(int id, ActualizarSalidaProveedorDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("SalidaDetalle no encontrada");
+
+            if (salida.TipoSalida != "Proveedor")
+                return BadRequest("Este endpoint es solo para proveedores");
+
+            // Deserializar JSON actual
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            // Crear nuevo JSON con hora de salida actualizada
+            var datosActualizados = new
+            {
+                nombres = datosActuales.GetProperty("nombres").GetString(),
+                apellidos = datosActuales.GetProperty("apellidos").GetString(),
+                dni = datosActuales.GetProperty("dni").GetString(),
+                procedencia = datosActuales.GetProperty("procedencia").GetString(),
+                destino = datosActuales.GetProperty("destino").GetString(),
+                horaIngreso = datosActuales.GetProperty("horaIngreso").GetDateTime(),
+                horaSalida = dto.HoraSalida, // ✅ Nuevo
+                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+            };
+
+            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados);
+
+            return Ok(new
+            {
+                mensaje = "Salida de proveedor registrada",
+                salidaId = id,
+                tipoSalida = "Proveedor",
+                estado = "Salida completada"
             });
         }
 
