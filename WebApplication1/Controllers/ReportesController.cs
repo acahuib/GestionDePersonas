@@ -22,10 +22,12 @@ namespace WebApplication1.Controllers
         // ======================================================
         // GET: api/reportes
         // Reporte histórico paginado (uso administrativo)
-        // ======================================================||
+        // Soporta rango de fechas (fechaInicio y fechaFin)
+        // ======================================================
         [HttpGet]
         public async Task<IActionResult> ObtenerReporte(
-            [FromQuery] DateTime fecha,
+            [FromQuery] DateTime? fechaInicio,
+            [FromQuery] DateTime? fechaFin,
             [FromQuery] int? puntoControlId,
             [FromQuery] string? tipoMovimiento,
             [FromQuery] int page = 1,
@@ -34,8 +36,12 @@ namespace WebApplication1.Controllers
             if (page <= 0) page = 1;
             if (pageSize <= 0 || pageSize > 200) pageSize = 50;
 
-            var inicio = fecha.Date;
-            var fin = fecha.Date.AddDays(1);
+            // Si no se especifica rango, usar solo fechaInicio como un día
+            if (!fechaInicio.HasValue)
+                return BadRequest("Se requiere fechaInicio");
+
+            var inicio = fechaInicio.Value.Date;
+            var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : inicio.AddDays(1);
 
             var query = _context.Movimientos
                 .AsNoTracking()
@@ -76,16 +82,20 @@ namespace WebApplication1.Controllers
 
         // ======================================================
         // GET: api/reportes/export/excel
-        // Exportación oficial a Excel
+        // Exportación a Excel con rango de fechas
         // ======================================================
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportarExcel(
-            [FromQuery] DateTime fecha,
+            [FromQuery] DateTime? fechaInicio,
+            [FromQuery] DateTime? fechaFin,
             [FromQuery] int? puntoControlId,
             [FromQuery] string? tipoMovimiento)
         {
-            var inicio = fecha.Date;
-            var fin = fecha.Date.AddDays(1);
+            if (!fechaInicio.HasValue)
+                return BadRequest("Se requiere fechaInicio");
+
+            var inicio = fechaInicio.Value.Date;
+            var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : inicio.AddDays(1);
 
             var query = _context.Movimientos
                 .AsNoTracking()
@@ -137,10 +147,15 @@ namespace WebApplication1.Controllers
             workbook.SaveAs(stream);
             stream.Position = 0;
 
+            // Nombre del archivo: Reporte_2026-02-05_a_2026-02-08.xlsx
+            var nombreArchivo = fechaFin.HasValue
+                ? $"Reporte_{fechaInicio:yyyyMMdd}_a_{fechaFin:yyyyMMdd}.xlsx"
+                : $"Reporte_{fechaInicio:yyyyMMdd}.xlsx";
+
             return File(
                 stream.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Reporte_{fecha:yyyyMMdd}.xlsx"
+                nombreArchivo
             );
         }
     }

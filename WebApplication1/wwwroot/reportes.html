@@ -33,8 +33,11 @@
             <h2>Reportes históricos</h2>
 
             <!-- ===== FILTROS ===== -->
-            <label>Fecha</label>
-            <input type="date" id="fechaReporte" onchange="paginaActual=1">
+            <label>Fecha inicio</label>
+            <input type="date" id="fechaInicio" onchange="paginaActual=1">
+
+            <label>Fecha fin (opcional)</label>
+            <input type="date" id="fechaFin" onchange="paginaActual=1">
 
             <label>Punto de control</label>
             <select id="puntoReporte" onchange="paginaActual=1">
