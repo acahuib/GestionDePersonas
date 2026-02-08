@@ -298,6 +298,132 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
+        // POST: /api/salidas/control-bienes
+        // Registra INGRESO con control de bienes
+        // Se usa cuando un trabajador trae bienes personales
+        // ======================================================
+        [HttpPost("control-bienes")]
+        public async Task<IActionResult> RegistrarControlBienes(SalidaControlBienesDto dto)
+        {
+            // 1️ Verificar que existe un movimiento de entrada en garita para este DNI
+            var ultimoMovimiento = await _context.Movimientos
+                .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1) // GARITA_ID = 1
+                .OrderByDescending(m => m.FechaHora)
+                .FirstOrDefaultAsync();
+
+            if (ultimoMovimiento == null)
+                return BadRequest("No existe movimiento de entrada en garita para este DNI.");
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            // 2️ Crear SalidaDetalle con los datos del control de bienes
+            var salida = await _salidasService.CrearSalidaDetalle(
+                ultimoMovimiento.Id,
+                "ControlBienes",
+                new
+                {
+                    dni = dto.Dni,
+                    nombre = dto.Nombre,
+                    bienesDeclarados = dto.BienesDeclarados,
+                    fechaIngreso = dto.FechaIngreso,
+                    fechaSalida = dto.FechaSalida, // null si no se proporciona
+                    observacion = dto.Observacion
+                },
+                usuarioId
+            );
+
+            return Ok(new
+            {
+                mensaje = "Control de bienes registrado",
+                salidaId = salida.Id,
+                tipoSalida = "ControlBienes",
+                estado = "Pendiente de salida"
+            });
+        }
+
+        // ======================================================
+        // PUT: /api/salidas/control-bienes/{id}/salida
+        // Actualiza fecha de SALIDA de control de bienes
+        // Se ejecuta cuando el trabajador sale con sus bienes
+        // ======================================================
+        [HttpPut("control-bienes/{id}/salida")]
+        public async Task<IActionResult> ActualizarSalidaControlBienes(int id, ActualizarSalidaControlBienesDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("SalidaDetalle no encontrada");
+
+            if (salida.TipoSalida != "ControlBienes")
+                return BadRequest("Este endpoint es solo para control de bienes");
+
+            // Deserializar JSON actual
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            // Crear nuevo JSON con fecha de salida actualizada
+            var datosActualizados = new
+            {
+                dni = datosActuales.GetProperty("dni").GetString(),
+                nombre = datosActuales.GetProperty("nombre").GetString(),
+                bienesDeclarados = datosActuales.GetProperty("bienesDeclarados").GetString(),
+                fechaIngreso = datosActuales.GetProperty("fechaIngreso").GetDateTime(),
+                fechaSalida = dto.FechaSalida, // ✅ Nuevo
+                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+            };
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+
+            return Ok(new
+            {
+                mensaje = "Salida de control de bienes registrada",
+                salidaId = id,
+                tipoSalida = "ControlBienes",
+                estado = "Salida completada"
+            });
+        }
+
+        // ======================================================
+        // GET: /api/salidas/control-bienes/persona/{dni}
+        // Obtiene todos los registros de control de bienes de una persona
+        // ======================================================
+        [HttpGet("control-bienes/persona/{dni}")]
+        public async Task<IActionResult> ObtenerControlBienesPorPersona(string dni)
+        {
+            // Buscar todos los movimientos de la persona
+            var movimientos = await _context.Movimientos
+                .Where(m => m.Dni == dni)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            if (!movimientos.Any())
+                return NotFound(new { mensaje = $"No hay movimientos para el DNI {dni}" });
+
+            // Buscar salidas de tipo ControlBienes asociadas a esos movimientos
+            var salidas = await _context.SalidasDetalle
+                .Where(s => movimientos.Contains(s.MovimientoId) && s.TipoSalida == "ControlBienes")
+                .OrderByDescending(s => s.FechaCreacion)
+                .ToListAsync();
+
+            if (!salidas.Any())
+                return NotFound(new { mensaje = $"No hay registros de control de bienes para el DNI {dni}" });
+
+            var resultado = salidas.Select(s => new
+            {
+                id = s.Id,
+                movimientoId = s.MovimientoId,
+                tipoSalida = s.TipoSalida,
+                datos = JsonDocument.Parse(s.DatosJSON).RootElement,
+                fechaCreacion = s.FechaCreacion,
+                usuarioId = s.UsuarioId
+            }).ToList();
+
+            return Ok(resultado);
+        }
+
+        // ======================================================
         // DELETE: /api/salidas/{id}
         // Elimina una salida
         // ======================================================
