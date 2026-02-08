@@ -1,14 +1,14 @@
 namespace WebApplication1.DTOs
 {
     /// <summary>
-    /// DTO para registrar salida de Vehiculo de Proveedor
-    /// Incluye datos del cuaderno de vehiculos de proveedores
+    /// DTO para registrar salida de Vehiculo de Empresa
+    /// Incluye datos del cuaderno de vehiculos de empresa
     /// 
     /// Flujo:
     /// 1. POST con datos de SALIDA (horaIngreso y kmIngreso opcionales)
     /// 2. PUT posterior con datos de INGRESO (horaIngreso, kmIngreso)
     /// </summary>
-    public class SalidaVehiculosProveedoresDto
+    public class SalidaVehiculoEmpresaDto
     {
         public required string Dni { get; set; }
         public required string Conductor { get; set; }

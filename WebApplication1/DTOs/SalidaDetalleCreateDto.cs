@@ -14,7 +14,7 @@ namespace WebApplication1.DTOs
         public required int MovimientoId { get; set; }
 
         /// <summary>
-        /// Tipo de salida: "Proveedor", "VehiculosProveedores", "Visita", etc.
+        /// Tipo de salida: "Proveedor", "VehiculoEmpresa", "Visita", etc.
         /// </summary>
         public required string TipoSalida { get; set; }
 

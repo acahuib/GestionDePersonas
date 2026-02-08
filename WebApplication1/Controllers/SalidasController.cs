@@ -131,13 +131,13 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // POST: /api/salidas/vehiculos-proveedores
-        // Registra SALIDA de vehiculo de proveedor
+        // POST: /api/salidas/vehiculo-empresa
+        // Registra SALIDA de vehiculo de empresa
         // Los datos de ingreso (horaIngreso, kmIngreso) son opcionales
         // Se actualizaran despues con PUT cuando el vehiculo regrese
         // ======================================================
-        [HttpPost("vehiculos-proveedores")]
-        public async Task<IActionResult> RegistrarSalidaVehiculosProveedores(SalidaVehiculosProveedoresDto dto)
+        [HttpPost("vehiculo-empresa")]
+        public async Task<IActionResult> RegistrarSalidaVehiculoEmpresa(SalidaVehiculoEmpresaDto dto)
         {
             // 1️ Verificar que existe un movimiento de salida en garita para este DNI (conductor)
             var ultimoMovimiento = await _context.Movimientos
@@ -155,7 +155,7 @@ namespace WebApplication1.Controllers
             // Nota: kmIngreso y horaIngreso son opcionales, se llenan al actualizar (PUT)
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
-                "VehiculosProveedores",
+                "VehiculoEmpresa",
                 new
                 {
                     conductor = dto.Conductor,
@@ -173,9 +173,9 @@ namespace WebApplication1.Controllers
 
             return Ok(new
             {
-                mensaje = "Salida de vehiculo de proveedor registrada",
+                mensaje = "Salida de vehiculo de empresa registrada",
                 salidaId = salida.Id,
-                tipoSalida = "VehiculosProveedores",
+                tipoSalida = "VehiculoEmpresa",
                 estado = "Pendiente de ingreso"
             });
         }
@@ -252,19 +252,19 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // PUT: /api/salidas/vehiculos-proveedores/{id}/ingreso
-        // Actualiza datos de INGRESO de un vehiculo de proveedor
+        // PUT: /api/salidas/vehiculo-empresa/{id}/ingreso
+        // Actualiza datos de INGRESO de un vehiculo de empresa
         // Se ejecuta cuando el vehiculo regresa a la mina
         // ======================================================
-        [HttpPut("vehiculos-proveedores/{id}/ingreso")]
-        public async Task<IActionResult> ActualizarIngresoVehiculosProveedores(int id, ActualizarIngresoVehiculosProveedoresDto dto)
+        [HttpPut("vehiculo-empresa/{id}/ingreso")]
+        public async Task<IActionResult> ActualizarIngresoVehiculoEmpresa(int id, ActualizarIngresoVehiculoEmpresaDto dto)
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
                 return NotFound("SalidaDetalle no encontrada");
 
-            if (salida.TipoSalida != "VehiculosProveedores")
-                return BadRequest("Este endpoint es solo para vehiculos de proveedores");
+            if (salida.TipoSalida != "VehiculoEmpresa")
+                return BadRequest("Este endpoint es solo para vehiculos de empresa");
 
             // Deserializar JSON actual
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -290,9 +290,9 @@ namespace WebApplication1.Controllers
 
             return Ok(new
             {
-                mensaje = "Ingreso de vehiculo de proveedor registrado",
+                mensaje = "Ingreso de vehiculo de empresa registrado",
                 salidaId = id,
-                tipoSalida = "VehiculosProveedores",
+                tipoSalida = "VehiculoEmpresa",
                 estado = "Ingreso completado"
             });
         }
