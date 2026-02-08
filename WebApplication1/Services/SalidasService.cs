@@ -22,7 +22,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Crea un registro de SalidaDetalle con JSON genérico
         /// </summary>
-        public async Task<SalidaDetalle> CrearSalidaDetalle(int movimientoId, string tipoSalida, object datosObj)
+        public async Task<SalidaDetalle> CrearSalidaDetalle(int movimientoId, string tipoSalida, object datosObj, int? usuarioId)
         {
             // Convertir objeto a JSON string
             var datosJSON = JsonSerializer.Serialize(datosObj, new JsonSerializerOptions
@@ -35,7 +35,8 @@ namespace WebApplication1.Services
                 MovimientoId = movimientoId,
                 TipoSalida = tipoSalida,
                 DatosJSON = datosJSON,
-                FechaCreacion = DateTime.Now
+                FechaCreacion = DateTime.Now,
+                UsuarioId = usuarioId
             };
 
             _context.SalidasDetalle.Add(salida);
@@ -47,14 +48,15 @@ namespace WebApplication1.Services
         /// <summary>
         /// Crea SalidaDetalle desde DTO genérico (si ya tienes JSON serializado)
         /// </summary>
-        public async Task<SalidaDetalle> CrearSalidaDetalleFromDto(SalidaDetalleCreateDto dto)
+        public async Task<SalidaDetalle> CrearSalidaDetalleFromDto(SalidaDetalleCreateDto dto, int? usuarioId)
         {
             var salida = new SalidaDetalle
             {
                 MovimientoId = dto.MovimientoId,
                 TipoSalida = dto.TipoSalida,
                 DatosJSON = dto.DatosJSON,
-                FechaCreacion = DateTime.Now
+                FechaCreacion = DateTime.Now,
+                UsuarioId = usuarioId
             };
 
             _context.SalidasDetalle.Add(salida);
@@ -95,7 +97,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Actualiza los datos JSON de una salida existente
         /// </summary>
-        public async Task<SalidaDetalle> ActualizarSalidaDetalle(int id, object datosObj)
+        public async Task<SalidaDetalle> ActualizarSalidaDetalle(int id, object datosObj, int? usuarioId)
         {
             var salida = await _context.SalidasDetalle.FindAsync(id);
             if (salida == null)
@@ -105,6 +107,7 @@ namespace WebApplication1.Services
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
+            salida.UsuarioId = usuarioId;  // Registra quién hace la actualización
 
             _context.SalidasDetalle.Update(salida);
             await _context.SaveChangesAsync();

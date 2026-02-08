@@ -130,7 +130,8 @@ namespace WebApplication1.Controllers
             await _movimientosService.RegistrarMovimientoEnBD(
                 dto.Dni,
                 dtoNormal.PuntoControlId,
-                dtoNormal.TipoMovimiento
+                dtoNormal.TipoMovimiento,
+                null  // Registrado por dispositivo (escáner)
             );
 
             return Ok(new

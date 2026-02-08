@@ -5,6 +5,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.Json;
+using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
@@ -27,6 +28,16 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        /// <summary>
+        /// Extrae el ID del usuario (guardia) del token autenticado
+        /// Retorna 0 si no hay token o no se puede extraer
+        /// </summary>
+        private int GetUsuarioId()
+        {
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+            return int.TryParse(usuarioIdString, out var uid) ? uid : 0;
+        }
+
         // ======================================================
         // POST: /api/salidas/proveedor
         // Registra INGRESO de Proveedor
@@ -44,6 +55,9 @@ namespace WebApplication1.Controllers
             if (ultimoMovimiento == null)
                 return BadRequest("No existe movimiento de salida en garita para este DNI.");
 
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
             // 2️ Crear SalidaDetalle con los datos del proveedor (solo ingreso por ahora)
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
@@ -58,7 +72,8 @@ namespace WebApplication1.Controllers
                     horaIngreso = dto.HoraIngreso,
                     horaSalida = dto.HoraSalida, // null si no se proporciona
                     observacion = dto.Observacion
-                }
+                },
+                usuarioId
             );
 
             return Ok(new
@@ -101,7 +116,10 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
 
-            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados);
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
 
             return Ok(new
             {
@@ -113,13 +131,13 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // POST: /api/salidas/vehiculo
-        // Registra SALIDA de Vehículo empresarial
+        // POST: /api/salidas/vehiculos-proveedores
+        // Registra SALIDA de vehiculo de proveedor
         // Los datos de ingreso (horaIngreso, kmIngreso) son opcionales
-        // Se actualizarán después con PUT cuando el vehículo regrese
+        // Se actualizaran despues con PUT cuando el vehiculo regrese
         // ======================================================
-        [HttpPost("vehiculo")]
-        public async Task<IActionResult> RegistrarSalidaVehiculo(SalidaVehiculoDto dto)
+        [HttpPost("vehiculos-proveedores")]
+        public async Task<IActionResult> RegistrarSalidaVehiculosProveedores(SalidaVehiculosProveedoresDto dto)
         {
             // 1️ Verificar que existe un movimiento de salida en garita para este DNI (conductor)
             var ultimoMovimiento = await _context.Movimientos
@@ -130,11 +148,14 @@ namespace WebApplication1.Controllers
             if (ultimoMovimiento == null)
                 return BadRequest("No existe movimiento de salida en garita para este DNI.");
 
-            // 2️ Crear SalidaDetalle con los datos del vehículo
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            // 2️ Crear SalidaDetalle con los datos del vehiculo
             // Nota: kmIngreso y horaIngreso son opcionales, se llenan al actualizar (PUT)
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
-                "Vehiculo",
+                "VehiculosProveedores",
                 new
                 {
                     conductor = dto.Conductor,
@@ -146,14 +167,15 @@ namespace WebApplication1.Controllers
                     horaSalida = dto.HoraSalida,
                     horaIngreso = dto.HoraIngreso, // null si no se proporciona
                     observacion = dto.Observacion
-                }
+                },
+                usuarioId
             );
 
             return Ok(new
             {
-                mensaje = "Salida de vehículo registrada",
+                mensaje = "Salida de vehiculo de proveedor registrada",
                 salidaId = salida.Id,
-                tipoSalida = "Vehiculo",
+                tipoSalida = "VehiculosProveedores",
                 estado = "Pendiente de ingreso"
             });
         }
@@ -171,7 +193,10 @@ namespace WebApplication1.Controllers
             if (movimiento == null)
                 return BadRequest("Movimiento no encontrado");
 
-            var salida = await _salidasService.CrearSalidaDetalleFromDto(dto);
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            var salida = await _salidasService.CrearSalidaDetalleFromDto(dto, usuarioId);
 
             return Ok(new
             {
@@ -227,19 +252,19 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // PUT: /api/salidas/vehiculo/{id}/ingreso
-        // Actualiza datos de INGRESO de un vehículo
-        // Se ejecuta cuando el vehículo regresa a la mina
+        // PUT: /api/salidas/vehiculos-proveedores/{id}/ingreso
+        // Actualiza datos de INGRESO de un vehiculo de proveedor
+        // Se ejecuta cuando el vehiculo regresa a la mina
         // ======================================================
-        [HttpPut("vehiculo/{id}/ingreso")]
-        public async Task<IActionResult> ActualizarIngresoVehiculo(int id, ActualizarIngresoVehiculoDto dto)
+        [HttpPut("vehiculos-proveedores/{id}/ingreso")]
+        public async Task<IActionResult> ActualizarIngresoVehiculosProveedores(int id, ActualizarIngresoVehiculosProveedoresDto dto)
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
                 return NotFound("SalidaDetalle no encontrada");
 
-            if (salida.TipoSalida != "Vehiculo")
-                return BadRequest("Este endpoint es solo para vehículos");
+            if (salida.TipoSalida != "VehiculosProveedores")
+                return BadRequest("Este endpoint es solo para vehiculos de proveedores");
 
             // Deserializar JSON actual
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -258,13 +283,16 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
 
-            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados);
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
 
             return Ok(new
             {
-                mensaje = "Ingreso de vehículo registrado",
+                mensaje = "Ingreso de vehiculo de proveedor registrado",
                 salidaId = id,
-                tipoSalida = "Vehiculo",
+                tipoSalida = "VehiculosProveedores",
                 estado = "Ingreso completado"
             });
         }

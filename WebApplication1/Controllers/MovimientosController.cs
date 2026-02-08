@@ -5,6 +5,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Models;
 using WebApplication1.Services;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
@@ -93,9 +94,83 @@ namespace WebApplication1.Controllers
             // =========================
             // REGISTRAR MOVIMIENTO
             // =========================
-            await _movimientosService.RegistrarMovimientoEnBD(dto.Dni, dto.PuntoControlId, dto.TipoMovimiento);
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            await _movimientosService.RegistrarMovimientoEnBD(dto.Dni, dto.PuntoControlId, dto.TipoMovimiento, usuarioId);
 
             return Ok("Movimiento registrado correctamente.");
+        }
+
+        // =========================
+        // GET: api/movimientos/persona/{dni}/abierto
+        // =========================
+        /// <summary>
+        /// Busca movimientos abiertos (sin cerrar) de una persona
+        /// Un movimiento está abierto si:
+        /// - Para Proveedor: tiene horaIngreso pero falta horaSalida
+        /// - Para VehiculosProveedores: tiene horaSalida pero falta horaIngreso
+        /// </summary>
+        [HttpGet("persona/{dni}/abierto")]
+        public async Task<ActionResult<List<MovimientoAbiertoDto>>> ObtenerMovimientosAbiertos(string dni)
+        {
+            // Buscar movimientos de la persona con sus SalidaDetalle
+            var movimientos = await _context.Movimientos
+                .Where(m => m.Dni == dni)
+                .OrderByDescending(m => m.FechaHora)
+                .ToListAsync();
+
+            if (!movimientos.Any())
+                return NotFound(new { mensaje = $"No hay movimientos para el DNI {dni}" });
+
+            var resultado = new List<MovimientoAbiertoDto>();
+
+            foreach (var mov in movimientos)
+            {
+                // Buscar SalidaDetalle asociado
+                var salida = await _context.SalidasDetalle
+                    .FirstOrDefaultAsync(s => s.MovimientoId == mov.Id);
+
+                if (salida == null)
+                    continue; // Solo interesa SalidaDetalle
+
+                // Deserializar JSON
+                var datos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(salida.DatosJSON) 
+                    ?? new Dictionary<string, object>();
+
+                // Determinar si está abierto
+                bool estaAbierto = false;
+                string motivo = "";
+
+                if (salida.TipoSalida == "Proveedor")
+                {
+                    // Proveedor está abierto si no tiene horaSalida
+                    estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
+                    motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
+                }
+                else if (salida.TipoSalida == "VehiculosProveedores")
+                {
+                    // VehiculosProveedores esta abierto si no tiene horaIngreso
+                    estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
+                    motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
+                }
+
+                resultado.Add(new MovimientoAbiertoDto
+                {
+                    MovimientoId = mov.Id,
+                    Dni = mov.Dni,
+                    PuntoControlId = mov.PuntoControlId,
+                    TipoMovimiento = mov.TipoMovimiento,
+                    FechaHora = mov.FechaHora,
+                    SalidaDetalleId = salida.Id,
+                    TipoSalida = salida.TipoSalida,
+                    Datos = datos,
+                    EstaAbierto = estaAbierto,
+                    MotivoApertura = motivo
+                });
+            }
+
+            return Ok(resultado);
         }
     }
 }

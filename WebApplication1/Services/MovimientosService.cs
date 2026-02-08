@@ -90,14 +90,15 @@ namespace WebApplication1.Services
         // =========================
         // REGISTRAR MOVIMIENTO EN BD
         // =========================
-        public async Task RegistrarMovimientoEnBD(string dni, int puntoControlId, string tipoMovimiento)
+        public async Task RegistrarMovimientoEnBD(string dni, int puntoControlId, string tipoMovimiento, int? usuarioId)
         {
             var movimiento = new Movimiento
             {
                 Dni = dni,
                 PuntoControlId = puntoControlId,
                 TipoMovimiento = tipoMovimiento,
-                FechaHora = DateTime.Now
+                FechaHora = DateTime.Now,
+                UsuarioId = usuarioId
             };
 
             _context.Movimientos.Add(movimiento);

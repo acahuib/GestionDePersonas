@@ -14,7 +14,7 @@ namespace WebApplication1.Models
         public int MovimientoId { get; set; }
 
         /// <summary>
-        /// Tipo de salida: "Proveedor", "Vehiculo", "Visita", etc.
+        /// Tipo de salida: "Proveedor", "VehiculosProveedores", "Visita", etc.
         /// </summary>
         public required string TipoSalida { get; set; }
 
@@ -30,7 +30,14 @@ namespace WebApplication1.Models
         /// </summary>
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
+        // ===== AUDITORÍA =====
+        /// <summary>
+        /// ID del guardia/usuario que registró/actualizó esta salida
+        /// </summary>
+        public int? UsuarioId { get; set; }
+
         // ===== RELACIONES =====
         public Movimiento? Movimiento { get; set; }
+        public Usuario? Usuario { get; set; }
     }
 }
