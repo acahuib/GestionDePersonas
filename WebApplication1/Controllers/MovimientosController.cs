@@ -112,6 +112,7 @@ namespace WebApplication1.Controllers
         /// - Para VehiculoEmpresa: tiene horaSalida pero falta horaIngreso
         /// - Para ControlBienes: tiene fechaIngreso pero falta fechaSalida
         /// - Para VehiculosProveedores: tiene horaIngreso pero falta horaSalida
+        /// - Para PersonalLocal: tiene horaIngreso pero falta horaSalida
         /// </summary>
         [HttpGet("persona/{dni}/abierto")]
         public async Task<ActionResult<List<MovimientoAbiertoDto>>> ObtenerMovimientosAbiertos(string dni)
@@ -167,6 +168,12 @@ namespace WebApplication1.Controllers
                     // VehiculosProveedores esta abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
+                }
+                else if (salida.TipoSalida == "PersonalLocal")
+                {
+                    // PersonalLocal esta abierto si no tiene horaSalida
+                    estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
+                    motivo = estaAbierto ? "Falta registrar horaSalida final" : "Cerrado";
                 }
 
                 resultado.Add(new MovimientoAbiertoDto
