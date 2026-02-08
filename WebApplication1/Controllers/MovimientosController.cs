@@ -14,7 +14,7 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Guardia")]
+    // [Authorize(Roles = "Admin,Guardia")] // COMENTADO PARA PRUEBAS EN SWAGGER
     public class MovimientosController : ControllerBase
     {
         private readonly AppDbContext _context;

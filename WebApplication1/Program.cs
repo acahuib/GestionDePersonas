@@ -21,6 +21,9 @@ builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValida
 // Servicio compartido de movimientos
 builder.Services.AddScoped<WebApplication1.Services.MovimientosService>();
 
+// Servicio para detalles de salidas
+builder.Services.AddScoped<WebApplication1.Services.SalidasService>();
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

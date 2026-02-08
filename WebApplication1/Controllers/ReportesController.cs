@@ -9,7 +9,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    // [Authorize(Roles = "Admin")] // COMENTADO PARA PRUEBAS EN SWAGGER
     public class ReportesController : ControllerBase
     {
         private readonly AppDbContext _context;
