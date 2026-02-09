@@ -46,7 +46,17 @@ namespace WebApplication1.Controllers
                 if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
                     return BadRequest("Descripción de ocurrencia es requerida");
 
+                // Validar que solo se envía uno de horaIngreso O horaSalida
+                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
+                    return BadRequest("Ocurrencias: solo envíe horaIngreso O horaSalida, no ambos");
+
+                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
+                    return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
+
                 var usuarioId = ExtractUsuarioIdFromToken();
+
+                // Determinar tipo de movimiento basado en cuál hora se proporciona
+                string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
 
                 // Determinar DNI: usar proporcionado o generar ficticio
                 string dni = string.IsNullOrWhiteSpace(dto.Dni)
@@ -68,26 +78,50 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // Registrar Movimiento
-                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                    dni,
-                    1,
-                    dto.HoraIngreso.HasValue ? "Entrada" : "Salida",
-                    usuarioId);
+                // Obtener último movimiento para verificar auto-corrección si es necesario
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dni && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
 
-                if (movimiento == null)
+                // Para Ocurrencias: auto-corregir si último movimiento NO coincide con tipo esperado
+                // Esta es lógica flexible: si envía horaIngreso→Entrada, si envía horaSalida→Salida
+                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
+                {
+                    // Crear nuevo movimiento con el tipo correcto
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dni,
+                        1,
+                        tipoMovimiento,
+                        usuarioId);
+                }
+                else if (ultimoMovimiento == null)
+                {
+                    // Si no existe movimiento previo, crear uno
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dni,
+                        1,
+                        tipoMovimiento,
+                        usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
+
+                var fechaActual = DateTime.Now.Date;
 
                 // Crear SalidaDetalle
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
-                    movimiento.Id,
+                    ultimoMovimiento.Id,
                     "Ocurrencias",
                     new
                     {
                         dni = dni,
                         nombre = dto.Nombre,
                         horaIngreso = dto.HoraIngreso,
+                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
                         horaSalida = dto.HoraSalida,
+                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         ocurrencia = dto.Ocurrencia
                     },
                     usuarioId);
@@ -152,8 +186,14 @@ namespace WebApplication1.Controllers
                         horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null 
                             ? hi.GetDateTime() 
                             : (DateTime?)null,
+                        fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null 
+                            ? fi.GetDateTime() 
+                            : (DateTime?)null,
                         horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null 
                             ? hs.GetDateTime() 
+                            : (DateTime?)null,
+                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null 
+                            ? fs.GetDateTime() 
                             : (DateTime?)null,
                         ocurrencia = root.GetProperty("ocurrencia").GetString()
                     };
@@ -191,18 +231,23 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
+                    var fechaActual = DateTime.Now.Date;
+                    
+                    var horaIngresoActual = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null;
+                    var fechaIngresoActual = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null;
+                    var horaSalidaActual = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null;
+                    var fechaSalidaActual = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null;
+
                     var datosActualizados = new
                     {
                         dni = root.GetProperty("dni").GetString(),
                         nombre = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null 
                             ? n.GetString() 
                             : null,
-                        horaIngreso = dto.HoraIngreso ?? (root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null 
-                            ? hi.GetDateTime() 
-                            : (DateTime?)null),
-                        horaSalida = dto.HoraSalida ?? (root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null 
-                            ? hs.GetDateTime() 
-                            : (DateTime?)null),
+                        horaIngreso = dto.HoraIngreso ?? horaIngresoActual,
+                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : fechaIngresoActual,
+                        horaSalida = dto.HoraSalida ?? horaSalidaActual,
+                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual,
                         ocurrencia = dto.Ocurrencia ?? root.GetProperty("ocurrencia").GetString()
                     };
 

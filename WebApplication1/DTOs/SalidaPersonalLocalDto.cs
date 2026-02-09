@@ -13,7 +13,7 @@ namespace WebApplication1.DTOs
     {
         public required string Dni { get; set; }
         public required string NombreApellidos { get; set; }
-        public required DateTime HoraIngreso { get; set; } // Entrada mañana
+        public DateTime? HoraIngreso { get; set; } // Entrada mañana
         
         // Almuerzo opcional
         public DateTime? HoraSalidaAlmuerzo { get; set; }

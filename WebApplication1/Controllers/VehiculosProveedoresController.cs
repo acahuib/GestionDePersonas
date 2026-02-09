@@ -19,11 +19,13 @@ namespace WebApplication1.Controllers
     {
         private readonly AppDbContext _context;
         private readonly SalidasService _salidasService;
+        private readonly MovimientosService _movimientosService;
 
-        public VehiculosProveedoresController(AppDbContext context, SalidasService salidasService)
+        public VehiculosProveedoresController(AppDbContext context, SalidasService salidasService, MovimientosService movimientosService)
         {
             _context = context;
             _salidasService = salidasService;
+            _movimientosService = movimientosService;
         }
 
         // ======================================================
@@ -33,44 +35,79 @@ namespace WebApplication1.Controllers
         [HttpPost]
         public async Task<IActionResult> RegistrarIngreso(SalidaVehiculosProveedoresDto dto)
         {
-            var ultimoMovimiento = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
-
-            if (ultimoMovimiento == null)
-                return BadRequest("No existe movimiento de entrada en garita para este DNI.");
-
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
-
-            var salida = await _salidasService.CrearSalidaDetalle(
-                ultimoMovimiento.Id,
-                "VehiculosProveedores",
-                new
-                {
-                    dni = dto.Dni,
-                    nombreApellidos = dto.NombreApellidos,
-                    proveedor = dto.Proveedor,
-                    placa = dto.Placa,
-                    tipo = dto.Tipo,
-                    lote = dto.Lote,
-                    cantidad = dto.Cantidad,
-                    procedencia = dto.Procedencia,
-                    horaIngreso = dto.HoraIngreso,
-                    horaSalida = dto.HoraSalida,
-                    observaciones = dto.Observaciones
-                },
-                usuarioId
-            );
-
-            return Ok(new
+            try
             {
-                mensaje = "Vehiculo de proveedor registrado",
-                salidaId = salida.Id,
-                tipoSalida = "VehiculosProveedores",
-                estado = "Pendiente de salida"
-            });
+                // Validar que solo se envía UNO: horaIngreso O horaSalida
+                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
+                    return BadRequest("VehiculosProveedores: solo envíe horaIngreso O horaSalida, no ambos");
+
+                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
+                    return BadRequest("VehiculosProveedores: debe enviar horaIngreso O horaSalida");
+
+                // Determinar tipo de movimiento basado en cuál campo se proporciona
+                string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+                // Obtener último movimiento
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
+
+                // Auto-corrección: si hay movimiento previo y tipo no coincide, crear nuevo con tipo correcto
+                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
+                {
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+                else if (ultimoMovimiento == null)
+                {
+                    // Si no existe movimiento, crear con tipo determinado
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
+                    return StatusCode(500, "Error al registrar movimiento");
+
+                var fechaActual = DateTime.Now.Date;
+                
+                var salida = await _salidasService.CrearSalidaDetalle(
+                    ultimoMovimiento.Id,
+                    "VehiculosProveedores",
+                    new
+                    {
+                        dni = dto.Dni,
+                        nombreApellidos = dto.NombreApellidos,
+                        proveedor = dto.Proveedor,
+                        placa = dto.Placa,
+                        tipo = dto.Tipo,
+                        lote = dto.Lote,
+                        cantidad = dto.Cantidad,
+                        procedencia = dto.Procedencia,
+                        horaIngreso = dto.HoraIngreso,
+                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
+                        horaSalida = dto.HoraSalida,
+                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
+                        observaciones = dto.Observaciones
+                    },
+                    usuarioId
+                );
+
+                return Ok(new
+                {
+                    mensaje = "Vehiculo de proveedor registrado",
+                    salidaId = salida.Id,
+                    tipoSalida = "VehiculosProveedores",
+                    estado = "Pendiente de salida"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
 
         // ======================================================
@@ -89,6 +126,8 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
+            var fechaActual = DateTime.Now.Date;
+            
             var datosActualizados = new
             {
                 dni = datosActuales.GetProperty("dni").GetString(),
@@ -100,7 +139,9 @@ namespace WebApplication1.Controllers
                 cantidad = datosActuales.GetProperty("cantidad").GetString(),
                 procedencia = datosActuales.GetProperty("procedencia").GetString(),
                 horaIngreso = datosActuales.GetProperty("horaIngreso").GetDateTime(),
+                fechaIngreso = datosActuales.GetProperty("fechaIngreso").GetDateTime(),
                 horaSalida = dto.HoraSalida,
+                fechaSalida = fechaActual,
                 observaciones = dto.Observaciones ?? datosActuales.GetProperty("observaciones").GetString()
             };
 

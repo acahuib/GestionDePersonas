@@ -19,11 +19,13 @@ namespace WebApplication1.Controllers
     {
         private readonly AppDbContext _context;
         private readonly SalidasService _salidasService;
+        private readonly MovimientosService _movimientosService;
 
-        public VehiculoEmpresaController(AppDbContext context, SalidasService salidasService)
+        public VehiculoEmpresaController(AppDbContext context, SalidasService salidasService, MovimientosService movimientosService)
         {
             _context = context;
             _salidasService = salidasService;
+            _movimientosService = movimientosService;
         }
 
         // ======================================================
@@ -33,42 +35,77 @@ namespace WebApplication1.Controllers
         [HttpPost]
         public async Task<IActionResult> RegistrarSalida(SalidaVehiculoEmpresaDto dto)
         {
-            var ultimoMovimiento = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
-
-            if (ultimoMovimiento == null)
-                return BadRequest("No existe movimiento de salida en garita para este DNI.");
-
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
-
-            var salida = await _salidasService.CrearSalidaDetalle(
-                ultimoMovimiento.Id,
-                "VehiculoEmpresa",
-                new
-                {
-                    conductor = dto.Conductor,
-                    placa = dto.Placa,
-                    kmSalida = dto.KmSalida,
-                    kmIngreso = dto.KmIngreso,
-                    origen = dto.Origen,
-                    destino = dto.Destino,
-                    horaSalida = dto.HoraSalida,
-                    horaIngreso = dto.HoraIngreso,
-                    observacion = dto.Observacion
-                },
-                usuarioId
-            );
-
-            return Ok(new
+            try
             {
-                mensaje = "Salida de vehiculo de empresa registrada",
-                salidaId = salida.Id,
-                tipoSalida = "VehiculoEmpresa",
-                estado = "Pendiente de ingreso"
-            });
+                // Validar que solo se envía UNO: horaIngreso O horaSalida
+                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
+                    return BadRequest("VehiculoEmpresa: solo envíe horaSalida O horaIngreso, no ambos");
+
+                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
+                    return BadRequest("VehiculoEmpresa: debe enviar horaSalida O horaIngreso");
+
+                // Determinar tipo de movimiento basado en cuál campo se proporciona
+                string tipoMovimiento = dto.HoraSalida.HasValue ? "Salida" : "Entrada";
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+                // Obtener último movimiento
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
+
+                // Auto-corrección: si hay movimiento previo y tipo no coincide, crear nuevo con tipo correcto
+                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
+                {
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+                else if (ultimoMovimiento == null)
+                {
+                    // Si no existe movimiento, crear con tipo determinado
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
+                    return StatusCode(500, "Error al registrar movimiento");
+
+                var fechaActual = DateTime.Now.Date;
+
+                var salida = await _salidasService.CrearSalidaDetalle(
+                    ultimoMovimiento.Id,
+                    "VehiculoEmpresa",
+                    new
+                    {
+                        conductor = dto.Conductor,
+                        placa = dto.Placa,
+                        kmSalida = dto.KmSalida,
+                        kmIngreso = dto.KmIngreso,
+                        origen = dto.Origen,
+                        destino = dto.Destino,
+                        horaSalida = dto.HoraSalida,
+                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
+                        horaIngreso = dto.HoraIngreso,
+                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
+                        observacion = dto.Observacion
+                    },
+                    usuarioId
+                );
+
+                return Ok(new
+                {
+                    mensaje = "Salida de vehiculo de empresa registrada",
+                    salidaId = salida.Id,
+                    tipoSalida = "VehiculoEmpresa",
+                    estado = "Pendiente de ingreso"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
 
         // ======================================================
@@ -87,6 +124,8 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
+            var fechaActual = DateTime.Now.Date;
+
             var datosActualizados = new
             {
                 conductor = datosActuales.GetProperty("conductor").GetString(),
@@ -96,7 +135,9 @@ namespace WebApplication1.Controllers
                 origen = datosActuales.GetProperty("origen").GetString(),
                 destino = datosActuales.GetProperty("destino").GetString(),
                 horaSalida = datosActuales.GetProperty("horaSalida").GetDateTime(),
+                fechaSalida = datosActuales.GetProperty("fechaSalida").GetDateTime(),
                 horaIngreso = dto.HoraIngreso,
+                fechaIngreso = fechaActual,
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
 

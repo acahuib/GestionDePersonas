@@ -18,7 +18,7 @@ namespace WebApplication1.DTOs
         public required string Lote { get; set; }
         public required string Cantidad { get; set; }
         public required string Procedencia { get; set; }
-        public required DateTime HoraIngreso { get; set; }
+        public DateTime? HoraIngreso { get; set; }
         
         // Opcional: Se llena cuando sale (via PUT)
         public DateTime? HoraSalida { get; set; }

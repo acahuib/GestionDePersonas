@@ -16,7 +16,7 @@ namespace WebApplication1.DTOs
         public required int KmSalida { get; set; }
         public required string Origen { get; set; }
         public required string Destino { get; set; }
-        public required DateTime HoraSalida { get; set; }
+        public DateTime? HoraSalida { get; set; }
         
         // Opcionales: Se llenan cuando ingresa el vehículo (via PUT)
         public int? KmIngreso { get; set; }

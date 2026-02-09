@@ -15,7 +15,7 @@ namespace WebApplication1.DTOs
         public required string Apellidos { get; set; }
         public required string Procedencia { get; set; }
         public required string Destino { get; set; }
-        public required DateTime HoraIngreso { get; set; }
+        public DateTime? HoraIngreso { get; set; }
         
         // Opcional: Se llena cuando el proveedor se va (via PUT)
         public DateTime? HoraSalida { get; set; }

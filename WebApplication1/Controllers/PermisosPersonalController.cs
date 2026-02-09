@@ -56,8 +56,15 @@ namespace WebApplication1.Controllers
                 if (string.IsNullOrWhiteSpace(dto.QuienAutoriza))
                     return BadRequest("QuienAutoriza es requerido");
 
-                if (dto.HoraSalida == default)
-                    return BadRequest("Hora de salida es requerida");
+                // Validar que solo se envía UNO: horaSalida O horaIngreso
+                if (dto.HoraSalida.HasValue && dto.HoraIngreso.HasValue)
+                    return BadRequest("SalidasPermisosPersonal: solo envíe horaSalida O horaIngreso, no ambos");
+
+                if (!dto.HoraSalida.HasValue && !dto.HoraIngreso.HasValue)
+                    return BadRequest("SalidasPermisosPersonal: debe enviar horaSalida O horaIngreso");
+
+                // Determinar tipo de movimiento basado en cuál campo se proporciona
+                string tipoMovimiento = dto.HoraSalida.HasValue ? "Salida" : "Entrada";
 
                 // Verificar que la persona existe
                 var persona = await _context.Personas.FindAsync(dto.Dni);
@@ -67,25 +74,47 @@ namespace WebApplication1.Controllers
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
 
-                // Registrar movimiento de salida
-                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                    dto.Dni,
-                    1,
-                    "Salida",
-                    usuarioId);
+                // Obtener último movimiento
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
 
-                if (movimiento == null)
+                // Auto-corrección: si hay movimiento previo y tipo no coincide, crear nuevo con tipo correcto
+                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
+                {
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni,
+                        1,
+                        tipoMovimiento,
+                        usuarioId);
+                }
+                else if (ultimoMovimiento == null)
+                {
+                    // Si no existe movimiento, crear con tipo determinado
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni,
+                        1,
+                        tipoMovimiento,
+                        usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
+
+                var fechaActual = DateTime.Now.Date;
 
                 // Crear registro de salida con datos JSON
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
-                    movimiento.Id,
+                    ultimoMovimiento.Id,
                     "SalidasPermisosPersonal",
                     new
                     {
                         dni = dto.Dni,
                         horaSalida = dto.HoraSalida,
+                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         horaIngreso = dto.HoraIngreso,
+                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
                         nombre = dto.Nombre,
                         deDonde = dto.DeDonde,
                         personal = dto.Personal,
@@ -136,6 +165,8 @@ namespace WebApplication1.Controllers
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
 
+                var fechaActual = DateTime.Now.Date;
+
                 // Deserializar datos actuales
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
@@ -145,7 +176,9 @@ namespace WebApplication1.Controllers
                     {
                         dni = root.GetProperty("dni").GetString(),
                         horaSalida = root.GetProperty("horaSalida").GetDateTime(),
+                        fechaSalida = root.GetProperty("fechaSalida").GetDateTime(),
                         horaIngreso = dto.HoraIngreso,
+                        fechaIngreso = fechaActual,
                         nombre = root.GetProperty("nombre").GetString(),
                         deDonde = root.GetProperty("deDonde").GetString(),
                         personal = root.GetProperty("personal").GetString(),

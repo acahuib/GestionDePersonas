@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Security.Claims;
@@ -21,11 +23,13 @@ namespace WebApplication1.Controllers
     [Authorize(Roles = "Administrador,Guardia")]
     public class PersonalLocalController : ControllerBase
     {
+        private readonly AppDbContext _context;
         private readonly MovimientosService _movimientosService;
         private readonly SalidasService _salidaService;
 
-        public PersonalLocalController(MovimientosService movimientosService, SalidasService salidaService)
+        public PersonalLocalController(AppDbContext context, MovimientosService movimientosService, SalidasService salidaService)
         {
+            _context = context;
             _movimientosService = movimientosService;
             _salidaService = salidaService;
         }
@@ -43,18 +47,42 @@ namespace WebApplication1.Controllers
                 if (string.IsNullOrWhiteSpace(dto.Dni) || string.IsNullOrWhiteSpace(dto.NombreApellidos))
                     return BadRequest("DNI y Nombres/Apellidos son requeridos");
 
-                if (dto.HoraIngreso == default)
-                    return BadRequest("Hora de ingreso es requerida");
+                // Validar que solo se envía UNO: horaIngreso O horaSalida
+                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
+                    return BadRequest("PersonalLocal: solo envíe horaIngreso O horaSalida, no ambos");
+
+                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
+                    return BadRequest("PersonalLocal: debe enviar horaIngreso O horaSalida");
+
+                // Determinar tipo de movimiento basado en cuál campo se proporciona
+                string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
 
                 // Extract usuarioId from token (guardia)
                 var usuarioId = ExtractUsuarioIdFromToken();
 
-                // Registrar movimiento de entrada
-                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                    dto.Dni, 1, "Entrada", usuarioId);
+                // Obtener último movimiento
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
 
-                if (movimiento == null)
+                // Auto-corrección: si hay movimiento previo y tipo no coincide, crear nuevo con tipo correcto
+                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
+                {
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+                else if (ultimoMovimiento == null)
+                {
+                    // Si no existe movimiento, crear con tipo determinado
+                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
+
+                var fechaActual = DateTime.Now.Date;
 
                 // Serializar datos del personal local
                 var datosPersonalLocal = new
@@ -62,15 +90,19 @@ namespace WebApplication1.Controllers
                     dni = dto.Dni,
                     nombreApellidos = dto.NombreApellidos,
                     horaIngreso = dto.HoraIngreso,
-                    horaSalidaAlmuerzo = dto.HoraSalidaAlmuerzo,
-                    horaEntradaAlmuerzo = dto.HoraEntradaAlmuerzo,
+                    fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
+                    horaSalidaAlmuerzo = (DateTime?)null,
+                    fechaSalidaAlmuerzo = (DateTime?)null,
+                    horaEntradaAlmuerzo = (DateTime?)null,
+                    fechaEntradaAlmuerzo = (DateTime?)null,
                     horaSalida = dto.HoraSalida,
+                    fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                     observaciones = dto.Observaciones
                 };
 
                 // Crear registro de salida con datos JSON
                 var salidaDetalle = await _salidaService.CrearSalidaDetalle(
-                    movimiento.Id,
+                    ultimoMovimiento.Id,
                     "PersonalLocal",
                     datosPersonalLocal,
                     usuarioId);
@@ -105,6 +137,8 @@ namespace WebApplication1.Controllers
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
 
+                var fechaActual = DateTime.Now.Date;
+
                 // Obtener datos actuales y actualizar solo horaSalidaAlmuerzo
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
@@ -115,9 +149,13 @@ namespace WebApplication1.Controllers
                         dni = root.GetProperty("dni").GetString(),
                         nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
                         horaIngreso = root.GetProperty("horaIngreso").GetDateTime(),
+                        fechaIngreso = root.GetProperty("fechaIngreso").GetDateTime(),
                         horaSalidaAlmuerzo = dto.HoraSalidaAlmuerzo,
+                        fechaSalidaAlmuerzo = fechaActual,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
+                        fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
                         horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
+                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
@@ -150,6 +188,8 @@ namespace WebApplication1.Controllers
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
 
+                var fechaActual = DateTime.Now.Date;
+
                 // Obtener datos actuales y actualizar solo horaEntradaAlmuerzo
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
@@ -160,9 +200,13 @@ namespace WebApplication1.Controllers
                         dni = root.GetProperty("dni").GetString(),
                         nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
                         horaIngreso = root.GetProperty("horaIngreso").GetDateTime(),
+                        fechaIngreso = root.GetProperty("fechaIngreso").GetDateTime(),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
+                        fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = dto.HoraEntradaAlmuerzo,
+                        fechaEntradaAlmuerzo = fechaActual,
                         horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
+                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
@@ -195,21 +239,27 @@ namespace WebApplication1.Controllers
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
 
+                var fechaActual = DateTime.Now.Date;
+
                 // Obtener datos actuales y actualizar salida final
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
                     var dni = root.GetProperty("dni").GetString();
-
+                
                     var datosActualizados = new
                     {
                         dni = dni,
                         nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
                         horaIngreso = root.GetProperty("horaIngreso").GetDateTime(),
+                        fechaIngreso = root.GetProperty("fechaIngreso").GetDateTime(),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
+                        fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
+                        fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
                         horaSalida = dto.HoraSalida,
+                        fechaSalida = fechaActual,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
