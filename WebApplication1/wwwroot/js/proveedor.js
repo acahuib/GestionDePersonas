@@ -95,7 +95,7 @@ async function cargarActivos() {
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #666;">No hay proveedores activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay proveedores activos en este momento</p>';
             return;
         }
 
@@ -127,18 +127,19 @@ async function cargarActivos() {
         });
 
         if (proveedores.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #666;">No hay proveedores activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay proveedores activos en este momento</p>';
             return;
         }
 
-        let html = '<table style="width: 100%; border-collapse: collapse;">';
-        html += '<thead><tr style="background: #007bff; color: white;">';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">DNI</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Nombre</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Procedencia</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Destino</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Hora Ingreso</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Acciones</th>';
+        let html = '<div class="table-wrapper">';
+        html += '<table class="table">';
+        html += '<thead><tr>';
+        html += '<th>DNI</th>';
+        html += '<th>Nombre</th>';
+        html += '<th>Procedencia</th>';
+        html += '<th>Destino</th>';
+        html += '<th>Hora Ingreso</th>';
+        html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
         proveedores.forEach(p => {
@@ -147,21 +148,21 @@ async function cargarActivos() {
             const nombreCompleto = `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
             
             html += '<tr>';
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.dni || 'N/A'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${nombreCompleto}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.procedencia || 'N/A'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.destino || 'N/A'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${horaIngreso}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">`;
-            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}')" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Registrar Salida</button>`;
-            html += `</td></tr>`;
+            html += `<td>${datos.dni || 'N/A'}</td>`;
+            html += `<td>${nombreCompleto}</td>`;
+            html += `<td>${datos.procedencia || 'N/A'}</td>`;
+            html += `<td>${datos.destino || 'N/A'}</td>`;
+            html += `<td>${horaIngreso}</td>`;
+            html += '<td>';
+            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+            html += '</td></tr>';
         });
 
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p style="text-align: center; color: red;">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
 }
 

@@ -9,21 +9,21 @@
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header">
         <h2>📋 Cuaderno de Proveedores (Sin Vehículo)</h2>
-        <div>
-            <a href="proveedor_historial.html" style="margin-right: 10px; text-decoration: none;">
-                <button>📚 Ver Historial</button>
+        <div class="header-actions">
+            <a href="proveedor_historial.html" class="card-link">
+                <button class="btn-inline">📚 Ver Historial</button>
             </a>
             <span id="usuario-info"></span>
-            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesión</button>
+            <button onclick="cerrarSesion()" class="btn-inline">Cerrar Sesión</button>
         </div>
     </div>
 
     <hr>
 
     <!-- FORMULARIO DE REGISTRO -->
-    <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+    <div class="form-card">
         <h3>Registrar Entrada</h3>
 
         <label>DNI *</label>
@@ -42,10 +42,10 @@
         <input type="text" id="destino" placeholder="Destino">
 
         <label>Observacion</label>
-        <textarea id="observacion" placeholder="Observacion (opcional)" rows="4" style="width: 100%;"></textarea>
+        <textarea id="observacion" placeholder="Observacion (opcional)" rows="4"></textarea>
 
-        <div style="margin-top: 15px;">
-            <button onclick="registrarEntrada()" style="background: #28a745; width: 100%;">
+        <div>
+            <button onclick="registrarEntrada()" class="btn-success btn-block">
                 ✅ Registrar ENTRADA
             </button>
         </div>
@@ -55,13 +55,13 @@
 
     <!-- LISTA DE PROVEEDORES ACTIVOS -->
     <div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="toolbar">
             <h3>Proveedores Activos (Sin salida)</h3>
-            <button onclick="cargarActivos()" style="padding: 5px 15px;">🔄 Actualizar</button>
+            <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
         </div>
         
         <div id="lista-activos">
-            <p style="text-align: center; color: #666;">Cargando...</p>
+            <p class="text-center muted">Cargando...</p>
         </div>
     </div>
 </div>

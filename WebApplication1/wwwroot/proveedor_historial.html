@@ -9,28 +9,28 @@
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header">
         <h2>📚 Historial de Proveedores</h2>
-        <div>
+        <div class="header-actions">
             <span id="usuario-info"></span>
-            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesion</button>
+            <button onclick="cerrarSesion()" class="btn-inline">Cerrar Sesion</button>
         </div>
     </div>
 
     <hr>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <p style="margin: 0;">Todos los registros realizados</p>
-        <div>
-            <button onclick="cargarHistorial()" style="padding: 5px 15px;">🔄 Actualizar</button>
-            <a href="proveedor.html" style="text-decoration: none; margin-left: 8px;">
-                <button>Volver</button>
+    <div class="toolbar">
+        <p class="m-0">Todos los registros realizados</p>
+        <div class="toolbar-actions">
+            <button onclick="cargarHistorial()" class="btn-inline btn-small">🔄 Actualizar</button>
+            <a href="proveedor.html" class="card-link">
+                <button class="btn-inline">Volver</button>
             </a>
         </div>
     </div>
 
     <div id="tabla-historial">
-        <p style="text-align: center; color: #666;">Cargando...</p>
+        <p class="text-center muted">Cargando...</p>
     </div>
 </div>
 

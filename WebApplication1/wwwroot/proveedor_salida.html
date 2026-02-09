@@ -9,17 +9,17 @@
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header">
         <h2>❌ Registrar Salida de Proveedor</h2>
-        <div>
+        <div class="header-actions">
             <span id="usuario-info"></span>
-            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesion</button>
+            <button onclick="cerrarSesion()" class="btn-inline">Cerrar Sesion</button>
         </div>
     </div>
 
     <hr>
 
-    <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+    <div class="form-card">
         <h3>Datos del Proveedor</h3>
 
         <label>DNI</label>
@@ -38,15 +38,13 @@
         <input type="text" id="destino" readonly>
 
         <label>Observacion (editable)</label>
-        <textarea id="observacion" placeholder="Observacion (opcional)" rows="4" style="width: 100%;"></textarea>
+        <textarea id="observacion" placeholder="Observacion (opcional)" rows="4"></textarea>
 
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button onclick="registrarSalida()" style="background: #dc3545; flex: 1;">
-                ❌ Registrar SALIDA
-            </button>
-            <button onclick="volver()" style="background: #6c757d; flex: 1;">
-                Volver
-            </button>
+        <div>
+            <button onclick="registrarSalida()" class="btn-danger btn-block">❌ Registrar SALIDA</button>
+        </div>
+        <div>
+            <button onclick="volver()" class="btn-secondary btn-block">Volver</button>
         </div>
 
         <p id="mensaje"></p>

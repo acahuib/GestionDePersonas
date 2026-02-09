@@ -15,7 +15,7 @@ async function cargarHistorial() {
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #666;">No hay registros en el historial</p>';
+            container.innerHTML = '<p class="text-center muted">No hay registros en el historial</p>';
             return;
         }
 
@@ -89,35 +89,35 @@ async function cargarHistorial() {
 
         const filas = sesiones;
 
-        let html = '<div style="overflow-x: auto;">';
-        html += '<table style="width: 100%; border-collapse: collapse;">';
-        html += '<thead><tr style="background: #007bff; color: white;">';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">DNI</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Nombre</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Procedencia</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Destino</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Fecha Ingreso</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Hora Ingreso</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Guardia Ingreso</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Fecha Salida</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Hora Salida</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Guardia Salida</th>';
-        html += '<th style="padding: 10px; border: 1px solid #ddd;">Observacion</th>';
+        let html = '<div class="table-wrapper">';
+        html += '<table class="table">';
+        html += '<thead><tr>';
+        html += '<th>DNI</th>';
+        html += '<th>Nombre</th>';
+        html += '<th>Procedencia</th>';
+        html += '<th>Destino</th>';
+        html += '<th>Fecha Ingreso</th>';
+        html += '<th>Hora Ingreso</th>';
+        html += '<th>Guardia Ingreso</th>';
+        html += '<th>Fecha Salida</th>';
+        html += '<th>Hora Salida</th>';
+        html += '<th>Guardia Salida</th>';
+        html += '<th>Observacion</th>';
         html += '</tr></thead><tbody>';
 
         filas.forEach(f => {
             html += '<tr>';
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.dni}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.nombres}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.procedencia}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.destino}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.fechaIngreso}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.horaIngreso}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.guardiaIngreso}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.fechaSalida}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.horaSalida}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd;">${f.guardiaSalida}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; white-space: pre-wrap;">${f.observacion}</td>`;
+            html += `<td>${f.dni}</td>`;
+            html += `<td>${f.nombres}</td>`;
+            html += `<td>${f.procedencia}</td>`;
+            html += `<td>${f.destino}</td>`;
+            html += `<td>${f.fechaIngreso}</td>`;
+            html += `<td>${f.horaIngreso}</td>`;
+            html += `<td>${f.guardiaIngreso}</td>`;
+            html += `<td>${f.fechaSalida}</td>`;
+            html += `<td>${f.horaSalida}</td>`;
+            html += `<td>${f.guardiaSalida}</td>`;
+            html += `<td class="cell-wrap">${f.observacion}</td>`;
             html += '</tr>';
         });
 
@@ -125,6 +125,6 @@ async function cargarHistorial() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p style="text-align: center; color: red;">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
 }
