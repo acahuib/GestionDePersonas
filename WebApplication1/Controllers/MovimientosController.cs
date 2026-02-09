@@ -175,6 +175,12 @@ namespace WebApplication1.Controllers
                     estaAbierto = false;
                     motivo = "Permiso registrado";
                 }
+                else if (salida.TipoSalida == "SalidasPermisosPersonal")
+                {
+                    // SalidasPermisosPersonal esta abierto si no tiene horaIngreso
+                    estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
+                    motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
+                }
                 else if (salida.TipoSalida == "PersonalLocal")
                 {
                     // PersonalLocal esta abierto si no tiene horaSalida
