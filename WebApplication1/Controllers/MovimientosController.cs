@@ -181,6 +181,14 @@ namespace WebApplication1.Controllers
                     estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
                 }
+                else if (salida.TipoSalida == "Ocurrencias")
+                {
+                    // Ocurrencias esta abierto si le falta o ingreso o salida
+                    bool tieneIngreso = datos.ContainsKey("horaIngreso") && !string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
+                    bool tieneSalida = datos.ContainsKey("horaSalida") && !string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
+                    estaAbierto = !tieneIngreso || !tieneSalida;
+                    motivo = estaAbierto ? "Falta completar horarios" : "Cerrado";
+                }
                 else if (salida.TipoSalida == "PersonalLocal")
                 {
                     // PersonalLocal esta abierto si no tiene horaSalida
