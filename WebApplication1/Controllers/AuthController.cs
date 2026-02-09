@@ -38,7 +38,8 @@ namespace WebApplication1.Controllers
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, usuario.UsuarioLogin),
-                new Claim(ClaimTypes.Role, usuario.Rol)
+                new Claim(ClaimTypes.Role, usuario.Rol),
+                new Claim("NombreCompleto", usuario.NombreCompleto)
             };
 
             var jwtKey = _config["Jwt:Key"];
@@ -61,7 +62,8 @@ namespace WebApplication1.Controllers
             return Ok(new
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
-                rol = usuario.Rol
+                rol = usuario.Rol,
+                nombreCompleto = usuario.NombreCompleto
             });
         }
     }

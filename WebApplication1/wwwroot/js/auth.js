@@ -12,8 +12,24 @@ function verificarAutenticacion() {
     // Mostrar info del usuario si existe el elemento
     const usuarioInfo = document.getElementById("usuario-info");
     if (usuarioInfo) {
-        const usuario = localStorage.getItem("usuario") || "Usuario";
-        usuarioInfo.innerText = `👤 ${usuario} (${rol})`;
+        // Intentar obtener nombreCompleto desde localStorage o decodificar JWT
+        let nombreUsuario = localStorage.getItem("nombreCompleto");
+        
+        if (!nombreUsuario) {
+            // Fallback: decodificar JWT para obtener NombreCompleto
+            try {
+                const parts = token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1]));
+                    nombreUsuario = payload.NombreCompleto || payload.name || "Usuario";
+                }
+            } catch (e) {
+                console.error("Error decodificando JWT:", e);
+            }
+        }
+        
+        nombreUsuario = nombreUsuario || "Usuario";
+        usuarioInfo.innerText = `Bienvenido ${nombreUsuario}`;
         usuarioInfo.style.fontWeight = "bold";
         usuarioInfo.style.color = "#007bff";
     }

@@ -32,6 +32,7 @@ async function login() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("rol", data.rol);
         localStorage.setItem("usuario", usuario);
+        localStorage.setItem("nombreCompleto", data.nombreCompleto || usuario);
 
         // Redirigir al menú principal
         window.location.href = "index.html";

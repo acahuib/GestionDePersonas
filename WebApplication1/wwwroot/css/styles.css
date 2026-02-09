@@ -202,12 +202,16 @@ button:hover {
    =============================== */
 .table-wrapper {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    border: 1px solid #ddd;
+    border-radius: 3px;
 }
 
 .table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 0;
 }
 
 .table th {
@@ -215,6 +219,9 @@ button:hover {
     color: white;
     padding: 10px;
     border: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .table td {
@@ -225,6 +232,15 @@ button:hover {
 
 .cell-wrap {
     white-space: pre-wrap;
+    max-width: 300px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-height: 150px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    padding: 8px;
+    border-radius: 3px;
+    text-align: left;
 }
 
 /* ===============================
@@ -244,6 +260,44 @@ button:hover {
 
 .ml-10 {
     margin-left: 10px;
+}
+
+/* ===============================
+   PAGINACIÓN
+   =============================== */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.pagination button {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #2980b9;
+    color: white;
+    border-color: #2980b9;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 14px;
 }
 
 .mr-10 {

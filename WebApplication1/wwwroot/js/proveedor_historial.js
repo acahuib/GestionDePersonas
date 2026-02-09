@@ -2,6 +2,10 @@
 // HISTORIAL DE PROVEEDORES (Sin Vehiculo)
 // =========================================
 
+let todasLasSesiones = [];
+let paginaActual = 1;
+const REGISTROS_POR_PAGINA = 10;
+
 async function cargarHistorial() {
     const container = document.getElementById("tabla-historial");
 
@@ -27,7 +31,7 @@ async function cargarHistorial() {
         const ordenadas = [...salidas].sort((a, b) => {
             const fa = a.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
             const fb = b.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
-            return fa - fb;
+            return fa - fb;  // ASCENDENTE: más antigua primero (para emparejamiento correcto)
         });
 
         ordenadas.forEach(s => {
@@ -51,7 +55,8 @@ async function cargarHistorial() {
                     fechaIngreso: tieneValor(datos.fechaIngreso) ? new Date(datos.fechaIngreso).toLocaleDateString('es-PE') : "N/A",
                     horaIngreso: tieneValor(datos.horaIngreso) ? new Date(datos.horaIngreso).toLocaleString('es-PE') : "N/A",
                     fechaSalida: "N/A",
-                    horaSalida: "N/A"
+                    horaSalida: "N/A",
+                    timestamp: new Date(s.fechaCreacion).getTime()
                 };
 
                 sesiones.push(sesion);
@@ -64,6 +69,7 @@ async function cargarHistorial() {
                     abierta.fechaSalida = tieneValor(datos.fechaSalida) ? new Date(datos.fechaSalida).toLocaleDateString('es-PE') : "N/A";
                     abierta.horaSalida = tieneValor(datos.horaSalida) ? new Date(datos.horaSalida).toLocaleString('es-PE') : "N/A";
                     abierta.guardiaSalida = tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A";
+                    abierta.timestamp = new Date(s.fechaCreacion).getTime();  // Actualizar timestamp
                     if (tieneValor(datos.observacion)) {
                         abierta.observacion = datos.observacion;
                     }
@@ -80,51 +86,82 @@ async function cargarHistorial() {
                         fechaIngreso: "N/A",
                         horaIngreso: "N/A",
                         fechaSalida: tieneValor(datos.fechaSalida) ? new Date(datos.fechaSalida).toLocaleDateString('es-PE') : "N/A",
-                        horaSalida: tieneValor(datos.horaSalida) ? new Date(datos.horaSalida).toLocaleString('es-PE') : "N/A"
+                        horaSalida: tieneValor(datos.horaSalida) ? new Date(datos.horaSalida).toLocaleString('es-PE') : "N/A",
+                        timestamp: new Date(s.fechaCreacion).getTime()
                     };
                     sesiones.push(sesion);
                 }
             }
         });
 
-        const filas = sesiones;
-
-        let html = '<div class="table-wrapper">';
-        html += '<table class="table">';
-        html += '<thead><tr>';
-        html += '<th>DNI</th>';
-        html += '<th>Nombre</th>';
-        html += '<th>Procedencia</th>';
-        html += '<th>Destino</th>';
-        html += '<th>Fecha Ingreso</th>';
-        html += '<th>Hora Ingreso</th>';
-        html += '<th>Guardia Ingreso</th>';
-        html += '<th>Fecha Salida</th>';
-        html += '<th>Hora Salida</th>';
-        html += '<th>Guardia Salida</th>';
-        html += '<th>Observacion</th>';
-        html += '</tr></thead><tbody>';
-
-        filas.forEach(f => {
-            html += '<tr>';
-            html += `<td>${f.dni}</td>`;
-            html += `<td>${f.nombres}</td>`;
-            html += `<td>${f.procedencia}</td>`;
-            html += `<td>${f.destino}</td>`;
-            html += `<td>${f.fechaIngreso}</td>`;
-            html += `<td>${f.horaIngreso}</td>`;
-            html += `<td>${f.guardiaIngreso}</td>`;
-            html += `<td>${f.fechaSalida}</td>`;
-            html += `<td>${f.horaSalida}</td>`;
-            html += `<td>${f.guardiaSalida}</td>`;
-            html += `<td class="cell-wrap">${f.observacion}</td>`;
-            html += '</tr>';
+        // Ordenar sesiones de forma descendente (más recientes primero) para mostrar en tabla
+        sesiones.sort((a, b) => {
+            return b.timestamp - a.timestamp;  // Descendente: más reciente primero
         });
 
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
+        todasLasSesiones = sesiones;
+        paginaActual = 1;
+        mostrarPagina(1);
 
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+
+function mostrarPagina(numeroPagina) {
+    const container = document.getElementById("tabla-historial");
+    const totalRegistros = todasLasSesiones.length;
+    const totalPaginas = Math.ceil(totalRegistros / REGISTROS_POR_PAGINA);
+
+    if (numeroPagina < 1 || numeroPagina > totalPaginas) {
+        return;
+    }
+
+    paginaActual = numeroPagina;
+    const inicio = (numeroPagina - 1) * REGISTROS_POR_PAGINA;
+    const fin = inicio + REGISTROS_POR_PAGINA;
+    const filasPagina = todasLasSesiones.slice(inicio, fin);
+
+    let html = '<div class="table-wrapper">';
+    html += '<table class="table">';
+    html += '<thead><tr>';
+    html += '<th>DNI</th>';
+    html += '<th>Nombre</th>';
+    html += '<th>Procedencia</th>';
+    html += '<th>Destino</th>';
+    html += '<th>Fecha Ingreso</th>';
+    html += '<th>Hora Ingreso</th>';
+    html += '<th>Guardia Ingreso</th>';
+    html += '<th>Fecha Salida</th>';
+    html += '<th>Hora Salida</th>';
+    html += '<th>Guardia Salida</th>';
+    html += '<th>Observacion</th>';
+    html += '</tr></thead><tbody>';
+
+    filasPagina.forEach(f => {
+        html += '<tr>';
+        html += `<td>${f.dni}</td>`;
+        html += `<td>${f.nombres}</td>`;
+        html += `<td>${f.procedencia}</td>`;
+        html += `<td>${f.destino}</td>`;
+        html += `<td>${f.fechaIngreso}</td>`;
+        html += `<td>${f.horaIngreso}</td>`;
+        html += `<td>${f.guardiaIngreso}</td>`;
+        html += `<td>${f.fechaSalida}</td>`;
+        html += `<td>${f.horaSalida}</td>`;
+        html += `<td>${f.guardiaSalida}</td>`;
+        html += `<td class="cell-wrap">${f.observacion}</td>`;
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+
+    // Agregar controles de paginación
+    html += '<div class="pagination">';
+    html += `<button onclick="mostrarPagina(${numeroPagina - 1})" ${numeroPagina === 1 ? 'disabled' : ''}>← Anterior</button>`;
+    html += `<span class="pagination-info">Página ${numeroPagina} de ${totalPaginas} (Total: ${totalRegistros} registros)</span>`;
+    html += `<button onclick="mostrarPagina(${numeroPagina + 1})" ${numeroPagina === totalPaginas ? 'disabled' : ''}>Siguiente →</button>`;
+    html += '</div>';
+
+    container.innerHTML = html;
 }
