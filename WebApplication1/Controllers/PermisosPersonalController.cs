@@ -109,8 +109,18 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                var fechaActual = DateTime.Now.Date;
+                // NUEVO: Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
+                
+                // NUEVO: Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
+                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
+                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
+                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // Crear registro de salida con datos JSON
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
@@ -118,10 +128,6 @@ namespace WebApplication1.Controllers
                     new
                     {
                         dni = dto.Dni,
-                        horaSalida = dto.HoraSalida,
-                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
-                        horaIngreso = dto.HoraIngreso,
-                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         nombre = dto.Nombre,
@@ -130,7 +136,12 @@ namespace WebApplication1.Controllers
                         quienAutoriza = dto.QuienAutoriza,
                         observaciones = dto.Observaciones
                     },
-                    usuarioId);
+                    usuarioId,
+                    horaIngresoCol,     // NUEVO: Pasar a columnas
+                    fechaIngresoCol,    // NUEVO: Pasar a columnas
+                    horaSalidaCol,      // NUEVO: Pasar a columnas
+                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                );
 
                 if (salidaDetalle == null)
                     return StatusCode(500, "Error al crear registro de salida");
@@ -181,20 +192,20 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                var fechaActual = DateTime.Now.Date;
+                // NUEVO: Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
 
                 // Deserializar datos actuales
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
+                    // NUEVO: horaIngreso y fechaIngreso ya NO van al JSON, van a columnas
                     var datosActualizados = new
                     {
                         dni = root.GetProperty("dni").GetString(),
-                        horaSalida = root.GetProperty("horaSalida").GetDateTime(),
-                        fechaSalida = root.GetProperty("fechaSalida").GetDateTime(),
-                        horaIngreso = dto.HoraIngreso,
-                        fechaIngreso = fechaActual,
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaIngreso = guardiaNombre,
                         nombre = root.GetProperty("nombre").GetString(),
@@ -204,7 +215,16 @@ namespace WebApplication1.Controllers
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
-                    var salidaActualizada = await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+                    // NUEVO: Pasar horaIngreso y fechaIngreso como columnas
+                    var salidaActualizada = await _salidasService.ActualizarSalidaDetalle(
+                        id, 
+                        datosActualizados, 
+                        usuarioId,
+                        ahoraLocal,      // NUEVO: horaIngreso va a columna
+                        fechaActual,     // NUEVO: fechaIngreso va a columna
+                        null,            // horaSalida (no se actualiza en PUT de ingreso)
+                        null             // fechaSalida (no se actualiza en PUT de ingreso)
+                    );
 
                     // Registrar movimiento de entrada
                     if (salidaExistente.Movimiento != null)

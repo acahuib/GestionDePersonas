@@ -74,7 +74,12 @@ namespace WebApplication1.Controllers
                 tipoSalida = salida.TipoSalida,
                 datos = datosObj,
                 fechaCreacion = salida.FechaCreacion,
-                usuarioId = salida.UsuarioId
+                usuarioId = salida.UsuarioId,
+                // NUEVO: Incluir columnas con fallback al JSON
+                horaIngreso = _salidasService.ObtenerHoraIngreso(salida),
+                fechaIngreso = _salidasService.ObtenerFechaIngreso(salida),
+                horaSalida = _salidasService.ObtenerHoraSalida(salida),
+                fechaSalida = _salidasService.ObtenerFechaSalida(salida)
             });
         }
 
@@ -94,7 +99,12 @@ namespace WebApplication1.Controllers
                 tipoSalida = s.TipoSalida,
                 datos = JsonDocument.Parse(s.DatosJSON).RootElement,
                 fechaCreacion = s.FechaCreacion,
-                usuarioId = s.UsuarioId
+                usuarioId = s.UsuarioId,
+                // NUEVO: Incluir columnas con fallback al JSON
+                horaIngreso = _salidasService.ObtenerHoraIngreso(s),
+                fechaIngreso = _salidasService.ObtenerFechaIngreso(s),
+                horaSalida = _salidasService.ObtenerHoraSalida(s),
+                fechaSalida = _salidasService.ObtenerFechaSalida(s)
             }).ToList();
 
             return Ok(resultado);

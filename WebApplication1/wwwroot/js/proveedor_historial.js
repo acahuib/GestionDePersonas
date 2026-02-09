@@ -40,8 +40,15 @@ async function cargarHistorial() {
             if (!dni) return;
 
             const nombres = `${datos.nombres || ""} ${datos.apellidos || ""}`.trim();
-            const tieneIngreso = tieneValor(datos.horaIngreso);
-            const tieneSalida = tieneValor(datos.horaSalida);
+            
+            // NUEVO: Leer desde columnas primero, luego fallback al JSON
+            const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
+            const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
+            const horaSalidaValue = s.horaSalida || datos.horaSalida;
+            const fechaSalidaValue = s.fechaSalida || datos.fechaSalida;
+            
+            const tieneIngreso = tieneValor(horaIngresoValue);
+            const tieneSalida = tieneValor(horaSalidaValue);
 
             if (tieneIngreso) {
                 const sesion = {
@@ -52,8 +59,9 @@ async function cargarHistorial() {
                     observacion: tieneValor(datos.observacion) ? datos.observacion : "",
                     guardiaIngreso: tieneValor(datos.guardiaIngreso) ? datos.guardiaIngreso : "N/A",
                     guardiaSalida: "N/A",
-                    fechaIngreso: tieneValor(datos.fechaIngreso) ? new Date(datos.fechaIngreso).toLocaleDateString('es-PE') : "N/A",
-                    horaIngreso: tieneValor(datos.horaIngreso) ? new Date(datos.horaIngreso).toLocaleString('es-PE') : "N/A",
+                    // NUEVO: Usar valores desde columnas con fallback
+                    fechaIngreso: tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A",
+                    horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleString('es-PE') : "N/A",
                     fechaSalida: "N/A",
                     horaSalida: "N/A",
                     timestamp: new Date(s.fechaCreacion).getTime()
@@ -66,8 +74,9 @@ async function cargarHistorial() {
             if (tieneSalida) {
                 const abierta = abiertasPorDni.get(dni);
                 if (abierta && abierta.horaSalida === "N/A") {
-                    abierta.fechaSalida = tieneValor(datos.fechaSalida) ? new Date(datos.fechaSalida).toLocaleDateString('es-PE') : "N/A";
-                    abierta.horaSalida = tieneValor(datos.horaSalida) ? new Date(datos.horaSalida).toLocaleString('es-PE') : "N/A";
+                    // NUEVO: Usar valores desde columnas con fallback
+                    abierta.fechaSalida = tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A";
+                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A";
                     abierta.guardiaSalida = tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A";
                     abierta.timestamp = new Date(s.fechaCreacion).getTime();  // Actualizar timestamp
                     if (tieneValor(datos.observacion)) {
@@ -85,8 +94,9 @@ async function cargarHistorial() {
                         guardiaSalida: tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A",
                         fechaIngreso: "N/A",
                         horaIngreso: "N/A",
-                        fechaSalida: tieneValor(datos.fechaSalida) ? new Date(datos.fechaSalida).toLocaleDateString('es-PE') : "N/A",
-                        horaSalida: tieneValor(datos.horaSalida) ? new Date(datos.horaSalida).toLocaleString('es-PE') : "N/A",
+                        // NUEVO: Usar valores desde columnas con fallback
+                        fechaSalida: tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A",
+                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A",
                         timestamp: new Date(s.fechaCreacion).getTime()
                     };
                     sesiones.push(sesion);

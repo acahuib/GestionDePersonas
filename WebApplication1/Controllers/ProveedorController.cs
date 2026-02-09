@@ -81,8 +81,20 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                var fechaActual = DateTime.Now.Date;
+                // NUEVO: Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
                 
+                // NUEVO: Extraer horaIngreso/fechaIngreso para guardar en columnas
+                // Ya no usamos la hora del cliente, usamos la hora del servidor
+                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
+                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
+
+                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
+                // Solo datos variables (nombres, apellidos, procedencia, etc.)
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Proveedor",
@@ -93,15 +105,15 @@ namespace WebApplication1.Controllers
                         dni = dto.Dni,
                         procedencia = dto.Procedencia,
                         destino = dto.Destino,
-                        horaIngreso = dto.HoraIngreso,
-                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
-                        horaSalida = dto.HoraSalida,
-                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
                         observacion = dto.Observacion
                     },
-                    usuarioId
+                    usuarioId,
+                    horaIngresoCol,     // NUEVO: Pasar a columnas
+                    fechaIngresoCol,    // NUEVO: Pasar a columnas
+                    horaSalidaCol,      // NUEVO: Pasar a columnas
+                    fechaSalidaCol      // NUEVO: Pasar a columnas
                 );
 
                 return Ok(new
@@ -144,8 +156,12 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            var fechaActual = DateTime.Now.Date;
+            // NUEVO: Usar hora local del servidor (Perú UTC-5)
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            var fechaActual = ahoraLocal.Date;
             
+            // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
             var datosActualizados = new
             {
                 nombres = datosActuales.GetProperty("nombres").GetString(),
@@ -153,10 +169,6 @@ namespace WebApplication1.Controllers
                 dni = datosActuales.GetProperty("dni").GetString(),
                 procedencia = datosActuales.GetProperty("procedencia").GetString(),
                 destino = datosActuales.GetProperty("destino").GetString(),
-                horaIngreso = datosActuales.GetProperty("horaIngreso").GetDateTime(),
-                fechaIngreso = datosActuales.GetProperty("fechaIngreso").GetDateTime(),
-                horaSalida = dto.HoraSalida,
-                fechaSalida = fechaActual,
                 guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
                     ? gi.GetString()
                     : null,
@@ -164,7 +176,16 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
 
-            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+            // NUEVO: Pasar horaSalida y fechaSalida como columnas
+            await _salidasService.ActualizarSalidaDetalle(
+                id, 
+                datosActualizados, 
+                usuarioId,
+                null,               // horaIngreso (no se actualiza en PUT de salida)
+                null,               // fechaIngreso (no se actualiza en PUT de salida)
+                ahoraLocal,         // NUEVO: horaSalida va a columna (hora del servidor)
+                fechaActual         // NUEVO: fechaSalida va a columna
+            );
 
             return Ok(new
             {

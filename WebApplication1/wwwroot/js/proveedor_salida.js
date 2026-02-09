@@ -41,7 +41,7 @@ async function registrarSalida() {
         const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/salida`, {
             method: "PUT",
             body: JSON.stringify({
-                horaSalida: new Date().toISOString(),
+                horaSalida: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
                 observacion: observacion || null
             })
         });

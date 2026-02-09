@@ -115,8 +115,18 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                var fechaActual = DateTime.Now.Date;
+                // NUEVO: Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
+                
+                // NUEVO: Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
+                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
+                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
+                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
+                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // Crear SalidaDetalle
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
@@ -125,15 +135,16 @@ namespace WebApplication1.Controllers
                     {
                         dni = dni,
                         nombre = dto.Nombre,
-                        horaIngreso = dto.HoraIngreso,
-                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
-                        horaSalida = dto.HoraSalida,
-                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
                         ocurrencia = dto.Ocurrencia
                     },
-                    usuarioId);
+                    usuarioId,
+                    horaIngresoCol,     // NUEVO: Pasar a columnas
+                    fechaIngresoCol,    // NUEVO: Pasar a columnas
+                    horaSalidaCol,      // NUEVO: Pasar a columnas
+                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                );
 
                 if (salidaDetalle == null)
                     return StatusCode(500, "Error al crear registro de ocurrencia");
@@ -179,7 +190,7 @@ namespace WebApplication1.Controllers
 
                     // Verificar que es Ocurrencia o DNI ficticio
                     var persona = await _context.Personas.FindAsync(dni);
-                    if (persona == null || (persona.Tipo != "Ocurrencia" && !dni.StartsWith("OCR_")))
+                    if (persona == null || (persona.Tipo != "Ocurrencia" && !dni!.StartsWith("OCR_")))
                         return BadRequest("Solo se puede actualizar nombre de ocurrencias");
 
                     // Actualizar nombre en Persona

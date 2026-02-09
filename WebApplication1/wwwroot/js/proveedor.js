@@ -37,7 +37,7 @@ async function registrarEntrada() {
                 apellidos,
                 procedencia,
                 destino,
-                horaIngreso: new Date().toISOString(),
+                horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
                 observacion: observacion || null
             })
         });
@@ -121,11 +121,13 @@ async function cargarActivos() {
 
         const proveedores = Array.from(ultimosPorDni.values()).filter(s => {
             const datos = s.datos || {};
-            const ingresoRaw = datos.horaIngreso;
-            const salidaRaw = datos.horaSalida;
+            
+            // NUEVO: Leer desde columnas primero, luego fallback al JSON
+            const horaIngreso = s.horaIngreso || datos.horaIngreso;
+            const horaSalida = s.horaSalida || datos.horaSalida;
 
-            const tieneIngreso = ingresoRaw !== null && ingresoRaw !== undefined && String(ingresoRaw).trim() !== "" && String(ingresoRaw).toLowerCase() !== "null";
-            const tieneSalida = salidaRaw !== null && salidaRaw !== undefined && String(salidaRaw).trim() !== "" && String(salidaRaw).toLowerCase() !== "null";
+            const tieneIngreso = horaIngreso !== null && horaIngreso !== undefined && String(horaIngreso).trim() !== "" && String(horaIngreso).toLowerCase() !== "null";
+            const tieneSalida = horaSalida !== null && horaSalida !== undefined && String(horaSalida).trim() !== "" && String(horaSalida).toLowerCase() !== "null";
 
             return tieneIngreso && !tieneSalida;
         });
@@ -148,8 +150,17 @@ async function cargarActivos() {
 
         proveedores.forEach(p => {
             const datos = p.datos || {};
-            const horaIngreso = datos.horaIngreso ? new Date(datos.horaIngreso).toLocaleString('es-PE') : 'N/A';
+            
+            // NUEVO: Leer horaIngreso desde columnas primero, luego fallback al JSON
+            const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
+            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleString('es-PE') : 'N/A';
+            
             const nombreCompleto = `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
+            
+            // NUEVO: Preparar valores para pasar a la función de salida (usar columnas si existen)
+            const fechaIngresoParam = p.fechaIngreso || datos.fechaIngreso || '';
+            const horaIngresoParam = p.horaIngreso || datos.horaIngreso || '';
+            const guardiaIngresoParam = datos.guardiaIngreso || '';
             
             html += '<tr>';
             html += `<td>${datos.dni || 'N/A'}</td>`;
@@ -158,7 +169,7 @@ async function cargarActivos() {
             html += `<td>${datos.destino || 'N/A'}</td>`;
             html += `<td>${horaIngreso}</td>`;
             html += '<td>';
-            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${datos.fechaIngreso || ''}', '${datos.horaIngreso || ''}', '${datos.guardiaIngreso || ''}', ${p.id})" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}', ${p.id})" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
             html += '</td></tr>';
         });
 

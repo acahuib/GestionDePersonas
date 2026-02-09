@@ -52,6 +52,17 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
+            // NUEVO: Usar hora local del servidor (Perú UTC-5) - NO confiar en hora del cliente
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            
+            // NUEVO: Generar hora/fecha de ingreso desde el servidor
+            var horaIngresoCol = ahoraLocal;
+            var fechaIngresoCol = ahoraLocal.Date;
+            var horaSalidaCol = (DateTime?)null;  // Salida se registra después vía PUT
+            var fechaSalidaCol = (DateTime?)null;
+
+            // NUEVO: DatosJSON ya NO contiene fechaIngreso ni fechaSalida
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
                 "ControlBienes",
@@ -60,13 +71,15 @@ namespace WebApplication1.Controllers
                     dni = dto.Dni,
                     nombre = dto.Nombre,
                     bienesDeclarados = dto.BienesDeclarados,
-                    fechaIngreso = dto.FechaIngreso,
-                    fechaSalida = dto.FechaSalida,
                     guardiaIngreso = guardiaNombre,
-                    guardiaSalida = (string)null,
+                    guardiaSalida = (string?)null,
                     observacion = dto.Observacion
                 },
-                usuarioId
+                usuarioId,
+                horaIngresoCol,     // NUEVO: Pasar a columnas
+                fechaIngresoCol,    // NUEVO: Pasar a columnas
+                horaSalidaCol,      // NUEVO: Pasar a columnas
+                fechaSalidaCol      // NUEVO: Pasar a columnas
             );
 
             return Ok(new
@@ -104,13 +117,16 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
+            // NUEVO: Usar hora local del servidor (Perú UTC-5) - NO confiar en hora del cliente
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+
+            // NUEVO: fechaSalida ya NO va al JSON, va a columnas (hora actual del servidor)
             var datosActualizados = new
             {
                 dni = datosActuales.GetProperty("dni").GetString(),
                 nombre = datosActuales.GetProperty("nombre").GetString(),
                 bienesDeclarados = datosActuales.GetProperty("bienesDeclarados").GetString(),
-                fechaIngreso = datosActuales.GetProperty("fechaIngreso").GetDateTime(),
-                fechaSalida = dto.FechaSalida,
                 guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
                     ? gi.GetString()
                     : null,
@@ -118,7 +134,16 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
 
-            await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+            // NUEVO: Pasar horaSalida y fechaSalida como columnas (hora actual del servidor)
+            await _salidasService.ActualizarSalidaDetalle(
+                id, 
+                datosActualizados, 
+                usuarioId,
+                null,                       // horaIngreso (no se actualiza en PUT de salida)
+                null,                       // fechaIngreso (no se actualiza en PUT de salida)
+                ahoraLocal,                 // NUEVO: horaSalida generada en servidor
+                ahoraLocal.Date             // NUEVO: fechaSalida generada en servidor
+            );
 
             return Ok(new
             {
@@ -159,7 +184,12 @@ namespace WebApplication1.Controllers
                 tipoSalida = s.TipoSalida,
                 datos = JsonDocument.Parse(s.DatosJSON).RootElement,
                 fechaCreacion = s.FechaCreacion,
-                usuarioId = s.UsuarioId
+                usuarioId = s.UsuarioId,
+                // NUEVO: Incluir columnas con fallback al JSON
+                horaIngreso = _salidasService.ObtenerHoraIngreso(s),
+                fechaIngreso = _salidasService.ObtenerFechaIngreso(s),
+                horaSalida = _salidasService.ObtenerHoraSalida(s),
+                fechaSalida = _salidasService.ObtenerFechaSalida(s)
             }).ToList();
 
             return Ok(resultado);

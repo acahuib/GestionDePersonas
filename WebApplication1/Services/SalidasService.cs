@@ -21,8 +21,17 @@ namespace WebApplication1.Services
 
         /// <summary>
         /// Crea un registro de SalidaDetalle con JSON genérico
+        /// NUEVO: Acepta parámetros opcionales para columnas de fecha/hora
         /// </summary>
-        public async Task<SalidaDetalle> CrearSalidaDetalle(int movimientoId, string tipoSalida, object datosObj, int? usuarioId)
+        public async Task<SalidaDetalle> CrearSalidaDetalle(
+            int movimientoId, 
+            string tipoSalida, 
+            object datosObj, 
+            int? usuarioId,
+            DateTime? horaIngreso = null,
+            DateTime? fechaIngreso = null,
+            DateTime? horaSalida = null,
+            DateTime? fechaSalida = null)
         {
             // Convertir objeto a JSON string
             var datosJSON = JsonSerializer.Serialize(datosObj, new JsonSerializerOptions
@@ -36,7 +45,12 @@ namespace WebApplication1.Services
                 TipoSalida = tipoSalida,
                 DatosJSON = datosJSON,
                 FechaCreacion = DateTime.Now,
-                UsuarioId = usuarioId
+                UsuarioId = usuarioId,
+                // NUEVO: Guardar en columnas
+                HoraIngreso = horaIngreso,
+                FechaIngreso = fechaIngreso,
+                HoraSalida = horaSalida,
+                FechaSalida = fechaSalida
             };
 
             _context.SalidasDetalle.Add(salida);
@@ -96,8 +110,16 @@ namespace WebApplication1.Services
 
         /// <summary>
         /// Actualiza los datos JSON de una salida existente
+        /// NUEVO: Acepta parámetros opcionales para actualizar columnas de fecha/hora
         /// </summary>
-        public async Task<SalidaDetalle> ActualizarSalidaDetalle(int id, object datosObj, int? usuarioId)
+        public async Task<SalidaDetalle> ActualizarSalidaDetalle(
+            int id, 
+            object datosObj, 
+            int? usuarioId,
+            DateTime? horaIngreso = null,
+            DateTime? fechaIngreso = null,
+            DateTime? horaSalida = null,
+            DateTime? fechaSalida = null)
         {
             var salida = await _context.SalidasDetalle.FindAsync(id);
             if (salida == null)
@@ -108,6 +130,12 @@ namespace WebApplication1.Services
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
             salida.UsuarioId = usuarioId;  // Registra quién hace la actualización
+
+            // NUEVO: Actualizar columnas si se proporcionan
+            if (horaIngreso.HasValue) salida.HoraIngreso = horaIngreso;
+            if (fechaIngreso.HasValue) salida.FechaIngreso = fechaIngreso;
+            if (horaSalida.HasValue) salida.HoraSalida = horaSalida;
+            if (fechaSalida.HasValue) salida.FechaSalida = fechaSalida;
 
             _context.SalidasDetalle.Update(salida);
             await _context.SaveChangesAsync();
@@ -126,6 +154,88 @@ namespace WebApplication1.Services
                 _context.SalidasDetalle.Remove(salida);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        // ===== MÉTODOS DE COMPATIBILIDAD CON FALLBACK =====
+        
+        /// <summary>
+        /// Obtiene HoraIngreso desde columna, o desde JSON si columna es null (fallback)
+        /// </summary>
+        public DateTime? ObtenerHoraIngreso(SalidaDetalle salida)
+        {
+            if (salida.HoraIngreso.HasValue)
+                return salida.HoraIngreso.Value;
+
+            // Fallback: leer desde JSON
+            try
+            {
+                var json = JsonDocument.Parse(salida.DatosJSON);
+                if (json.RootElement.TryGetProperty("horaIngreso", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene FechaIngreso desde columna, o desde JSON si columna es null (fallback)
+        /// </summary>
+        public DateTime? ObtenerFechaIngreso(SalidaDetalle salida)
+        {
+            if (salida.FechaIngreso.HasValue)
+                return salida.FechaIngreso.Value;
+
+            // Fallback: leer desde JSON
+            try
+            {
+                var json = JsonDocument.Parse(salida.DatosJSON);
+                if (json.RootElement.TryGetProperty("fechaIngreso", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene HoraSalida desde columna, o desde JSON si columna es null (fallback)
+        /// </summary>
+        public DateTime? ObtenerHoraSalida(SalidaDetalle salida)
+        {
+            if (salida.HoraSalida.HasValue)
+                return salida.HoraSalida.Value;
+
+            // Fallback: leer desde JSON
+            try
+            {
+                var json = JsonDocument.Parse(salida.DatosJSON);
+                if (json.RootElement.TryGetProperty("horaSalida", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene FechaSalida desde columna, o desde JSON si columna es null (fallback)
+        /// </summary>
+        public DateTime? ObtenerFechaSalida(SalidaDetalle salida)
+        {
+            if (salida.FechaSalida.HasValue)
+                return salida.FechaSalida.Value;
+
+            // Fallback: leer desde JSON
+            try
+            {
+                var json = JsonDocument.Parse(salida.DatosJSON);
+                if (json.RootElement.TryGetProperty("fechaSalida", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            
+            return null;
         }
     }
 }
