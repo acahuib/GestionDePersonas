@@ -73,6 +73,10 @@ namespace WebApplication1.Controllers
 
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
@@ -115,6 +119,8 @@ namespace WebApplication1.Controllers
                         fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         horaIngreso = dto.HoraIngreso,
                         fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
+                        guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
+                        guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         nombre = dto.Nombre,
                         deDonde = dto.DeDonde,
                         personal = dto.Personal,
@@ -164,6 +170,10 @@ namespace WebApplication1.Controllers
 
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 var fechaActual = DateTime.Now.Date;
 
@@ -179,6 +189,8 @@ namespace WebApplication1.Controllers
                         fechaSalida = root.GetProperty("fechaSalida").GetDateTime(),
                         horaIngreso = dto.HoraIngreso,
                         fechaIngreso = fechaActual,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                        guardiaIngreso = guardiaNombre,
                         nombre = root.GetProperty("nombre").GetString(),
                         deDonde = root.GetProperty("deDonde").GetString(),
                         personal = root.GetProperty("personal").GetString(),

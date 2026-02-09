@@ -54,6 +54,10 @@ namespace WebApplication1.Controllers
                     return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
 
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 // Determinar tipo de movimiento basado en cuál hora se proporciona
                 string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
@@ -122,6 +126,8 @@ namespace WebApplication1.Controllers
                         fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
                         horaSalida = dto.HoraSalida,
                         fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
+                        guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
+                        guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
                         ocurrencia = dto.Ocurrencia
                     },
                     usuarioId);
@@ -195,6 +201,12 @@ namespace WebApplication1.Controllers
                         fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null 
                             ? fs.GetDateTime() 
                             : (DateTime?)null,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                            ? gi.GetString()
+                            : null,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
+                            ? gs.GetString()
+                            : null,
                         ocurrencia = root.GetProperty("ocurrencia").GetString()
                     };
 
@@ -232,11 +244,23 @@ namespace WebApplication1.Controllers
                     var root = doc.RootElement;
 
                     var fechaActual = DateTime.Now.Date;
+                    var usuarioId = ExtractUsuarioIdFromToken();
+                    var guardiaNombre = usuarioId.HasValue
+                        ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null;
+                    guardiaNombre ??= "S/N";
                     
                     var horaIngresoActual = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null;
                     var fechaIngresoActual = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null;
                     var horaSalidaActual = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null;
                     var fechaSalidaActual = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null;
+
+                    var guardiaIngresoActual = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                        ? gi.GetString()
+                        : null;
+                    var guardiaSalidaActual = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
+                        ? gs.GetString()
+                        : null;
 
                     var datosActualizados = new
                     {
@@ -248,10 +272,10 @@ namespace WebApplication1.Controllers
                         fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : fechaIngresoActual,
                         horaSalida = dto.HoraSalida ?? horaSalidaActual,
                         fechaSalida = dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual,
+                        guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : guardiaIngresoActual,
+                        guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : guardiaSalidaActual,
                         ocurrencia = dto.Ocurrencia ?? root.GetProperty("ocurrencia").GetString()
                     };
-
-                    var usuarioId = ExtractUsuarioIdFromToken();
                     await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
 
                     return Ok(new { mensaje = "Horario actualizado" });

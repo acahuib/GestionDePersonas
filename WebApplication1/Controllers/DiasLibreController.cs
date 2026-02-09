@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
@@ -52,6 +53,10 @@ namespace WebApplication1.Controllers
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : null;
+            guardiaNombre ??= "S/N";
 
             var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
                 dto.Dni,
@@ -76,6 +81,8 @@ namespace WebApplication1.Controllers
                     al = dto.Al.Date,
                     trabaja = fechaTrabaja,
                     dia = dto.Dia,
+                    guardiaSalida = guardiaNombre,
+                    guardiaIngreso = (string)null,
                     observaciones = dto.Observaciones
                 },
                 usuarioId

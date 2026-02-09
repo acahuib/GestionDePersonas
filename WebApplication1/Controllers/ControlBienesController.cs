@@ -43,6 +43,10 @@ namespace WebApplication1.Controllers
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : null;
+            guardiaNombre ??= "S/N";
 
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
@@ -54,6 +58,8 @@ namespace WebApplication1.Controllers
                     bienesDeclarados = dto.BienesDeclarados,
                     fechaIngreso = dto.FechaIngreso,
                     fechaSalida = dto.FechaSalida,
+                    guardiaIngreso = guardiaNombre,
+                    guardiaSalida = (string)null,
                     observacion = dto.Observacion
                 },
                 usuarioId
@@ -84,6 +90,13 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : null;
+            guardiaNombre ??= "S/N";
+
             var datosActualizados = new
             {
                 dni = datosActuales.GetProperty("dni").GetString(),
@@ -91,11 +104,12 @@ namespace WebApplication1.Controllers
                 bienesDeclarados = datosActuales.GetProperty("bienesDeclarados").GetString(),
                 fechaIngreso = datosActuales.GetProperty("fechaIngreso").GetDateTime(),
                 fechaSalida = dto.FechaSalida,
+                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                    ? gi.GetString()
+                    : null,
+                guardiaSalida = guardiaNombre,
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
-
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
 
             await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
 

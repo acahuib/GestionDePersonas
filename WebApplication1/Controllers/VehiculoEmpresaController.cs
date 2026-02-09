@@ -49,6 +49,10 @@ namespace WebApplication1.Controllers
 
                 var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
@@ -89,6 +93,8 @@ namespace WebApplication1.Controllers
                         fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
                         horaIngreso = dto.HoraIngreso,
                         fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null,
+                        guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
+                        guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         observacion = dto.Observacion
                     },
                     usuarioId
@@ -124,6 +130,13 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : null;
+            guardiaNombre ??= "S/N";
+
             var fechaActual = DateTime.Now.Date;
 
             var datosActualizados = new
@@ -138,11 +151,12 @@ namespace WebApplication1.Controllers
                 fechaSalida = datosActuales.GetProperty("fechaSalida").GetDateTime(),
                 horaIngreso = dto.HoraIngreso,
                 fechaIngreso = fechaActual,
+                guardiaSalida = datosActuales.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
+                    ? gs.GetString()
+                    : null,
+                guardiaIngreso = guardiaNombre,
                 observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
             };
-
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
 
             await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
 

@@ -69,7 +69,7 @@ namespace WebApplication1.Controllers
                 var usuario = usuarioId.HasValue 
                     ? await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
                     : null;
-                string nombreGuardia = usuario?.Nombre ?? "S/N";
+                string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
                 // Crear movimiento de Entrada
                 var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
@@ -96,7 +96,9 @@ namespace WebApplication1.Controllers
                         horaSalida = (DateTime?)null,
                         fechaSalida = (DateTime?)null,
                         entrega = nombreGuardia,
-                        recibidoPor = (string)null
+                        recibidoPor = (string)null,
+                        guardiaIngreso = nombreGuardia,
+                        guardiaSalida = (string)null
                     },
                     usuarioId);
 
@@ -144,7 +146,7 @@ namespace WebApplication1.Controllers
                 var usuario = usuarioId.HasValue
                     ? await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
                     : null;
-                string nombreGuardia = usuario?.Nombre ?? "S/N";
+                string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
                 var fechaActual = DateTime.Now.Date;
 
@@ -167,7 +169,11 @@ namespace WebApplication1.Controllers
                         horaSalida = dto.HoraSalida,
                         fechaSalida = fechaActual,
                         entrega = root.GetProperty("entrega").GetString(),
-                        recibidoPor = nombreGuardia
+                        recibidoPor = nombreGuardia,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                            ? gi.GetString()
+                            : root.GetProperty("entrega").GetString(),
+                        guardiaSalida = nombreGuardia
                     };
 
                     await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);

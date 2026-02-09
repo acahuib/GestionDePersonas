@@ -59,6 +59,10 @@ namespace WebApplication1.Controllers
 
                 // Extract usuarioId from token (guardia)
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
@@ -97,6 +101,10 @@ namespace WebApplication1.Controllers
                     fechaEntradaAlmuerzo = (DateTime?)null,
                     horaSalida = dto.HoraSalida,
                     fechaSalida = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null,
+                    guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
+                    guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
+                    guardiaSalidaAlmuerzo = (string)null,
+                    guardiaEntradaAlmuerzo = (string)null,
                     observaciones = dto.Observaciones
                 };
 
@@ -136,6 +144,10 @@ namespace WebApplication1.Controllers
 
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 var fechaActual = DateTime.Now.Date;
 
@@ -156,6 +168,10 @@ namespace WebApplication1.Controllers
                         fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
                         horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
                         fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                        guardiaSalidaAlmuerzo = guardiaNombre,
+                        guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
@@ -187,6 +203,10 @@ namespace WebApplication1.Controllers
 
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 var fechaActual = DateTime.Now.Date;
 
@@ -207,6 +227,10 @@ namespace WebApplication1.Controllers
                         fechaEntradaAlmuerzo = fechaActual,
                         horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
                         fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                        guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
+                        guardiaEntradaAlmuerzo = guardiaNombre,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
@@ -238,6 +262,10 @@ namespace WebApplication1.Controllers
 
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null;
+                guardiaNombre ??= "S/N";
 
                 var fechaActual = DateTime.Now.Date;
 
@@ -260,6 +288,10 @@ namespace WebApplication1.Controllers
                         fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
                         horaSalida = dto.HoraSalida,
                         fechaSalida = fechaActual,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
+                        guardiaSalida = guardiaNombre,
+                        guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
+                        guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
