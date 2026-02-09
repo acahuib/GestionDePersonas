@@ -16,7 +16,7 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/ocurrencias")]
-    [Authorize(Roles = "Administrador,Guardia")]
+    [Authorize(Roles = "Admin,Guardia")]
     public class OcurrenciasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -54,9 +54,12 @@ namespace WebApplication1.Controllers
                     return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
 
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
                     ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                    : null;
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
                 guardiaNombre ??= "S/N";
 
                 // Determinar tipo de movimiento basado en cuál hora se proporciona
@@ -245,9 +248,12 @@ namespace WebApplication1.Controllers
 
                     var fechaActual = DateTime.Now.Date;
                     var usuarioId = ExtractUsuarioIdFromToken();
+                    var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                     var guardiaNombre = usuarioId.HasValue
                         ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                        : null;
+                        : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                            ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                            : null);
                     guardiaNombre ??= "S/N";
                     
                     var horaIngresoActual = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null;

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial Proveedores - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>📚 Historial de Proveedores</h2>
+        <div>
+            <span id="usuario-info"></span>
+            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesion</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <p style="margin: 0;">Todos los registros realizados</p>
+        <div>
+            <button onclick="cargarHistorial()" style="padding: 5px 15px;">🔄 Actualizar</button>
+            <a href="proveedor.html" style="text-decoration: none; margin-left: 8px;">
+                <button>Volver</button>
+            </a>
+        </div>
+    </div>
+
+    <div id="tabla-historial">
+        <p style="text-align: center; color: #666;">Cargando...</p>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/proveedor_historial.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarHistorial();
+});
+</script>
+
+</body>
+</html>

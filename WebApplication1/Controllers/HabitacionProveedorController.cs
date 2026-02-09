@@ -16,7 +16,7 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/habitacion-proveedor")]
-    [Authorize(Roles = "Administrador,Guardia")]
+    [Authorize(Roles = "Admin,Guardia")]
     public class HabitacionProveedorController : ControllerBase
     {
         private readonly AppDbContext _context;

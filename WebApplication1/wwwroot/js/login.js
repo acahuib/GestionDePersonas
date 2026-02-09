@@ -31,13 +31,10 @@ async function login() {
         // Guardar sesión
         localStorage.setItem("token", data.token);
         localStorage.setItem("rol", data.rol);
+        localStorage.setItem("usuario", usuario);
 
-        // Redirigir según rol
-        if (data.rol === "Admin") {
-            window.location.href = "dashboard.html";
-        } else {
-            window.location.href = "index.html";
-        }
+        // Redirigir al menú principal
+        window.location.href = "index.html";
 
     } catch (err) {
         mensaje.className = "error";

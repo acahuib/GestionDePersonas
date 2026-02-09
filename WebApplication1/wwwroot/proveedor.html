@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuaderno Proveedores - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>📋 Cuaderno de Proveedores (Sin Vehículo)</h2>
+        <div>
+            <a href="proveedor_historial.html" style="margin-right: 10px; text-decoration: none;">
+                <button>📚 Ver Historial</button>
+            </a>
+            <span id="usuario-info"></span>
+            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- FORMULARIO DE REGISTRO -->
+    <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>Registrar Entrada</h3>
+
+        <label>DNI *</label>
+        <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
+
+        <label>Nombres *</label>
+        <input type="text" id="nombres" placeholder="Nombres del proveedor">
+
+        <label>Apellidos *</label>
+        <input type="text" id="apellidos" placeholder="Apellidos del proveedor">
+
+        <label>Procedencia *</label>
+        <input type="text" id="procedencia" placeholder="Procedencia">
+
+        <label>Destino *</label>
+        <input type="text" id="destino" placeholder="Destino">
+
+        <label>Observacion</label>
+        <textarea id="observacion" placeholder="Observacion (opcional)" rows="4" style="width: 100%;"></textarea>
+
+        <div style="margin-top: 15px;">
+            <button onclick="registrarEntrada()" style="background: #28a745; width: 100%;">
+                ✅ Registrar ENTRADA
+            </button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <!-- LISTA DE PROVEEDORES ACTIVOS -->
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Proveedores Activos (Sin salida)</h3>
+            <button onclick="cargarActivos()" style="padding: 5px 15px;">🔄 Actualizar</button>
+        </div>
+        
+        <div id="lista-activos">
+            <p style="text-align: center; color: #666;">Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/proveedor.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarActivos();
+
+    // Auto-actualizar lista cada 15 segundos
+    setInterval(cargarActivos, 15000);
+
+    // Si venimos de registrar salida, limpiar query y refrescar
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("refresh") === "1") {
+        cargarActivos();
+        window.history.replaceState({}, document.title, "proveedor.html");
+    }
+
+    // Detectar ENTER en los campos
+    addEnterListener("dni", () => document.getElementById("nombres").focus());
+    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
+    addEnterListener("apellidos", () => document.getElementById("procedencia").focus());
+    addEnterListener("procedencia", () => document.getElementById("destino").focus());
+    addEnterListener("destino", registrarEntrada);
+});
+</script>
+
+</body>
+</html>

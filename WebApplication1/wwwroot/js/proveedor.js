@@ -1,0 +1,168 @@
+// =========================================
+// CUADERNO DE PROVEEDORES (Sin Vehículo)
+// =========================================
+
+// Registrar ENTRADA de proveedor
+async function registrarEntrada() {
+    const dni = document.getElementById("dni").value.trim();
+    const nombres = document.getElementById("nombres").value.trim();
+    const apellidos = document.getElementById("apellidos").value.trim();
+    const procedencia = document.getElementById("procedencia").value.trim();
+    const destino = document.getElementById("destino").value.trim();
+    const observacion = document.getElementById("observacion").value.trim();
+    const mensaje = document.getElementById("mensaje");
+
+    mensaje.innerText = "";
+    mensaje.className = "";
+
+    // Validaciones
+    if (!dni || !nombres || !apellidos || !procedencia || !destino) {
+        mensaje.className = "error";
+        mensaje.innerText = "Complete DNI, Nombres, Apellidos, Procedencia y Destino";
+        return;
+    }
+
+    if (dni.length !== 8 || isNaN(dni)) {
+        mensaje.className = "error";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/proveedor`, {
+            method: "POST",
+            body: JSON.stringify({
+                dni,
+                nombres,
+                apellidos,
+                procedencia,
+                destino,
+                horaIngreso: new Date().toISOString(),
+                observacion: observacion || null
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error);
+        }
+
+        mensaje.className = "success";
+        mensaje.innerText = `✅ ENTRADA registrada para ${nombres} ${apellidos}`;
+
+        // Limpiar formulario
+        document.getElementById("dni").value = "";
+        document.getElementById("nombres").value = "";
+        document.getElementById("apellidos").value = "";
+        document.getElementById("procedencia").value = "";
+        document.getElementById("destino").value = "";
+        document.getElementById("observacion").value = "";
+        document.getElementById("dni").focus();
+
+        // Actualizar lista
+        setTimeout(cargarActivos, 500);
+
+    } catch (error) {
+        mensaje.className = "error";
+        mensaje.innerText = `❌ Error: ${error.message}`;
+    }
+}
+
+// Navegar a la pantalla de salida con datos precargados
+function irASalida(dni, nombres, apellidos, procedencia, destino, observacion) {
+    const params = new URLSearchParams({
+        dni,
+        nombres,
+        apellidos,
+        procedencia,
+        destino,
+        observacion
+    });
+    window.location.href = `proveedor_salida.html?${params.toString()}`;
+}
+
+// Cargar proveedores activos (sin salida)
+async function cargarActivos() {
+    const container = document.getElementById("lista-activos");
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/Proveedor`);
+
+        if (!response.ok) {
+            throw new Error("Error al cargar proveedores activos");
+        }
+
+        const salidas = await response.json();
+
+        if (!salidas || salidas.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">No hay proveedores activos en este momento</p>';
+            return;
+        }
+
+        // Tomar el ultimo registro por DNI y mostrar solo los que no tengan salida
+        const ultimosPorDni = new Map();
+
+        salidas.forEach(s => {
+            const datos = s.datos || {};
+            const dni = (datos.dni || "").trim();
+            if (!dni) return;
+
+            const fecha = s.fechaCreacion ? new Date(s.fechaCreacion).getTime() : 0;
+            const actual = ultimosPorDni.get(dni);
+
+            if (!actual || fecha >= actual._fecha) {
+                ultimosPorDni.set(dni, { ...s, _fecha: fecha });
+            }
+        });
+
+        const proveedores = Array.from(ultimosPorDni.values()).filter(s => {
+            const datos = s.datos || {};
+            const ingresoRaw = datos.horaIngreso;
+            const salidaRaw = datos.horaSalida;
+
+            const tieneIngreso = ingresoRaw !== null && ingresoRaw !== undefined && String(ingresoRaw).trim() !== "" && String(ingresoRaw).toLowerCase() !== "null";
+            const tieneSalida = salidaRaw !== null && salidaRaw !== undefined && String(salidaRaw).trim() !== "" && String(salidaRaw).toLowerCase() !== "null";
+
+            return tieneIngreso && !tieneSalida;
+        });
+
+        if (proveedores.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">No hay proveedores activos en este momento</p>';
+            return;
+        }
+
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #007bff; color: white;">';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">DNI</th>';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">Nombre</th>';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">Procedencia</th>';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">Destino</th>';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">Hora Ingreso</th>';
+        html += '<th style="padding: 10px; border: 1px solid #ddd;">Acciones</th>';
+        html += '</tr></thead><tbody>';
+
+        proveedores.forEach(p => {
+            const datos = p.datos || {};
+            const horaIngreso = datos.horaIngreso ? new Date(datos.horaIngreso).toLocaleString('es-PE') : 'N/A';
+            const nombreCompleto = `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
+            
+            html += '<tr>';
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.dni || 'N/A'}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${nombreCompleto}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.procedencia || 'N/A'}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${datos.destino || 'N/A'}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd;">${horaIngreso}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">`;
+            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}')" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Registrar Salida</button>`;
+            html += `</td></tr>`;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+    } catch (error) {
+        container.innerHTML = `<p style="text-align: center; color: red;">Error: ${error.message}</p>`;
+    }
+}
+
+// Nota: la salida se registra en una pagina aparte

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
@@ -14,7 +15,7 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/control-bienes")]
-    // [Authorize(Roles = "Admin,Guardia")]
+    [Authorize(Roles = "Admin,Guardia")]
     public class ControlBienesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -43,9 +44,12 @@ namespace WebApplication1.Controllers
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                : null;
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
             guardiaNombre ??= "S/N";
 
             var salida = await _salidasService.CrearSalidaDetalle(
@@ -92,9 +96,12 @@ namespace WebApplication1.Controllers
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                : null;
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
             guardiaNombre ??= "S/N";
 
             var datosActualizados = new

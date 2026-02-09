@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú Principal - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>📌 Menú Principal</h2>
+        <div>
+            <span id="usuario-info"></span>
+            <button onclick="cerrarSesion()" style="margin-left: 10px;">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <p>Seleccione el cuaderno que desea abrir:</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+        <a href="proveedor.html" style="text-decoration: none;">
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f8f9fa;">
+                <h3>Proveedores</h3>
+                <p>Ingreso/salida de proveedores sin vehiculo.</p>
+            </div>
+        </a>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Vehiculos Empresa</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Vehiculos Proveedores</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Personal Local</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Permisos Personal</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Ocurrencias</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Control de Bienes</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Dias Libre</h3>
+            <p>Proximamente</p>
+        </div>
+
+        <div style="border: 1px dashed #bbb; border-radius: 8px; padding: 15px; color: #888;">
+            <h3>Habitacion Proveedor</h3>
+            <p>Proximamente</p>
+        </div>
+    </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+});
+</script>
+
+</body>
+</html>

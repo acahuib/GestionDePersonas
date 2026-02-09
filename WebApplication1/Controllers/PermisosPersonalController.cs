@@ -15,7 +15,7 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/permisos-personal")]
-    [Authorize(Roles = "Administrador,Guardia")]
+    [Authorize(Roles = "Admin,Guardia")]
     public class PermisosPersonalController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -73,9 +73,12 @@ namespace WebApplication1.Controllers
 
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
                     ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                    : null;
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
                 guardiaNombre ??= "S/N";
 
                 // Obtener último movimiento
@@ -170,9 +173,12 @@ namespace WebApplication1.Controllers
 
                 // Extraer usuarioId del token
                 var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
                     ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                    : null;
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
                 guardiaNombre ??= "S/N";
 
                 var fechaActual = DateTime.Now.Date;
