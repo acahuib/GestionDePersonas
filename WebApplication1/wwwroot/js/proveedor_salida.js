@@ -5,41 +5,42 @@
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
 
+    const salidaId = params.get("salidaId");
+    document.getElementById("dni").dataset.salidaId = salidaId || "";
+    
     document.getElementById("dni").value = params.get("dni") || "";
     document.getElementById("nombres").value = params.get("nombres") || "";
     document.getElementById("apellidos").value = params.get("apellidos") || "";
     document.getElementById("procedencia").value = params.get("procedencia") || "";
     document.getElementById("destino").value = params.get("destino") || "";
     document.getElementById("observacion").value = params.get("observacion") || "";
+    
+    // Guardar datos de ingreso para usarlos al registrar salida
+    document.getElementById("dni").dataset.fechaIngreso = params.get("fechaIngreso") || "";
+    document.getElementById("dni").dataset.horaIngreso = params.get("horaIngreso") || "";
+    document.getElementById("dni").dataset.guardiaIngreso = params.get("guardiaIngreso") || "";
 }
 
 async function registrarSalida() {
-    const dni = document.getElementById("dni").value.trim();
-    const nombres = document.getElementById("nombres").value.trim();
-    const apellidos = document.getElementById("apellidos").value.trim();
-    const procedencia = document.getElementById("procedencia").value.trim();
-    const destino = document.getElementById("destino").value.trim();
+    const dniElement = document.getElementById("dni");
+    const salidaId = dniElement.dataset.salidaId;
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni || !nombres || !apellidos || !procedencia || !destino) {
+    if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Faltan datos del proveedor para registrar la salida";
+        mensaje.innerText = "Error: No se encontró el ID del registro de ingreso";
         return;
     }
 
     try {
-        const responseSalida = await fetchAuth(`${API_BASE}/proveedor`, {
-            method: "POST",
+        // Usar PUT para actualizar el registro existente
+        const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/salida`, {
+            method: "PUT",
             body: JSON.stringify({
-                dni,
-                nombres,
-                apellidos,
-                procedencia,
-                destino,
                 horaSalida: new Date().toISOString(),
                 observacion: observacion || null
             })

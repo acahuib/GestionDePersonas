@@ -69,14 +69,18 @@ async function registrarEntrada() {
 }
 
 // Navegar a la pantalla de salida con datos precargados
-function irASalida(dni, nombres, apellidos, procedencia, destino, observacion) {
+function irASalida(dni, nombres, apellidos, procedencia, destino, observacion, fechaIngreso, horaIngreso, guardiaIngreso, salidaId) {
     const params = new URLSearchParams({
+        salidaId,
         dni,
         nombres,
         apellidos,
         procedencia,
         destino,
-        observacion
+        observacion,
+        fechaIngreso,
+        horaIngreso,
+        guardiaIngreso
     });
     window.location.href = `proveedor_salida.html?${params.toString()}`;
 }
@@ -154,7 +158,7 @@ async function cargarActivos() {
             html += `<td>${datos.destino || 'N/A'}</td>`;
             html += `<td>${horaIngreso}</td>`;
             html += '<td>';
-            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+            html += `<button onclick="irASalida('${datos.dni || ''}', '${datos.nombres || ''}', '${datos.apellidos || ''}', '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${datos.fechaIngreso || ''}', '${datos.horaIngreso || ''}', '${datos.guardiaIngreso || ''}', ${p.id})" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
             html += '</td></tr>';
         });
 
