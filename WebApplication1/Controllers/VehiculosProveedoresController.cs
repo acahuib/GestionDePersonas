@@ -48,6 +48,30 @@ namespace WebApplication1.Controllers
                 // Determinar tipo de movimiento basado en cuál campo se proporciona
                 string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
 
+                // ===== NUEVO: Buscar o crear en tabla Personas =====
+                var dniNormalizado = dto.Dni.Trim();
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                
+                if (persona == null)
+                {
+                    // DNI no existe: validar que se envíe nombreApellidos
+                    if (string.IsNullOrWhiteSpace(dto.NombreApellidos))
+                        return BadRequest("DNI no registrado. Debe proporcionar Nombre y Apellidos para registrar la persona.");
+
+                    // Crear nuevo registro en tabla Personas
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = dto.NombreApellidos.Trim(),
+                        Tipo = "VehiculoProveedor"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+                // Si persona ya existe, se usa el nombre de la tabla
+                // ===== FIN NUEVO =====
+
                 var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -60,7 +84,7 @@ namespace WebApplication1.Controllers
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
                     .OrderByDescending(m => m.FechaHora)
                     .FirstOrDefaultAsync();
 
@@ -68,13 +92,13 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
                 {
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
                 else if (ultimoMovimiento == null)
                 {
                     // Si no existe movimiento, crear con tipo determinado
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
 
                 if (ultimoMovimiento == null)
@@ -93,12 +117,13 @@ namespace WebApplication1.Controllers
                 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // DNI se guarda en columna para JOIN directo con Personas
+                // nombreApellidos se guarda solo como referencia temporal (nombre real viene de Personas)
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "VehiculosProveedores",
                     new
                     {
-                        nombreApellidos = dto.NombreApellidos,
+                        nombreApellidos = persona.Nombre, // Usar nombre de tabla Personas
                         proveedor = dto.Proveedor,
                         placa = dto.Placa,
                         tipo = dto.Tipo,
@@ -114,7 +139,7 @@ namespace WebApplication1.Controllers
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
                     fechaSalidaCol,     // NUEVO: Pasar a columnas
-                    dto.Dni?.Trim()     // NUEVO: Pasar DNI a columna
+                    dniNormalizado      // NUEVO: Pasar DNI a columna
                 );
 
                 return Ok(new
@@ -173,11 +198,11 @@ namespace WebApplication1.Controllers
                 lote = datosActuales.TryGetProperty("lote", out var lot) && lot.ValueKind == JsonValueKind.String ? lot.GetString() : null,
                 cantidad = datosActuales.TryGetProperty("cantidad", out var cant) && cant.ValueKind == JsonValueKind.String ? cant.GetString() : null,
                 procedencia = datosActuales.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
-                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
                     ? gi.GetString()
                     : null,
                 guardiaSalida = guardiaNombre,
-                observaciones = dto.Observaciones ?? datosActuales.GetProperty("observaciones").GetString()
+                observaciones = dto.Observaciones ?? (datosActuales.TryGetProperty("observaciones", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas

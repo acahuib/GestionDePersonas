@@ -11,7 +11,12 @@ namespace WebApplication1.DTOs
     public class SalidaVehiculosProveedoresDto
     {
         public required string Dni { get; set; }
-        public required string NombreApellidos { get; set; }
+        
+        /// <summary>
+        /// Nombre completo (opcional si DNI ya está registrado en tabla Personas)
+        /// </summary>
+        public string? NombreApellidos { get; set; }
+        
         public required string Proveedor { get; set; } // Empresa proveedora
         public required string Placa { get; set; }
         public required string Tipo { get; set; } // Tipo de vehiculo

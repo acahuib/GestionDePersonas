@@ -1,5 +1,5 @@
 // =========================================
-// SALIDA DE PROVEEDOR (Sin Vehiculo)
+// SALIDA DE VEHÍCULO PROVEEDOR
 // =========================================
 
 function cargarDatosDesdeUrl() {
@@ -10,8 +10,12 @@ function cargarDatosDesdeUrl() {
     
     document.getElementById("dni").value = params.get("dni") || "";
     document.getElementById("nombreCompleto").value = params.get("nombreCompleto") || "";
+    document.getElementById("proveedor").value = params.get("proveedor") || "";
+    document.getElementById("placa").value = params.get("placa") || "";
+    document.getElementById("tipo").value = params.get("tipo") || "";
+    document.getElementById("lote").value = params.get("lote") || "";
+    document.getElementById("cantidad").value = params.get("cantidad") || "";
     document.getElementById("procedencia").value = params.get("procedencia") || "";
-    document.getElementById("destino").value = params.get("destino") || "";
     document.getElementById("observacion").value = params.get("observacion") || "";
     
     // Guardar datos de ingreso para usarlos al registrar salida
@@ -37,7 +41,7 @@ async function registrarSalida() {
 
     try {
         // Usar PUT para actualizar el registro existente
-        const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/salida`, {
+        const responseSalida = await fetchAuth(`${API_BASE}/vehiculos-proveedores/${salidaId}/salida`, {
             method: "PUT",
             body: JSON.stringify({
                 horaSalida: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
@@ -55,7 +59,7 @@ async function registrarSalida() {
 
         // Redirigir automáticamente después de 500ms
         setTimeout(() => {
-            window.location.href = "proveedor.html?refresh=1";
+            window.location.href = "vehiculos_proveedores.html?refresh=1";
         }, 500);
 
     } catch (error) {
@@ -65,5 +69,5 @@ async function registrarSalida() {
 }
 
 function volver() {
-    window.location.href = "proveedor.html?refresh=1";
+    window.location.href = "vehiculos_proveedores.html?refresh=1";
 }

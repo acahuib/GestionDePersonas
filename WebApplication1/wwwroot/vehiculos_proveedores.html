@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuaderno Vehículos Proveedores - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="page-header">
+        <h2>🚚 Cuaderno de Vehículos Proveedores</h2>
+        <div class="header-actions">
+            <span id="usuario-info"></span>
+            <button onclick="cerrarSesion()" class="btn-inline">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="toolbar">
+        <a href="vehiculos_proveedores_historial.html" class="card-link">
+            <button class="btn-inline">📚 Ver Historial</button>
+        </a>
+    </div>
+
+    <!-- FORMULARIO DE REGISTRO -->
+    <div class="form-card">
+        <h3>Registrar Entrada</h3>
+
+        <label>DNI *</label>
+        <input type="text" id="dni" placeholder="Ingrese DNI del conductor" maxlength="8">
+
+        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombres" placeholder="Nombres del conductor">
+
+        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="apellidos" placeholder="Apellidos del conductor">
+
+        <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+            <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+        </div>
+
+        <label>Proveedor/Empresa *</label>
+        <input type="text" id="proveedor" placeholder="Empresa o proveedor">
+
+        <label>Placa *</label>
+        <input type="text" id="placa" placeholder="Placa del vehículo">
+
+        <label>Tipo de Vehículo *</label>
+        <input type="text" id="tipo" placeholder="Tipo de vehículo (ej: Camión, Camioneta)">
+
+        <label>Lote *</label>
+        <input type="text" id="lote" placeholder="Número de lote">
+
+        <label>Cantidad *</label>
+        <input type="text" id="cantidad" placeholder="Cantidad">
+
+        <label>Procedencia *</label>
+        <input type="text" id="procedencia" placeholder="Procedencia">
+
+        <label>Observación</label>
+        <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
+
+        <div>
+            <button onclick="registrarEntrada()" class="btn-success btn-block">
+                ✅ Registrar ENTRADA
+            </button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <!-- LISTA DE VEHÍCULOS ACTIVOS -->
+    <div>
+        <div class="toolbar">
+            <h3>Vehículos Activos (Sin salida)</h3>
+            <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+        </div>
+        
+        <div id="lista-activos">
+            <p class="text-center muted">Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vehiculos_proveedores.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarActivos();
+
+    // Auto-actualizar lista cada 15 segundos
+    setInterval(cargarActivos, 15000);
+
+    // Si venimos de registrar salida, limpiar query y refrescar
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("refresh") === "1") {
+        cargarActivos();
+        window.history.replaceState({}, document.title, "vehiculos_proveedores.html");
+    }
+
+    // Detectar ENTER y BLUR en el campo DNI
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
+    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
+    addEnterListener("apellidos", () => document.getElementById("proveedor").focus());
+    addEnterListener("proveedor", () => document.getElementById("placa").focus());
+    addEnterListener("placa", () => document.getElementById("tipo").focus());
+    addEnterListener("tipo", () => document.getElementById("lote").focus());
+    addEnterListener("lote", () => document.getElementById("cantidad").focus());
+    addEnterListener("cantidad", () => document.getElementById("procedencia").focus());
+    addEnterListener("procedencia", registrarEntrada);
+});
+</script>
+
+</body>
+</html>
