@@ -55,16 +55,26 @@ function actualizarInfoUsuarioSidebar() {
     const token = localStorage.getItem("token");
     if (!token) return;
     
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const nombreCompleto = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || payload.unique_name || "Usuario";
-        
-        const sidebarUsuarioInfo = document.getElementById("sidebar-usuario-info");
-        if (sidebarUsuarioInfo) {
-            sidebarUsuarioInfo.textContent = nombreCompleto;
+    // Intentar obtener nombreCompleto desde localStorage primero
+    let nombreUsuario = localStorage.getItem("nombreCompleto");
+    
+    if (!nombreUsuario) {
+        // Fallback: decodificar JWT para obtener NombreCompleto
+        try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1]));
+                nombreUsuario = payload.NombreCompleto || payload.name || payload.unique_name || "Usuario";
+            }
+        } catch (error) {
+            console.error("Error al decodificar token para sidebar:", error);
+            nombreUsuario = "Usuario";
         }
-    } catch (error) {
-        console.error("Error al decodificar token para sidebar:", error);
+    }
+    
+    const sidebarUsuarioInfo = document.getElementById("sidebar-usuario-info");
+    if (sidebarUsuarioInfo) {
+        sidebarUsuarioInfo.textContent = nombreUsuario;
     }
 }
 
