@@ -32,10 +32,10 @@ function crearSidebar() {
                         <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehículos Proveedores</a></li>
                         <li><a href="${basePath}PersonalLocal/html/personal_local.html">Personal Local</a></li>
                         <li><a href="${basePath}DiasLibre/html/dias_libre.html">Días Libre</a></li>
+                        <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">Habitación Proveedor</a></li>
                         <li><a class="disabled">Permisos Personal</a></li>
                         <li><a class="disabled">Ocurrencias</a></li>
                         <li><a class="disabled">Control de Bienes</a></li>
-                        <li><a class="disabled">Habitación Proveedor</a></li>
                     </ul>
                 </li>
             </ul>

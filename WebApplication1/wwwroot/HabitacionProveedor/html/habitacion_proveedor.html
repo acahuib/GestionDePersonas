@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>🏠 Habitación Proveedor - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div id="sidebar"></div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>🏠 Cuaderno de Habitación Proveedor</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="toolbar">
+        <a href="habitacion_proveedor_historial.html" class="card-link">
+            <button class="btn-inline">📚 Ver Historial</button>
+        </a>
+    </div>
+
+    <!-- Formulario de ingreso a habitación -->
+    <div class="form-card">
+        <h3>Registrar Ingreso a Habitación</h3>
+
+        <label>DNI *</label>
+        <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
+
+        <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+            <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+        </div>
+
+        <label>Nombres y Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombreApellidos" placeholder="Solo si DNI no registrado">
+
+        <label>Origen *</label>
+        <input type="text" id="origen" placeholder="Origen">
+
+        <label>Cuarto</label>
+        <input type="text" id="cuarto" placeholder="Número de cuarto (opcional)">
+
+        <label>Frazadas</label>
+        <input type="number" id="frazadas" placeholder="Número de frazadas (opcional)" min="0">
+
+        <div>
+            <button onclick="registrarIngreso()" class="btn-success btn-block">
+                ✅ Registrar INGRESO
+            </button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <!-- Lista de proveedores en habitación (sin salida) -->
+    <div>
+        <div class="toolbar">
+            <h3>Proveedores en Habitación (Sin salida registrada)</h3>
+            <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+        </div>
+        
+        <div id="lista-activos">
+            <p class="text-center muted">Cargando...</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/habitacion_proveedor.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    crearSidebar();
+    cargarActivos();
+
+    // Auto-actualizar lista cada 15 segundos
+    setInterval(cargarActivos, 15000);
+
+    // Detectar ENTER en los campos
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
+    addEnterListener("nombreApellidos", () => document.getElementById("origen").focus());
+    addEnterListener("origen", () => document.getElementById("cuarto").focus());
+    addEnterListener("cuarto", () => document.getElementById("frazadas").focus());
+    addEnterListener("frazadas", registrarIngreso);
+});
+</script>
+
+</body>
+</html>

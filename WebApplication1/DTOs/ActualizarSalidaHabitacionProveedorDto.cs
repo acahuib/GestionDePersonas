@@ -1,10 +1,10 @@
 namespace WebApplication1.DTOs
 {
     /// <summary>
-    /// DTO para actualizar salida de Habitación Proveedor
+    /// DTO para registrar ingreso de Habitación Proveedor (regreso)
     /// </summary>
     public class ActualizarSalidaHabitacionProveedorDto
     {
-        public DateTime? HoraSalida { get; set; }
+        // Se puede agregar observaciones si se necesita en el futuro
     }
 }
