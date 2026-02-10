@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 Historial Días Libres - Control de Accesos</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div id="sidebar"></div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📚 Historial de Días Libres</h2>
+        </div>
+
+        <hr>
+
+        <!-- Filtros de búsqueda -->
+        <div class="form-card">
+            <h3>Filtros de Búsqueda</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="filtroDni">DNI</label>
+                    <input type="text" id="filtroDni" placeholder="Buscar por DNI">
+                </div>
+                <div class="form-group">
+                    <label for="filtroFechaInicio">Fecha Desde</label>
+                    <input type="date" id="filtroFechaInicio">
+                </div>
+                <div class="form-group">
+                    <label for="filtroFechaFin">Fecha Hasta</label>
+                    <input type="date" id="filtroFechaFin">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button id="btnBuscar" class="btn-inline btn-primary">Buscar</button>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Tabla de historial -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>Registros de Días Libres</h3>
+                <div class="toolbar-actions">
+                    <button onclick="cargarHistorial()" class="btn-inline btn-small">🔄 Actualizar</button>
+                    <a href="dias_libre.html" class="card-link">
+                        <button class="btn-inline">Volver</button>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="table" id="tablaHistorial">
+                    <thead>
+                        <tr>
+                            <th>Fecha Registro</th>
+                            <th>Hora Registro</th>
+                            <th>Boleta</th>
+                            <th>DNI</th>
+                            <th>Nombre Completo</th>
+                            <th>Del</th>
+                            <th>Al</th>
+                            <th>Trabaja</th>
+                            <th>Guardia Registro</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Datos dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Controles de paginación -->
+            <div class="pagination">
+                <button id="btnPrimera" class="btn-inline btn-small">Primera</button>
+                <button id="btnAnterior" class="btn-inline btn-small">Anterior</button>
+                <span id="infoPagina" style="margin: 0 15px;">Página 1 de 1</span>
+                <button id="btnSiguiente" class="btn-inline btn-small">Siguiente</button>
+                <button id="btnUltima" class="btn-inline btn-small">Última</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/dias_libre_historial.js"></script>
+</body>
+</html>

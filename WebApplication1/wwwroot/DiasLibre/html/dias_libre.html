@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Días Libres - Control de Accesos</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div id="sidebar"></div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📅 Cuaderno de Días Libres</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="toolbar">
+        <a href="dias_libre_historial.html" class="card-link">
+            <button class="btn-inline">📚 Ver Historial</button>
+        </a>
+    </div>
+
+    <!-- Formulario de Registro -->
+    <div class="form-card">
+        <h3>Registrar Permiso de Días Libres</h3>
+        <form id="formDiasLibre">
+            <label>Número de Boleta *</label>
+            <input type="text" id="numeroBoleta" name="numeroBoleta" required placeholder="Número de boleta">
+
+            <label>DNI *</label>
+            <input type="text" id="dni" name="dni" required maxlength="8" pattern="[0-9]{8}" placeholder="Ingrese DNI">
+            
+            <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+            </div>
+
+            <label>Nombres y Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+            <input type="text" id="nombreApellidos" name="nombreApellidos" placeholder="Solo si DNI no registrado">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="del">Fecha Del (inicio del permiso) *</label>
+                    <input type="date" id="del" name="del" required>
+                </div>
+                <div class="form-group">
+                    <label for="al">Fecha Al (fin del permiso) *</label>
+                    <input type="date" id="al" name="al" required>
+                </div>
+                <div class="form-group">
+                    <label for="trabaja">Fecha de Regreso al Trabajo</label>
+                    <input type="date" id="trabaja" name="trabaja" readonly disabled>
+                    <small class="muted">Se calcula automáticamente (Al + 1 día)</small>
+                </div>
+            </div>
+
+            <label>Observaciones</label>
+            <textarea id="observaciones" name="observaciones" rows="3" placeholder="Observaciones (opcional)"></textarea>
+
+            <button type="submit" class="btn-success btn-block">✅ Registrar Permiso</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <!-- Tabla de Permisos Activos -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Permisos de Días Libres Registrados Hoy</h3>
+            <button onclick="cargarDiasLibreHoy()" class="btn-inline btn-small">🔄 Actualizar</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="table" id="tablaDiasLibre">
+                    <thead>
+                        <tr>
+                            <th>Boleta</th>
+                            <th>DNI</th>
+                            <th>Nombre Completo</th>
+                            <th>Del</th>
+                            <th>Al</th>
+                            <th>Trabaja</th>
+                            <th>Hora Registro</th>
+                            <th>Guardia</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Datos dinámicos -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/dias_libre.js"></script>
+</body>
+</html>

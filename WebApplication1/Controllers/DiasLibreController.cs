@@ -30,13 +30,14 @@ namespace WebApplication1.Controllers
 
         // ======================================================
         // POST: /api/dias-libre
-        // Registra permiso de salida DiasLibre
+        // Registra permiso de salida DiasLibre (solo SALIDA, no hay INGRESO)
         // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarDiasLibre([FromBody] SalidaDiasLibreDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Dni) || string.IsNullOrWhiteSpace(dto.NombresApellidos))
-                return BadRequest("DNI y Nombres/Apellidos son requeridos");
+            // Validación de datos requeridos
+            if (string.IsNullOrWhiteSpace(dto.Dni))
+                return BadRequest("DNI es requerido");
 
             if (string.IsNullOrWhiteSpace(dto.NumeroBoleta))
                 return BadRequest("Numero de boleta es requerido");
@@ -47,9 +48,28 @@ namespace WebApplication1.Controllers
             if (dto.Al.Date < dto.Del.Date)
                 return BadRequest("La fecha Al no puede ser menor que Del");
 
-            var persona = await _context.Personas.FindAsync(dto.Dni);
+            // Buscar persona en tabla Personas
+            var persona = await _context.Personas
+                .FirstOrDefaultAsync(p => p.Dni == dto.Dni);
+
+            // Si no existe la persona, verificar que se haya proporcionado el nombre
+            if (persona == null && string.IsNullOrWhiteSpace(dto.NombresApellidos))
+            {
+                return BadRequest("Debe proporcionar el nombre completo para un DNI no registrado");
+            }
+
+            // Crear persona si no existe
             if (persona == null)
-                return BadRequest("El DNI no esta registrado.");
+            {
+                persona = new Models.Persona
+                {
+                    Dni = dto.Dni,
+                    Nombre = dto.NombresApellidos!,
+                    Tipo = "DiasLibre"
+                };
+                _context.Personas.Add(persona);
+                await _context.SaveChangesAsync();
+            }
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
@@ -70,6 +90,7 @@ namespace WebApplication1.Controllers
             if (movimiento == null)
                 return StatusCode(500, "Error al registrar movimiento");
 
+            // Calcular fecha de regreso al trabajo (día después de Al)
             var fechaTrabaja = dto.Al.Date.AddDays(1);
 
             // Obtener hora actual en zona horaria de Perú (para columnas de BD)
@@ -77,27 +98,25 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
             var fechaActual = ahoraLocal.Date;
 
+            // Crear SalidaDetalle - JSON solo contiene datos específicos (sin nombre/dni)
             var salida = await _salidasService.CrearSalidaDetalle(
                 movimiento.Id,
                 "DiasLibre",
                 new
                 {
                     numeroBoleta = dto.NumeroBoleta,
-                    nombresApellidos = dto.NombresApellidos,
                     del = dto.Del.Date,
                     al = dto.Al.Date,
                     trabaja = fechaTrabaja,
-                    dia = dto.Dia,
                     guardiaSalida = guardiaNombre,
-                    guardiaIngreso = (string?)null,
                     observaciones = dto.Observaciones
                 },
                 usuarioId,
-                null,               // horaIngreso (no aplica para DiasLibre)
-                null,               // fechaIngreso (no aplica para DiasLibre)
+                null,               // horaIngreso (no aplica - fecha de retorno ya programada)
+                null,               // fechaIngreso (no aplica - fecha de retorno ya programada)
                 ahoraLocal,         // horaSalida (momento en que se registra el permiso)
                 fechaActual,        // fechaSalida
-                dto.Dni?.Trim()     // NUEVO: DNI va a columna
+                dto.Dni.Trim()      // DNI va a columna
             );
 
             return Ok(new
@@ -105,13 +124,21 @@ namespace WebApplication1.Controllers
                 mensaje = "Permiso DiasLibre registrado",
                 salidaId = salida.Id,
                 tipoSalida = "DiasLibre",
+                nombreCompleto = persona.Nombre,
+                dni = dto.Dni,
+                del = dto.Del.Date,
+                al = dto.Al.Date,
+                trabaja = fechaTrabaja,
                 estado = "Registrado"
             });
         }
 
+        /*
         // ======================================================
         // PUT: /api/dias-libre/{id}/ingreso
-        // Registra el regreso de DiasLibre (actualiza horaIngreso y fechaIngreso)
+        // ENDPOINT COMENTADO: No se usa porque DiasLibre tiene fecha de retorno programada.
+        // La fecha "Trabaja" (Al + 1 día) indica cuándo la persona vuelve a trabajar,
+        // pero no se registra un ingreso real ya que es un permiso programado.
         // ======================================================
         [HttpPut("{id}/ingreso")]
         public async Task<IActionResult> RegistrarIngresoDiasLibre(int id, [FromBody] ActualizarIngresoDiasLibreDto dto)
@@ -177,5 +204,6 @@ namespace WebApplication1.Controllers
                 estado = "Regreso completado"
             });
         }
+        */
     }
 }

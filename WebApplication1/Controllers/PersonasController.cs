@@ -43,5 +43,32 @@ namespace WebApplication1.Controllers
 
             return Ok(persona);
         }
+
+        /// <summary>
+        /// Busca personas por DNI parcial (para autocompletado)
+        /// Retorna múltiples coincidencias que comienzan con el DNI buscado
+        /// </summary>
+        /// <param name="dni">DNI parcial o completo a buscar</param>
+        /// <returns>Lista de personas que coinciden</returns>
+        [HttpGet("buscar")]
+        public async Task<ActionResult<IEnumerable<Persona>>> BuscarPorDni([FromQuery] string dni)
+        {
+            if (string.IsNullOrWhiteSpace(dni))
+                return BadRequest(new { mensaje = "DNI es requerido para búsqueda" });
+
+            var dniNormalizado = dni.Trim();
+
+            // Validar que solo contenga dígitos
+            if (!dniNormalizado.All(char.IsDigit))
+                return BadRequest(new { mensaje = "DNI debe contener solo números" });
+
+            // Buscar personas cuyo DNI comience con el valor buscado
+            var personas = await _context.Personas
+                .Where(p => p.Dni.StartsWith(dniNormalizado))
+                .Take(10) // Limitar a 10 resultados para autocompletado
+                .ToListAsync();
+
+            return Ok(personas);
+        }
     }
 }
