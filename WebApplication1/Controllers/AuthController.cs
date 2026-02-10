@@ -37,6 +37,7 @@ namespace WebApplication1.Controllers
 
             var claims = new[]
             {
+                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                 new Claim(ClaimTypes.Name, usuario.UsuarioLogin),
                 new Claim(ClaimTypes.Role, usuario.Rol),
                 new Claim("NombreCompleto", usuario.NombreCompleto)
