@@ -241,7 +241,7 @@ async function cargarActivos() {
             
             // NUEVO: Leer horaIngreso desde columnas primero, luego fallback al JSON
             const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
-            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleString('es-PE') : 'N/A';
+            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : 'N/A';
             
             // NUEVO: Obtener nombreCompleto desde el endpoint que hace JOIN con Personas
             const nombreCompleto = p.nombreCompleto || `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';

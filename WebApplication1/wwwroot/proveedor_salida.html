@@ -8,16 +8,18 @@
 </head>
 <body>
 
-<div class="container">
-    <div class="page-header">
-        <h2>❌ Registrar Salida de Proveedor</h2>
-        <div class="header-actions">
-            <span id="usuario-info"></span>
-            <button onclick="cerrarSesion()" class="btn-inline">Cerrar Sesion</button>
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>❌ Registrar Salida de Proveedor</h2>
+            <div class="header-actions">
+                <a href="proveedor.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
         </div>
-    </div>
 
-    <hr>
+        <hr>
 
     <div class="form-card">
         <h3>Datos del Proveedor</h3>
@@ -47,7 +49,9 @@
         <p id="mensaje"></p>
     </div>
 </div>
+</div>
 
+<script src="js/sidebar.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/proveedor_salida.js"></script>

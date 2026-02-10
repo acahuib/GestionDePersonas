@@ -279,7 +279,7 @@ async function cargarActivos() {
             // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
             const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
-            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleString('es-PE') : "N/A";
+            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A";
             const fechaIngreso = fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
 

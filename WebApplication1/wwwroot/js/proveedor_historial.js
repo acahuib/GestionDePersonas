@@ -64,7 +64,7 @@ async function cargarHistorial() {
                     guardiaSalida: "N/A",
                     // NUEVO: Usar valores desde columnas con fallback
                     fechaIngreso: tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A",
-                    horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleString('es-PE') : "N/A",
+                    horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A",
                     fechaSalida: "N/A",
                     horaSalida: "N/A",
                     timestamp: new Date(s.fechaCreacion).getTime()
@@ -79,7 +79,7 @@ async function cargarHistorial() {
                 if (abierta && abierta.horaSalida === "N/A") {
                     // NUEVO: Usar valores desde columnas con fallback
                     abierta.fechaSalida = tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A";
-                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A";
+                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A";
                     abierta.guardiaSalida = tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A";
                     abierta.timestamp = new Date(s.fechaCreacion).getTime();  // Actualizar timestamp
                     if (tieneValor(datos.observacion)) {
@@ -99,7 +99,7 @@ async function cargarHistorial() {
                         horaIngreso: "N/A",
                         // NUEVO: Usar valores desde columnas con fallback
                         fechaSalida: tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A",
-                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A",
+                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A",
                         timestamp: new Date(s.fechaCreacion).getTime()
                     };
                     sesiones.push(sesion);

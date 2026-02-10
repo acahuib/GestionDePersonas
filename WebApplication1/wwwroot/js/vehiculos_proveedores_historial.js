@@ -67,7 +67,7 @@ async function cargarHistorial() {
                     guardiaIngreso: tieneValor(datos.guardiaIngreso) ? datos.guardiaIngreso : "N/A",
                     guardiaSalida: "N/A",
                     fechaIngreso: tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A",
-                    horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleString('es-PE') : "N/A",
+                    horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A",
                     fechaSalida: "N/A",
                     horaSalida: "N/A",
                     timestamp: new Date(s.fechaCreacion).getTime()
@@ -81,7 +81,7 @@ async function cargarHistorial() {
                 const abierta = abiertasPorDni.get(dni);
                 if (abierta && abierta.horaSalida === "N/A") {
                     abierta.fechaSalida = tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A";
-                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A";
+                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A";
                     abierta.guardiaSalida = tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A";
                     abierta.timestamp = new Date(s.fechaCreacion).getTime();  // Actualizar timestamp
                     if (tieneValor(datos.observacion)) {
@@ -104,7 +104,7 @@ async function cargarHistorial() {
                         fechaIngreso: "N/A",
                         horaIngreso: "N/A",
                         fechaSalida: tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A",
-                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleString('es-PE') : "N/A",
+                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A",
                         timestamp: new Date(s.fechaCreacion).getTime()
                     };
                     sesiones.push(sesion);

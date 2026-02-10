@@ -5,7 +5,138 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     background-color: #f4f6f9;
     margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+/* ===============================
+   SIDEBAR (MENÚ LATERAL)
+   =============================== */
+.sidebar {
+    width: 250px;
+    background-color: #2c3e50;
+    color: white;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.sidebar-header {
     padding: 20px;
+    background-color: #1a252f;
+    border-bottom: 1px solid #34495e;
+    text-align: center;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #ecf0f1;
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.sidebar-menu li {
+    border-bottom: 1px solid #34495e;
+}
+
+.sidebar-menu a {
+    display: block;
+    padding: 15px 20px;
+    color: #ecf0f1;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.sidebar-menu a:hover {
+    background-color: #34495e;
+    padding-left: 25px;
+}
+
+.sidebar-menu .active {
+    background-color: #2980b9;
+    border-left: 4px solid #3498db;
+}
+
+/* Submenu de Cuadernos */
+.sidebar-submenu {
+    position: relative;
+}
+
+.sidebar-submenu > a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-submenu-items {
+    display: none;
+    background-color: #1a252f;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-submenu:hover .sidebar-submenu-items {
+    display: block;
+}
+
+.sidebar-submenu-items li {
+    border-bottom: 1px solid #2c3e50;
+}
+
+.sidebar-submenu-items a {
+    padding: 12px 20px 12px 35px;
+    font-size: 0.9rem;
+}
+
+.sidebar-submenu-items a:hover {
+    background-color: #34495e;
+    padding-left: 40px;
+}
+
+.sidebar-submenu-items .disabled {
+    color: #7f8c8d;
+    cursor: not-allowed;
+}
+
+.sidebar-submenu-items .disabled:hover {
+    background-color: #1a252f;
+    padding-left: 35px;
+}
+
+.sidebar-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #34495e;
+    background-color: #1a252f;
+}
+
+.sidebar-footer button {
+    width: 100%;
+    background-color: #e74c3c;
+    margin-top: 0;
+}
+
+.sidebar-footer button:hover {
+    background-color: #c0392b;
+}
+
+/* Contenido principal con margen para el sidebar */
+.main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 h2 {
@@ -307,7 +438,34 @@ button:hover {
 /* ===============================
    RESPONSIVE (MÓVILES)
    =============================== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+    
+    .main-content {
+        margin-left: 200px;
+        width: calc(100% - 200px);
+    }
+}
+
 @media (max-width: 600px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 10px;
+    }
+    
     .container {
         padding: 10px;
     }
