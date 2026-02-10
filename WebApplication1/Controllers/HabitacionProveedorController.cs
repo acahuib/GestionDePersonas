@@ -84,13 +84,13 @@ namespace WebApplication1.Controllers
                 var fechaActual = ahoraLocal.Date;
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso
+                // DNI se guarda en columna para JOIN directo con Personas
                 // Crear SalidaDetalle con datos de HabitacionProveedor
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     movimiento.Id,
                     "HabitacionProveedor",
                     new
                     {
-                        dni = dto.Dni,
                         nombres = dto.Nombres,
                         apellidos = dto.Apellidos,
                         origen = dto.Origen,
@@ -101,10 +101,11 @@ namespace WebApplication1.Controllers
                         guardiaSalida = (string?)null
                     },
                     usuarioId,
-                    ahoraLocal,      // NUEVO: horaIngreso va a columna
-                    fechaActual,     // NUEVO: fechaIngreso va a columna
-                    null,            // horaSalida (se llenará después)
-                    null             // fechaSalida (se llenará después)
+                    ahoraLocal,          // NUEVO: horaIngreso va a columna
+                    fechaActual,         // NUEVO: fechaIngreso va a columna
+                    null,                // horaSalida (se llenará después)
+                    null,                // fechaSalida (se llenará después)
+                    dto.Dni?.Trim()      // NUEVO: DNI va a columna
                 );
 
                 if (salidaDetalle == null)
@@ -164,12 +165,10 @@ namespace WebApplication1.Controllers
                     var root = doc.RootElement;
 
                     // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
+                    // DNI ya NO está en JSON, está en columna. nombres/apellidos están en tabla Personas
                     var datosActualizados = new
                     {
-                        dni = root.GetProperty("dni").GetString(),
-                        nombres = root.GetProperty("nombres").GetString(),
-                        apellidos = root.GetProperty("apellidos").GetString(),
-                        origen = root.GetProperty("origen").GetString(),
+                        origen = root.TryGetProperty("origen", out var org) && org.ValueKind == JsonValueKind.String ? org.GetString() : null,
                         frazadas = root.TryGetProperty("frazadas", out var f) && f.ValueKind != JsonValueKind.Null
                             ? f.GetInt32()
                             : (int?)null,

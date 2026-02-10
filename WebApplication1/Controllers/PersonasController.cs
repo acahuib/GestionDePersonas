@@ -7,6 +7,7 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // [Authorize(Roles = "Admin,Guardia")] // Comentado para permitir búsqueda de personas sin auth
     public class PersonasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -17,17 +18,28 @@ namespace WebApplication1.Controllers
         }
 
         /// <summary>
-        /// Busca una persona por su DNI
+        /// Busca una persona por su DNI en la tabla maestra
+        /// Retorna los datos básicos (DNI, Nombre, Tipo)
         /// </summary>
-        /// <param name="dni">DNI a buscar</param>
+        /// <param name="dni">DNI a buscar (8 dígitos)</param>
         /// <returns>Persona encontrada o 404</returns>
         [HttpGet("{dni}")]
         public async Task<ActionResult<Persona>> ObtenerPorDni(string dni)
         {
-            var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dni);
+            if (string.IsNullOrWhiteSpace(dni))
+                return BadRequest(new { mensaje = "DNI es requerido" });
+
+            // Normalizar DNI (trim y validar formato)
+            var dniNormalizado = dni.Trim();
+            
+            if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
+                return BadRequest(new { mensaje = "DNI debe tener 8 dígitos numéricos" });
+
+            var persona = await _context.Personas
+                .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
             if (persona == null)
-                return NotFound(new { mensaje = $"Persona con DNI {dni} no encontrada" });
+                return NotFound(new { mensaje = $"Persona con DNI {dniNormalizado} no encontrada" });
 
             return Ok(persona);
         }

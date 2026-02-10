@@ -127,13 +127,13 @@ namespace WebApplication1.Controllers
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
+                // DNI se guarda en columna para JOIN directo con Personas
                 // Crear SalidaDetalle
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Ocurrencias",
                     new
                     {
-                        dni = dni,
                         nombre = dto.Nombre,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
@@ -143,7 +143,8 @@ namespace WebApplication1.Controllers
                     horaIngresoCol,     // NUEVO: Pasar a columnas
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
-                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                    fechaSalidaCol,     // NUEVO: Pasar a columnas
+                    dni?.Trim()         // NUEVO: DNI va a columna
                 );
 
                 if (salidaDetalle == null)
@@ -186,7 +187,8 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
-                    var dni = root.GetProperty("dni").GetString();
+                    // NUEVO: DNI ahora está en columna, no en JSON
+                    var dni = salidaExistente.Dni;
 
                     // Verificar que es Ocurrencia o DNI ficticio
                     var persona = await _context.Personas.FindAsync(dni);
@@ -199,9 +201,9 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
 
                     // Actualizar en SalidaDetalle
+                    // DNI ya NO va en JSON, está en columna
                     var datosActualizados = new
                     {
-                        dni = dni,
                         nombre = dto.Nombre,
                         horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null 
                             ? hi.GetDateTime() 

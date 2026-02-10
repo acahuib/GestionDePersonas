@@ -48,6 +48,31 @@ namespace WebApplication1.Controllers
                 // Determinar tipo de movimiento basado en cuál campo se proporciona
                 string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
 
+                // ===== NUEVO: Buscar o crear en tabla Personas =====
+                // Normalizar DNI (trim y uppercase por si hay inconsistencias)
+                var dniNormalizado = dto.Dni.Trim();
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                
+                if (persona == null)
+                {
+                    // DNI no existe: validar que se envíen nombres y apellidos
+                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                        return BadRequest("DNI no registrado. Debe proporcionar Nombres y Apellidos para registrar la persona.");
+
+                    // Crear nuevo registro en tabla Personas
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}",
+                        Tipo = "Proveedor"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+                // Si persona ya existe, se usa el nombre de la tabla
+                // ===== FIN NUEVO =====
+
                 var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -61,7 +86,7 @@ namespace WebApplication1.Controllers
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
                     .OrderByDescending(m => m.FechaHora)
                     .FirstOrDefaultAsync();
 
@@ -69,13 +94,13 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
                 {
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
                 else if (ultimoMovimiento == null)
                 {
                     // Si no existe movimiento, crear con tipo determinado
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
 
                 if (ultimoMovimiento == null)
@@ -93,16 +118,14 @@ namespace WebApplication1.Controllers
                 var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
-                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
-                // Solo datos variables (nombres, apellidos, procedencia, etc.)
+                // NUEVO: DatosJSON ya NO contiene nombres/apellidos/dni (están en tabla Personas)
+                // DNI se guarda en columna Dni de SalidaDetalle para JOIN directo
+                // Solo datos variables del evento específico
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Proveedor",
                     new
                     {
-                        nombres = dto.Nombres,
-                        apellidos = dto.Apellidos,
-                        dni = dto.Dni,
                         procedencia = dto.Procedencia,
                         destino = dto.Destino,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
@@ -113,7 +136,8 @@ namespace WebApplication1.Controllers
                     horaIngresoCol,     // NUEVO: Pasar a columnas
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
-                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                    fechaSalidaCol,     // NUEVO: Pasar a columnas
+                    dniNormalizado      // NUEVO: Pasar DNI a columna
                 );
 
                 return Ok(new
@@ -162,18 +186,21 @@ namespace WebApplication1.Controllers
             var fechaActual = ahoraLocal.Date;
             
             // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
+            // JSON ya NO contiene dni/nombres/apellidos (dni en columna, nombres en tabla Personas)
+            // JSON solo mantiene: procedencia, destino, guardias, observacion
             var datosActualizados = new
             {
-                nombres = datosActuales.GetProperty("nombres").GetString(),
-                apellidos = datosActuales.GetProperty("apellidos").GetString(),
-                dni = datosActuales.GetProperty("dni").GetString(),
-                procedencia = datosActuales.GetProperty("procedencia").GetString(),
-                destino = datosActuales.GetProperty("destino").GetString(),
-                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                procedencia = datosActuales.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String
+                    ? proc.GetString()
+                    : null,
+                destino = datosActuales.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String
+                    ? dest.GetString()
+                    : null,
+                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
                     ? gi.GetString()
                     : null,
                 guardiaSalida = guardiaNombre,
-                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas
@@ -193,6 +220,42 @@ namespace WebApplication1.Controllers
                 salidaId = id,
                 tipoSalida = "Proveedor",
                 estado = "Salida completada"
+            });
+        }
+
+        // ======================================================
+        // GET: /api/proveedor/{id}
+        // Obtiene detalle de proveedor con información de tabla Personas
+        // ======================================================
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ObtenerProveedorPorId(int id)
+        {
+            var salida = await _context.SalidasDetalle
+                .Include(s => s.Movimiento)
+                .ThenInclude(m => m!.Persona)
+                .FirstOrDefaultAsync(s => s.Id == id && s.TipoSalida == "Proveedor");
+
+            if (salida == null)
+                return NotFound("Proveedor no encontrado");
+
+            var datosJSON = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            // NUEVO: DNI ahora está en columna, no en JSON
+            // nombreCompleto viene de tabla Personas mediante JOIN
+            return Ok(new
+            {
+                id = salida.Id,
+                dni = salida.Dni,  // NUEVO: Leer desde columna
+                nombreCompleto = salida.Movimiento?.Persona?.Nombre ?? "Desconocido",
+                procedencia = datosJSON.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
+                destino = datosJSON.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String ? dest.GetString() : null,
+                horaIngreso = salida.HoraIngreso ?? _salidasService.ObtenerHoraIngreso(salida),
+                fechaIngreso = salida.FechaIngreso ?? _salidasService.ObtenerFechaIngreso(salida),
+                horaSalida = salida.HoraSalida ?? _salidasService.ObtenerHoraSalida(salida),
+                fechaSalida = salida.FechaSalida ?? _salidasService.ObtenerFechaSalida(salida),
+                guardiaIngreso = datosJSON.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String ? gi.GetString() : null,
+                guardiaSalida = datosJSON.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind == JsonValueKind.String ? gs.GetString() : null,
+                observacion = datosJSON.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null
             });
         }
     }

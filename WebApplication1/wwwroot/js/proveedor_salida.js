@@ -9,8 +9,7 @@ function cargarDatosDesdeUrl() {
     document.getElementById("dni").dataset.salidaId = salidaId || "";
     
     document.getElementById("dni").value = params.get("dni") || "";
-    document.getElementById("nombres").value = params.get("nombres") || "";
-    document.getElementById("apellidos").value = params.get("apellidos") || "";
+    document.getElementById("nombreCompleto").value = params.get("nombreCompleto") || "";
     document.getElementById("procedencia").value = params.get("procedencia") || "";
     document.getElementById("destino").value = params.get("destino") || "";
     document.getElementById("observacion").value = params.get("observacion") || "";

@@ -121,13 +121,13 @@ namespace WebApplication1.Controllers
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
+                // DNI se guarda en columna para JOIN directo con Personas
                 // Crear registro de salida con datos JSON
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "SalidasPermisosPersonal",
                     new
                     {
-                        dni = dto.Dni,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         nombre = dto.Nombre,
@@ -140,7 +140,8 @@ namespace WebApplication1.Controllers
                     horaIngresoCol,     // NUEVO: Pasar a columnas
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
-                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                    fechaSalidaCol,     // NUEVO: Pasar a columnas
+                    dto.Dni?.Trim()     // NUEVO: DNI va a columna
                 );
 
                 if (salidaDetalle == null)
@@ -203,15 +204,15 @@ namespace WebApplication1.Controllers
                     var root = doc.RootElement;
 
                     // NUEVO: horaIngreso y fechaIngreso ya NO van al JSON, van a columnas
+                    // DNI ya NO está en JSON, está en columna
                     var datosActualizados = new
                     {
-                        dni = root.GetProperty("dni").GetString(),
-                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind == JsonValueKind.String ? gs.GetString() : null,
                         guardiaIngreso = guardiaNombre,
-                        nombre = root.GetProperty("nombre").GetString(),
-                        deDonde = root.GetProperty("deDonde").GetString(),
-                        personal = root.GetProperty("personal").GetString(),
-                        quienAutoriza = root.GetProperty("quienAutoriza").GetString(),
+                        nombre = root.TryGetProperty("nombre", out var nom) && nom.ValueKind == JsonValueKind.String ? nom.GetString() : null,
+                        deDonde = root.TryGetProperty("deDonde", out var dd) && dd.ValueKind == JsonValueKind.String ? dd.GetString() : null,
+                        personal = root.TryGetProperty("personal", out var pers) && pers.ValueKind == JsonValueKind.String ? pers.GetString() : null,
+                        quienAutoriza = root.TryGetProperty("quienAutoriza", out var qa) && qa.ValueKind == JsonValueKind.String ? qa.GetString() : null,
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 

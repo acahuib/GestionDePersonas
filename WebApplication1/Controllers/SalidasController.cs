@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
@@ -86,28 +87,78 @@ namespace WebApplication1.Controllers
         // ======================================================
         // GET: /api/salidas/tipo/{tipoSalida}
         // Obtiene todas las salidas de un tipo específico
+        // JOIN directo con Personas usando campo Dni
         // ======================================================
         [HttpGet("tipo/{tipoSalida}")]
         public async Task<IActionResult> ObtenerSalidasPorTipo(string tipoSalida)
         {
-            var salidas = await _salidasService.ObtenerSalidasPorTipo(tipoSalida);
-
-            var resultado = salidas.Select(s => new
+            try
             {
-                id = s.Id,
-                movimientoId = s.MovimientoId,
-                tipoSalida = s.TipoSalida,
-                datos = JsonDocument.Parse(s.DatosJSON).RootElement,
-                fechaCreacion = s.FechaCreacion,
-                usuarioId = s.UsuarioId,
-                // NUEVO: Incluir columnas con fallback al JSON
-                horaIngreso = _salidasService.ObtenerHoraIngreso(s),
-                fechaIngreso = _salidasService.ObtenerFechaIngreso(s),
-                horaSalida = _salidasService.ObtenerHoraSalida(s),
-                fechaSalida = _salidasService.ObtenerFechaSalida(s)
-            }).ToList();
+                var salidas = await _context.SalidasDetalle
+                    .Where(s => s.TipoSalida == tipoSalida)
+                    .Select(s => new
+                    {
+                        s.Id,
+                        s.MovimientoId,
+                        s.TipoSalida,
+                        s.DatosJSON,
+                        s.FechaCreacion,
+                        s.UsuarioId,
+                        s.Dni,
+                        // JOIN directo con Personas usando el campo Dni
+                        NombreCompleto = _context.Personas
+                            .Where(p => p.Dni == s.Dni)
+                            .Select(p => p.Nombre)
+                            .FirstOrDefault(),
+                        HoraIngreso = s.HoraIngreso,
+                        FechaIngreso = s.FechaIngreso,
+                        HoraSalida = s.HoraSalida,
+                        FechaSalida = s.FechaSalida
+                    })
+                    .ToListAsync();
 
-            return Ok(resultado);
+                var resultado = salidas.Select(s =>
+                {
+                    JsonElement datosJson;
+                    try
+                    {
+                        datosJson = JsonDocument.Parse(s.DatosJSON).RootElement;
+                    }
+                    catch
+                    {
+                        datosJson = JsonDocument.Parse("{}").RootElement;
+                    }
+
+                    return new
+                    {
+                        id = s.Id,
+                        movimientoId = s.MovimientoId,
+                        tipoSalida = s.TipoSalida,
+                        datos = datosJson,
+                        fechaCreacion = s.FechaCreacion,
+                        usuarioId = s.UsuarioId,
+                        dni = s.Dni,
+                        nombreCompleto = s.NombreCompleto,
+                        horaIngreso = s.HoraIngreso ?? _salidasService.ObtenerHoraIngresoFromJson(s.DatosJSON),
+                        fechaIngreso = s.FechaIngreso ?? _salidasService.ObtenerFechaIngresoFromJson(s.DatosJSON),
+                        horaSalida = s.HoraSalida ?? _salidasService.ObtenerHoraSalidaFromJson(s.DatosJSON),
+                        fechaSalida = s.FechaSalida ?? _salidasService.ObtenerFechaSalidaFromJson(s.DatosJSON)
+                    };
+                }).ToList();
+
+                return Ok(resultado);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en ObtenerSalidasPorTipo: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return StatusCode(500, new
+                {
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
         }
 
         // ======================================================

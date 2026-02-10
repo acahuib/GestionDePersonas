@@ -36,10 +36,13 @@ async function cargarHistorial() {
 
         ordenadas.forEach(s => {
             const datos = s.datos || {};
-            const dni = (datos.dni || "").trim();
+            
+            // NUEVO: DNI ahora está en columna, no en JSON
+            const dni = (s.dni || "").trim();
             if (!dni) return;
 
-            const nombres = `${datos.nombres || ""} ${datos.apellidos || ""}`.trim();
+            // NUEVO: nombreCompleto viene del JOIN con tabla Personas (API ya lo trae)
+            const nombres = s.nombreCompleto || "N/A";
             
             // NUEVO: Leer desde columnas primero, luego fallback al JSON
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
@@ -53,7 +56,7 @@ async function cargarHistorial() {
             if (tieneIngreso) {
                 const sesion = {
                     dni,
-                    nombres: tieneValor(nombres) ? nombres : "N/A",
+                    nombres: nombres,  // Ya viene de la API o es "N/A"
                     procedencia: tieneValor(datos.procedencia) ? datos.procedencia : "N/A",
                     destino: tieneValor(datos.destino) ? datos.destino : "N/A",
                     observacion: tieneValor(datos.observacion) ? datos.observacion : "",
@@ -86,7 +89,7 @@ async function cargarHistorial() {
                 } else {
                     const sesion = {
                         dni,
-                        nombres: tieneValor(nombres) ? nombres : "N/A",
+                        nombres: nombres,  // Ya viene de la API o es "N/A"
                         procedencia: tieneValor(datos.procedencia) ? datos.procedencia : "N/A",
                         destino: tieneValor(datos.destino) ? datos.destino : "N/A",
                         observacion: tieneValor(datos.observacion) ? datos.observacion : "",

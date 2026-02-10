@@ -32,11 +32,15 @@
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
 
-        <label>Nombres *</label>
+        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
         <input type="text" id="nombres" placeholder="Nombres del proveedor">
 
-        <label>Apellidos *</label>
+        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
         <input type="text" id="apellidos" placeholder="Apellidos del proveedor">
+
+        <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+            <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+        </div>
 
         <label>Procedencia *</label>
         <input type="text" id="procedencia" placeholder="Procedencia">
@@ -88,7 +92,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Detectar ENTER en los campos
-    addEnterListener("dni", () => document.getElementById("nombres").focus());
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
     addEnterListener("nombres", () => document.getElementById("apellidos").focus());
     addEnterListener("apellidos", () => document.getElementById("procedencia").focus());
     addEnterListener("procedencia", () => document.getElementById("destino").focus());

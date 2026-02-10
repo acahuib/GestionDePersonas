@@ -91,10 +91,9 @@ namespace WebApplication1.Controllers
                 DateTime horaIngresoColumna = fechaHoraActual;
                 DateTime fechaIngresoColumna = fechaHoraActual.Date;
 
-                // Serializar datos del personal local (mantener en JSON también para compatibilidad)
+                // Serializar datos del personal local (DNI se guarda en columna, NO en JSON)
                 var datosPersonalLocal = new
                 {
-                    dni = dto.Dni,
                     nombreApellidos = dto.NombreApellidos,
                     horaIngreso = horaIngresoColumna,
                     fechaIngreso = fechaIngresoColumna,
@@ -119,8 +118,9 @@ namespace WebApplication1.Controllers
                     usuarioId,
                     horaIngresoColumna,
                     fechaIngresoColumna,
-                    null,  // horaSalida (se registra después vía PUT)
-                    null); // fechaSalida (se registra después vía PUT)
+                    null,                    // horaSalida (se registra después vía PUT)
+                    null,                    // fechaSalida (se registra después vía PUT)
+                    dto.Dni?.Trim());        // NUEVO: DNI va a columna
 
                 if (salidaDetalle == null)
                     return StatusCode(500, "Error al crear registro de salida");
@@ -233,10 +233,10 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
+                    // DNI ya NO está en JSON, está en columna
                     var datosActualizados = new
                     {
-                        dni = root.GetProperty("dni").GetString(),
-                        nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
+                        nombreApellidos = root.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
                         horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null,
                         fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
@@ -302,12 +302,12 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
-                    var dni = root.GetProperty("dni").GetString();
+                    // NUEVO: DNI ahora está en columna, no en JSON
+                    var dni = salidaExistente.Dni;
                 
                     var datosActualizados = new
                     {
-                        dni = dni,
-                        nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
+                        nombreApellidos = root.TryGetProperty("nombreApellidos", out var nap) && nap.ValueKind == JsonValueKind.String ? nap.GetString() : null,
                         horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null,
                         fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,

@@ -21,7 +21,7 @@ namespace WebApplication1.Services
 
         /// <summary>
         /// Crea un registro de SalidaDetalle con JSON genérico
-        /// NUEVO: Acepta parámetros opcionales para columnas de fecha/hora
+        /// NUEVO: Acepta parámetros opcionales para columnas de fecha/hora y DNI
         /// </summary>
         public async Task<SalidaDetalle> CrearSalidaDetalle(
             int movimientoId, 
@@ -31,7 +31,8 @@ namespace WebApplication1.Services
             DateTime? horaIngreso = null,
             DateTime? fechaIngreso = null,
             DateTime? horaSalida = null,
-            DateTime? fechaSalida = null)
+            DateTime? fechaSalida = null,
+            string? dni = null)
         {
             // Convertir objeto a JSON string
             var datosJSON = JsonSerializer.Serialize(datosObj, new JsonSerializerOptions
@@ -50,7 +51,8 @@ namespace WebApplication1.Services
                 HoraIngreso = horaIngreso,
                 FechaIngreso = fechaIngreso,
                 HoraSalida = horaSalida,
-                FechaSalida = fechaSalida
+                FechaSalida = fechaSalida,
+                Dni = dni  // NUEVO: Guardar DNI en columna
             };
 
             _context.SalidasDetalle.Add(salida);
@@ -235,6 +237,68 @@ namespace WebApplication1.Services
             }
             catch { }
             
+            return null;
+        }
+
+        // ===== MÉTODOS PARA FALLBACK DESDE JSON STRING =====
+        
+        /// <summary>
+        /// Obtiene HoraIngreso parseando JSON directamente
+        /// </summary>
+        public DateTime? ObtenerHoraIngresoFromJson(string datosJSON)
+        {
+            try
+            {
+                var json = JsonDocument.Parse(datosJSON);
+                if (json.RootElement.TryGetProperty("horaIngreso", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene FechaIngreso parseando JSON directamente
+        /// </summary>
+        public DateTime? ObtenerFechaIngresoFromJson(string datosJSON)
+        {
+            try
+            {
+                var json = JsonDocument.Parse(datosJSON);
+                if (json.RootElement.TryGetProperty("fechaIngreso", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene HoraSalida parseando JSON directamente
+        /// </summary>
+        public DateTime? ObtenerHoraSalidaFromJson(string datosJSON)
+        {
+            try
+            {
+                var json = JsonDocument.Parse(datosJSON);
+                if (json.RootElement.TryGetProperty("horaSalida", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Obtiene FechaSalida parseando JSON directamente
+        /// </summary>
+        public DateTime? ObtenerFechaSalidaFromJson(string datosJSON)
+        {
+            try
+            {
+                var json = JsonDocument.Parse(datosJSON);
+                if (json.RootElement.TryGetProperty("fechaSalida", out var prop) && prop.ValueKind != JsonValueKind.Null)
+                    return prop.GetDateTime();
+            }
+            catch { }
             return null;
         }
     }

@@ -14,6 +14,12 @@ namespace WebApplication1.Models
         public int MovimientoId { get; set; }
 
         /// <summary>
+        /// DNI de la persona asociada al registro (si aplica)
+        /// Permite JOIN directo con tabla Personas sin parsear JSON
+        /// </summary>
+        public string? Dni { get; set; }
+
+        /// <summary>
         /// Tipo de salida: "Proveedor", "VehiculoEmpresa", "ControlBienes", "VehiculosProveedores", "Visita", etc.
         /// </summary>
         public required string TipoSalida { get; set; }

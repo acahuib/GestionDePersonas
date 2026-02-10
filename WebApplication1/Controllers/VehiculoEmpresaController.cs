@@ -111,7 +111,8 @@ namespace WebApplication1.Controllers
                     horaIngresoCol,     // NUEVO: Pasar a columnas
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
-                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                    fechaSalidaCol,     // NUEVO: Pasar a columnas
+                    dto.Dni?.Trim()     // NUEVO: Pasar DNI a columna
                 );
 
                 return Ok(new

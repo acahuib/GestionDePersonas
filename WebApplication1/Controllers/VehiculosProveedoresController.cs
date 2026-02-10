@@ -92,12 +92,12 @@ namespace WebApplication1.Controllers
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
                 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
+                // DNI se guarda en columna para JOIN directo con Personas
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "VehiculosProveedores",
                     new
                     {
-                        dni = dto.Dni,
                         nombreApellidos = dto.NombreApellidos,
                         proveedor = dto.Proveedor,
                         placa = dto.Placa,
@@ -113,7 +113,8 @@ namespace WebApplication1.Controllers
                     horaIngresoCol,     // NUEVO: Pasar a columnas
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
-                    fechaSalidaCol      // NUEVO: Pasar a columnas
+                    fechaSalidaCol,     // NUEVO: Pasar a columnas
+                    dto.Dni?.Trim()     // NUEVO: Pasar DNI a columna
                 );
 
                 return Ok(new
@@ -162,16 +163,16 @@ namespace WebApplication1.Controllers
             var fechaActual = ahoraLocal.Date;
             
             // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
+            // DNI ya NO está en JSON, está en columna
             var datosActualizados = new
             {
-                dni = datosActuales.GetProperty("dni").GetString(),
-                nombreApellidos = datosActuales.GetProperty("nombreApellidos").GetString(),
-                proveedor = datosActuales.GetProperty("proveedor").GetString(),
-                placa = datosActuales.GetProperty("placa").GetString(),
-                tipo = datosActuales.GetProperty("tipo").GetString(),
-                lote = datosActuales.GetProperty("lote").GetString(),
-                cantidad = datosActuales.GetProperty("cantidad").GetString(),
-                procedencia = datosActuales.GetProperty("procedencia").GetString(),
+                nombreApellidos = datosActuales.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
+                proveedor = datosActuales.TryGetProperty("proveedor", out var prov) && prov.ValueKind == JsonValueKind.String ? prov.GetString() : null,
+                placa = datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
+                tipo = datosActuales.TryGetProperty("tipo", out var tip) && tip.ValueKind == JsonValueKind.String ? tip.GetString() : null,
+                lote = datosActuales.TryGetProperty("lote", out var lot) && lot.ValueKind == JsonValueKind.String ? lot.GetString() : null,
+                cantidad = datosActuales.TryGetProperty("cantidad", out var cant) && cant.ValueKind == JsonValueKind.String ? cant.GetString() : null,
+                procedencia = datosActuales.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
                 guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
                     ? gi.GetString()
                     : null,

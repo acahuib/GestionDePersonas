@@ -84,7 +84,6 @@ namespace WebApplication1.Controllers
                 {
                     numeroBoleta = dto.NumeroBoleta,
                     nombresApellidos = dto.NombresApellidos,
-                    dni = dto.Dni,
                     del = dto.Del.Date,
                     al = dto.Al.Date,
                     trabaja = fechaTrabaja,
@@ -94,10 +93,11 @@ namespace WebApplication1.Controllers
                     observaciones = dto.Observaciones
                 },
                 usuarioId,
-                null,           // horaIngreso (no aplica para DiasLibre)
-                null,           // fechaIngreso (no aplica para DiasLibre)
-                ahoraLocal,     // horaSalida (momento en que se registra el permiso)
-                fechaActual     // fechaSalida
+                null,               // horaIngreso (no aplica para DiasLibre)
+                null,               // fechaIngreso (no aplica para DiasLibre)
+                ahoraLocal,         // horaSalida (momento en que se registra el permiso)
+                fechaActual,        // fechaSalida
+                dto.Dni?.Trim()     // NUEVO: DNI va a columna
             );
 
             return Ok(new

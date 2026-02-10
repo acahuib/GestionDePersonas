@@ -63,12 +63,12 @@ namespace WebApplication1.Controllers
             var fechaSalidaCol = (DateTime?)null;
 
             // NUEVO: DatosJSON ya NO contiene fechaIngreso ni fechaSalida
+            // DNI se guarda en columna para JOIN directo con Personas
             var salida = await _salidasService.CrearSalidaDetalle(
                 ultimoMovimiento.Id,
                 "ControlBienes",
                 new
                 {
-                    dni = dto.Dni,
                     nombre = dto.Nombre,
                     bienesDeclarados = dto.BienesDeclarados,
                     guardiaIngreso = guardiaNombre,
@@ -79,7 +79,8 @@ namespace WebApplication1.Controllers
                 horaIngresoCol,     // NUEVO: Pasar a columnas
                 fechaIngresoCol,    // NUEVO: Pasar a columnas
                 horaSalidaCol,      // NUEVO: Pasar a columnas
-                fechaSalidaCol      // NUEVO: Pasar a columnas
+                fechaSalidaCol,     // NUEVO: Pasar a columnas
+                dto.Dni?.Trim()     // NUEVO: DNI va a columna
             );
 
             return Ok(new
