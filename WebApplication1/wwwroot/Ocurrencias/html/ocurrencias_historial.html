@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>📚 Historial Ocurrencias - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div id="sidebar"></div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📚 Historial de Ocurrencias</h2>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <p class="m-0">Todos los registros de ocurrencias</p>
+            <div class="toolbar-actions">
+                <button onclick="cargarHistorial()" class="btn-inline btn-small">🔄 Actualizar</button>
+                <a href="ocurrencias.html" class="card-link">
+                    <button class="btn-inline">Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <div id="tabla-historial">
+            <p class="text-center muted">Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/ocurrencias_historial.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    crearSidebar();
+    cargarHistorial();
+});
+</script>
+
+</body>
+</html>

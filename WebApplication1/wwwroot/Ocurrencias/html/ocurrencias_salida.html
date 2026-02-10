@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Salida - Ocurrencias</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>❌ Registrar Salida de Ocurrencia</h2>
+            <div class="header-actions">
+                <a href="ocurrencias.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="form-card">
+        <h3>Datos de la Ocurrencia</h3>
+
+        <label>DNI</label>
+        <input type="text" id="readonly-dni" readonly>
+
+        <label>Nombre</label>
+        <input type="text" id="readonly-nombre" readonly>
+
+        <label>Fecha de Ingreso</label>
+        <input type="text" id="readonly-fecha-ingreso" readonly>
+
+        <label>Hora de Ingreso</label>
+        <input type="text" id="readonly-hora-ingreso" readonly>
+
+        <label>Guardia de Ingreso</label>
+        <input type="text" id="readonly-guardia-ingreso" readonly>
+
+        <label>Ocurrencia</label>
+        <textarea id="readonly-ocurrencia" rows="4" readonly></textarea>
+
+        <div>
+            <button onclick="registrarSalida()" class="btn-danger btn-block">❌ Registrar SALIDA</button>
+        </div>
+        <div>
+            <button onclick="volver()" class="btn-secondary btn-block">Volver</button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+</div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/ocurrencias_salida.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarDatos();
+});
+</script>
+</body>
+</html>

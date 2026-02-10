@@ -187,12 +187,12 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
-                    // NUEVO: DNI ahora está en columna, no en JSON
+                    // DNI ahora está en columna, no en JSON
                     var dni = salidaExistente.Dni;
 
                     // Verificar que es Ocurrencia o DNI ficticio
                     var persona = await _context.Personas.FindAsync(dni);
-                    if (persona == null || (persona.Tipo != "Ocurrencia" && !dni!.StartsWith("OCR_")))
+                    if (persona == null || (persona.Tipo != "Ocurrencia" && !dni!.StartsWith("99")))
                         return BadRequest("Solo se puede actualizar nombre de ocurrencias");
 
                     // Actualizar nombre en Persona
@@ -201,22 +201,10 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
 
                     // Actualizar en SalidaDetalle
-                    // DNI ya NO va en JSON, está en columna
+                    // Mantener datos existentes del JSON
                     var datosActualizados = new
                     {
                         nombre = dto.Nombre,
-                        horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null 
-                            ? hi.GetDateTime() 
-                            : (DateTime?)null,
-                        fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null 
-                            ? fi.GetDateTime() 
-                            : (DateTime?)null,
-                        horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null 
-                            ? hs.GetDateTime() 
-                            : (DateTime?)null,
-                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null 
-                            ? fs.GetDateTime() 
-                            : (DateTime?)null,
                         guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
                             ? gi.GetString()
                             : null,
@@ -259,7 +247,11 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
-                    var fechaActual = DateTime.Now.Date;
+                    // Usar zona horaria Perú
+                    var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                    var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    var fechaActual = ahoraLocal.Date;
+                    
                     var usuarioId = ExtractUsuarioIdFromToken();
                     var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                     var guardiaNombre = usuarioId.HasValue
@@ -269,10 +261,11 @@ namespace WebApplication1.Controllers
                             : null);
                     guardiaNombre ??= "S/N";
                     
-                    var horaIngresoActual = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null;
-                    var fechaIngresoActual = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null;
-                    var horaSalidaActual = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null;
-                    var fechaSalidaActual = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null;
+                    // Horas actuales desde COLUMNAS, no JSON
+                    var horaIngresoActual = salidaExistente.HoraIngreso;
+                    var fechaIngresoActual = salidaExistente.FechaIngreso;
+                    var horaSalidaActual = salidaExistente.HoraSalida;
+                    var fechaSalidaActual = salidaExistente.FechaSalida;
 
                     var guardiaIngresoActual = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
                         ? gi.GetString()
@@ -281,21 +274,27 @@ namespace WebApplication1.Controllers
                         ? gs.GetString()
                         : null;
 
+                    // Actualizar JSON (sin fechas/horas)
                     var datosActualizados = new
                     {
-                        dni = root.GetProperty("dni").GetString(),
                         nombre = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null 
                             ? n.GetString() 
                             : null,
-                        horaIngreso = dto.HoraIngreso ?? horaIngresoActual,
-                        fechaIngreso = dto.HoraIngreso.HasValue ? fechaActual : fechaIngresoActual,
-                        horaSalida = dto.HoraSalida ?? horaSalidaActual,
-                        fechaSalida = dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : guardiaIngresoActual,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : guardiaSalidaActual,
                         ocurrencia = dto.Ocurrencia ?? root.GetProperty("ocurrencia").GetString()
                     };
-                    await _salidasService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+                    
+                    // Actualizar columnas de fecha/hora
+                    await _salidasService.ActualizarSalidaDetalle(
+                        id, 
+                        datosActualizados, 
+                        usuarioId,
+                        dto.HoraIngreso.HasValue ? ahoraLocal : horaIngresoActual,  // horaIngreso
+                        dto.HoraIngreso.HasValue ? fechaActual : fechaIngresoActual, // fechaIngreso
+                        dto.HoraSalida.HasValue ? ahoraLocal : horaSalidaActual,     // horaSalida
+                        dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual    // fechaSalida
+                    );
 
                     return Ok(new { mensaje = "Horario actualizado" });
                 }
@@ -329,22 +328,31 @@ namespace WebApplication1.Controllers
         }
 
         /// <summary>
-        /// Genera un DNI ficticio único (OCR_YYYYMMDD_###)
+        /// Genera un DNI ficticio único (99MMDDNN - máximo 8 dígitos)
+        /// 99 = prefijo ficticio, MM = mes, DD = día, NN = contador 00-99
         /// </summary>
         private async Task<string> GenerarDniFicticio()
         {
-            var hoy = DateTime.Now.ToString("yyyyMMdd");
-            var contador = 1;
+            var hoy = DateTime.Now;
+            var prefijo = $"99{hoy.Month:00}{hoy.Day:00}"; // 99MMDD = 6 dígitos
+            var contador = 0;
             string dniGenerado;
 
             do
             {
-                dniGenerado = $"OCR_{hoy}_{contador:000}";
+                dniGenerado = $"{prefijo}{contador:00}"; // 99MMDDNN = 8 dígitos
                 var existe = await _context.Personas.AnyAsync(p => p.Dni == dniGenerado);
                 if (!existe)
                     break;
                 contador++;
-            } while (contador < 1000);
+            } while (contador < 100); // Máximo 99 ocurrencias por día
+
+            if (contador >= 100)
+            {
+                // Si se agotaron los contadores del día, usar timestamp
+                var timestamp = DateTime.Now.ToString("HHmmss");
+                dniGenerado = $"99{timestamp.Substring(0, 6)}"; // 99HHMMSS
+            }
 
             return dniGenerado;
         }

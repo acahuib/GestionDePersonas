@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ocurrencias - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📝 Cuaderno de Ocurrencias</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <a href="ocurrencias_historial.html" class="card-link">
+                <button class="btn-inline">📚 Ver Historial</button>
+            </a>
+        </div>
+
+        <!-- Formulario de registro -->
+        <div class="form-card">
+            <h3>Registrar Ocurrencia</h3>
+            <p class="muted">Para casos especiales</p>
+
+            <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
+            <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
+
+            <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+            </div>
+
+            <label>Nombre <span class="muted">(Opcional)</span></label>
+            <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
+
+            <label>Descripción de Ocurrencia *</label>
+            <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4" required></textarea>
+
+            <div style="margin-top: 10px;">
+                <button onclick="registrarIngreso()" class="btn-success btn-block">
+                    ✅ Registrar INGRESO
+                </button>
+            </div>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <hr>
+
+        <!-- Tabla de ocurrencias activas -->
+        <div>
+            <div class="toolbar">
+                <h3>Ocurrencias Activas (Sin salida registrada)</h3>
+                <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+            </div>
+            
+            <div id="tabla-activos">
+                <p class="text-center muted">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/ocurrencias.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarActivos();
+
+    // Auto-actualizar cada 30 segundos
+    setInterval(cargarActivos, 30000);
+
+    // Enter listeners
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
+    addEnterListener("nombre", () => document.getElementById("ocurrencia").focus());
+});
+</script>
+
+</body>
+</html>
