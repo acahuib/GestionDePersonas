@@ -44,12 +44,35 @@ namespace WebApplication1.Controllers
             try
             {
                 // Validación básica
-                if (string.IsNullOrWhiteSpace(dto.Dni) || string.IsNullOrWhiteSpace(dto.NombreApellidos))
-                    return BadRequest("DNI y Nombres/Apellidos son requeridos");
+                if (string.IsNullOrWhiteSpace(dto.Dni))
+                    return BadRequest("DNI es requerido");
 
                 // POST es SOLO para ingreso de mañana
                 // La salida final debe registrarse vía PUT /{id}/salida
                 string tipoMovimiento = "Entrada";
+
+                // ===== NUEVO: Buscar o crear en tabla Personas =====
+                var dniNormalizado = dto.Dni.Trim();
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                
+                if (persona == null)
+                {
+                    // DNI no existe: validar que se envíe nombre
+                    if (string.IsNullOrWhiteSpace(dto.NombreApellidos))
+                        return BadRequest("DNI no registrado. Debe proporcionar Nombre y Apellidos para registrar la persona.");
+
+                    // Crear nuevo registro en tabla Personas
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = dto.NombreApellidos.Trim(),
+                        Tipo = "PersonalLocal"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+                // ===== FIN NUEVO =====
 
                 // Extract usuarioId from token (guardia)
                 var usuarioId = ExtractUsuarioIdFromToken();
@@ -63,7 +86,7 @@ namespace WebApplication1.Controllers
 
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
+                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
                     .OrderByDescending(m => m.FechaHora)
                     .FirstOrDefaultAsync();
 
@@ -71,13 +94,13 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
                 {
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
                 else if (ultimoMovimiento == null)
                 {
                     // Si no existe movimiento, crear con tipo determinado
                     ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dto.Dni, 1, tipoMovimiento, usuarioId);
+                        dniNormalizado, 1, tipoMovimiento, usuarioId);
                 }
 
                 if (ultimoMovimiento == null)
@@ -91,18 +114,14 @@ namespace WebApplication1.Controllers
                 DateTime horaIngresoColumna = fechaHoraActual;
                 DateTime fechaIngresoColumna = fechaHoraActual.Date;
 
-                // Serializar datos del personal local (DNI se guarda en columna, NO en JSON)
+                // NUEVO: JSON solo contiene horarios de almuerzo, guardias y observaciones
+                // DNI, nombre, horaIngreso/Salida, fechaIngreso/Salida están en COLUMNAS
                 var datosPersonalLocal = new
                 {
-                    nombreApellidos = dto.NombreApellidos,
-                    horaIngreso = horaIngresoColumna,
-                    fechaIngreso = fechaIngresoColumna,
                     horaSalidaAlmuerzo = (DateTime?)null,
                     fechaSalidaAlmuerzo = (DateTime?)null,
                     horaEntradaAlmuerzo = (DateTime?)null,
                     fechaEntradaAlmuerzo = (DateTime?)null,
-                    horaSalida = (DateTime?)null,  // Se registra después vía PUT /salida
-                    fechaSalida = (DateTime?)null,
                     guardiaIngreso = guardiaNombre,
                     guardiaSalida = (string?)null,
                     guardiaSalidaAlmuerzo = (string?)null,
@@ -120,7 +139,7 @@ namespace WebApplication1.Controllers
                     fechaIngresoColumna,
                     null,                    // horaSalida (se registra después vía PUT)
                     null,                    // fechaSalida (se registra después vía PUT)
-                    dto.Dni?.Trim());        // NUEVO: DNI va a columna
+                    dniNormalizado);         // DNI va a columna
 
                 if (salidaDetalle == null)
                     return StatusCode(500, "Error al crear registro de salida");
@@ -168,18 +187,13 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
+                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
-                        dni = root.GetProperty("dni").GetString(),
-                        nombreApellidos = root.GetProperty("nombreApellidos").GetString(),
-                        horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null,
-                        fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null,
                         horaSalidaAlmuerzo = fechaHoraActual,
                         fechaSalidaAlmuerzo = fechaHoraActual.Date,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
                         fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
-                        horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
-                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
                         guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = guardiaNombre,
@@ -233,18 +247,13 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
-                    // DNI ya NO está en JSON, está en columna
+                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
-                        nombreApellidos = root.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
-                        horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null,
-                        fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = fechaHoraActual,
                         fechaEntradaAlmuerzo = fechaHoraActual.Date,
-                        horaSalida = root.TryGetProperty("horaSalida", out var hs) && hs.ValueKind != JsonValueKind.Null ? hs.GetDateTime() : (DateTime?)null,
-                        fechaSalida = root.TryGetProperty("fechaSalida", out var fs) && fs.ValueKind != JsonValueKind.Null ? fs.GetDateTime() : (DateTime?)null,
                         guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
@@ -302,20 +311,16 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
-                    // NUEVO: DNI ahora está en columna, no en JSON
+                    // DNI está en columna
                     var dni = salidaExistente.Dni;
                 
+                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
-                        nombreApellidos = root.TryGetProperty("nombreApellidos", out var nap) && nap.ValueKind == JsonValueKind.String ? nap.GetString() : null,
-                        horaIngreso = root.TryGetProperty("horaIngreso", out var hi) && hi.ValueKind != JsonValueKind.Null ? hi.GetDateTime() : (DateTime?)null,
-                        fechaIngreso = root.TryGetProperty("fechaIngreso", out var fi) && fi.ValueKind != JsonValueKind.Null ? fi.GetDateTime() : (DateTime?)null,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
                         fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
-                        horaSalida = horaSalidaColumna,
-                        fechaSalida = fechaSalidaColumna,
                         guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
                         guardiaSalida = guardiaNombre,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
@@ -323,6 +328,7 @@ namespace WebApplication1.Controllers
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
+                    // Actualizar JSON + columnas de salida
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(
                         id, 
                         datosActualizados, 

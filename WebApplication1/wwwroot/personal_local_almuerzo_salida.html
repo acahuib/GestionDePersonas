@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>🍽️ Salida a Almuerzo - Personal Local</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>🍽️ Registrar Salida a Almuerzo</h2>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Datos del Personal</h3>
+            
+            <form id="form-almuerzo-salida" onsubmit="event.preventDefault(); registrarSalidaAlmuerzo();">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>DNI:</label>
+                        <input type="text" id="dni" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nombre:</label>
+                        <input type="text" id="nombreApellidos" readonly>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Hora Ingreso:</label>
+                        <input type="text" id="horaIngreso" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha Ingreso:</label>
+                        <input type="text" id="fechaIngreso" readonly>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observaciones">Observaciones:</label>
+                    <textarea id="observaciones" rows="3" placeholder="Opcional"></textarea>
+                </div>
+
+                <div id="mensaje" class="message"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-warning">🍽️ Registrar Salida Almuerzo</button>
+                    <button type="button" onclick="volver()" class="btn-secondary">Volver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/personal_local_almuerzo_salida.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarDatosDesdeUrl();
+});
+</script>
+
+</body>
+</html>

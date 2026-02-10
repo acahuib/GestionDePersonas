@@ -25,7 +25,7 @@ function crearSidebar() {
                         <li><a href="proveedor.html">Proveedores</a></li>
                         <li><a href="vehiculo_empresa.html">Vehículos Empresa</a></li>
                         <li><a href="vehiculos_proveedores.html">Vehículos Proveedores</a></li>
-                        <li><a class="disabled">Personal Local</a></li>
+                        <li><a href="personal_local.html">Personal Local</a></li>
                         <li><a class="disabled">Permisos Personal</a></li>
                         <li><a class="disabled">Ocurrencias</a></li>
                         <li><a class="disabled">Control de Bienes</a></li>

@@ -12,8 +12,13 @@ namespace WebApplication1.DTOs
     public class SalidaPersonalLocalDto
     {
         public required string Dni { get; set; }
-        public required string NombreApellidos { get; set; }
-        public DateTime? HoraIngreso { get; set; } // Entrada mañana
+        
+        /// <summary>
+        /// Solo requerido si DNI NO está registrado en tabla Personas
+        /// </summary>
+        public string? NombreApellidos { get; set; }
+        
+        public DateTime? HoraIngreso { get; set; } // Entrada mañana (servidor ignora y usa su propia hora)
         
         // Almuerzo opcional
         public DateTime? HoraSalidaAlmuerzo { get; set; }

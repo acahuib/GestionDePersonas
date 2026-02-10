@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>👷 Personal Local - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>👷 Cuaderno de Personal Local</h2>
+            <div class="header-actions">
+                <a href="index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="toolbar">
+        <a href="personal_local_historial.html" class="card-link">
+            <button class="btn-inline">📚 Ver Historial</button>
+        </a>
+    </div>
+
+    <!-- Formulario de ingreso (mañana) -->
+        <div class="form-card">
+            <h3>Registrar Ingreso de Personal Local</h3>
+            
+            <form id="form-ingreso" onsubmit="event.preventDefault(); registrarIngreso();">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dni">DNI: (*)</label>
+                        <input 
+                            type="text" 
+                            id="dni" 
+                            maxlength="8" 
+                            required 
+                            placeholder="12345678"
+                            onblur="buscarPersonaPorDni()"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault(); buscarPersonaPorDni();}">
+                        <div id="persona-info" style="display:none; margin-top: 5px; padding: 8px; background: #d4edda; border-radius: 4px; color: #155724;">
+                            ✅ Persona registrada: <strong id="persona-nombre"></strong>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombreApellidos">Nombre y Apellidos:</label>
+                        <input 
+                            type="text" 
+                            id="nombreApellidos" 
+                            placeholder="Solo si DNI no está registrado"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault(); document.getElementById('observaciones').focus();}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observaciones">Observaciones:</label>
+                    <textarea 
+                        id="observaciones" 
+                        rows="2" 
+                        placeholder="Opcional"></textarea>
+                </div>
+
+                <div id="mensaje" class="message"></div>
+
+                <button type="submit" class="btn-primary">✅ Registrar INGRESO</button>
+            </form>
+        </div>
+
+        <hr>
+
+        <!-- Lista de personal activo (con ingreso, sin salida final) -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>Personal Local Activo (Sin salida final)</h3>
+                <button onclick="cargarActivos()" class="btn-secondary btn-small">🔄 Actualizar</button>
+            </div>
+            <div id="lista-activos">
+                <p class="text-center">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/personal_local.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarActivos();
+
+    // Auto-refresh si viene con parámetro
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('refresh') === '1') {
+        setTimeout(() => {
+            cargarActivos();
+        }, 500);
+    }
+});
+</script>
+
+</body>
+</html>
