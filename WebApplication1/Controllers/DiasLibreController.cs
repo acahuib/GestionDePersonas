@@ -140,15 +140,15 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
 
             // Actualizar JSON con guardiaIngreso
+            // DNI ya NO está en JSON, está en columna
             var datosActualizados = new
             {
-                numeroBoleta = datosActuales.GetProperty("numeroBoleta").GetString(),
-                nombresApellidos = datosActuales.GetProperty("nombresApellidos").GetString(),
-                dni = datosActuales.GetProperty("dni").GetString(),
-                del = datosActuales.GetProperty("del").GetDateTime(),
-                al = datosActuales.GetProperty("al").GetDateTime(),
-                trabaja = datosActuales.GetProperty("trabaja").GetDateTime(),
-                dia = datosActuales.GetProperty("dia").GetInt32(),
+                numeroBoleta = datosActuales.TryGetProperty("numeroBoleta", out var nb) && nb.ValueKind == System.Text.Json.JsonValueKind.String ? nb.GetString() : null,
+                nombresApellidos = datosActuales.TryGetProperty("nombresApellidos", out var na) && na.ValueKind == System.Text.Json.JsonValueKind.String ? na.GetString() : null,
+                del = datosActuales.TryGetProperty("del", out var delProp) && delProp.ValueKind != System.Text.Json.JsonValueKind.Null ? delProp.GetDateTime() : (DateTime?)null,
+                al = datosActuales.TryGetProperty("al", out var alProp) && alProp.ValueKind != System.Text.Json.JsonValueKind.Null ? alProp.GetDateTime() : (DateTime?)null,
+                trabaja = datosActuales.TryGetProperty("trabaja", out var trab) && trab.ValueKind != System.Text.Json.JsonValueKind.Null ? trab.GetDateTime() : (DateTime?)null,
+                dia = datosActuales.TryGetProperty("dia", out var diaProp) && diaProp.ValueKind == System.Text.Json.JsonValueKind.Number ? diaProp.GetInt32() : (int?)null,
                 guardiaSalida = datosActuales.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != System.Text.Json.JsonValueKind.Null
                     ? gs.GetString()
                     : null,

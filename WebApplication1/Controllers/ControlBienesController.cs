@@ -123,16 +123,16 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
 
             // NUEVO: fechaSalida ya NO va al JSON, va a columnas (hora actual del servidor)
+            // DNI ya NO está en JSON, está en columna
             var datosActualizados = new
             {
-                dni = datosActuales.GetProperty("dni").GetString(),
-                nombre = datosActuales.GetProperty("nombre").GetString(),
-                bienesDeclarados = datosActuales.GetProperty("bienesDeclarados").GetString(),
-                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                nombre = datosActuales.TryGetProperty("nombre", out var nom) && nom.ValueKind == JsonValueKind.String ? nom.GetString() : null,
+                bienesDeclarados = datosActuales.TryGetProperty("bienesDeclarados", out var bd) && bd.ValueKind == JsonValueKind.String ? bd.GetString() : null,
+                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
                     ? gi.GetString()
                     : null,
                 guardiaSalida = guardiaNombre,
-                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas (hora actual del servidor)
