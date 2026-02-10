@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial Vehículos Empresa - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📚 Historial de Vehículos de Empresa</h2>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <p class="m-0">Todos los registros realizados</p>
+            <div class="toolbar-actions">
+                <button onclick="cargarHistorial()" class="btn-inline btn-small">🔄 Actualizar</button>
+                <a href="vehiculo_empresa.html" class="card-link">
+                    <button class="btn-inline">Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <div id="tabla-historial">
+            <p class="text-center muted">Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vehiculo_empresa_historial.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarHistorial();
+});
+</script>
+
+</body>
+</html>

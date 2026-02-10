@@ -58,6 +58,30 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
+                // NUEVO: Buscar o crear persona en tabla Personas
+                var dniNormalizado = dto.Dni.Trim();
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                
+                if (persona == null)
+                {
+                    // Validar que se proporcione el nombre del conductor
+                    if (string.IsNullOrWhiteSpace(dto.Conductor))
+                    {
+                        return BadRequest("El conductor es requerido cuando el DNI no está registrado. Por favor proporcione el nombre del conductor.");
+                    }
+                    
+                    // Crear nueva persona
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = dto.Conductor.Trim(),
+                        Tipo = "VehiculoEmpresa"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
                 // Obtener último movimiento
                 var ultimoMovimiento = await _context.Movimientos
                     .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
@@ -92,12 +116,14 @@ namespace WebApplication1.Controllers
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
+                // DNI se guarda en columna para JOIN directo con Personas
+                // conductor se guarda solo como referencia temporal (nombre real viene de Personas)
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "VehiculoEmpresa",
                     new
                     {
-                        conductor = dto.Conductor,
+                        conductor = persona.Nombre, // Usar nombre de tabla Personas
                         placa = dto.Placa,
                         kmSalida = dto.KmSalida,
                         kmIngreso = dto.KmIngreso,
@@ -112,7 +138,7 @@ namespace WebApplication1.Controllers
                     fechaIngresoCol,    // NUEVO: Pasar a columnas
                     horaSalidaCol,      // NUEVO: Pasar a columnas
                     fechaSalidaCol,     // NUEVO: Pasar a columnas
-                    dto.Dni?.Trim()     // NUEVO: Pasar DNI a columna
+                    dniNormalizado      // NUEVO: Pasar DNI a columna
                 );
 
                 return Ok(new
@@ -161,19 +187,18 @@ namespace WebApplication1.Controllers
             var fechaActual = ahoraLocal.Date;
 
             // NUEVO: horaIngreso y fechaIngreso ya NO van al JSON, van a columnas
+            // Usar TryGetProperty para safe parsing
             var datosActualizados = new
             {
-                conductor = datosActuales.GetProperty("conductor").GetString(),
-                placa = datosActuales.GetProperty("placa").GetString(),
-                kmSalida = datosActuales.GetProperty("kmSalida").GetInt32(),
+                conductor = datosActuales.TryGetProperty("conductor", out var cond) && cond.ValueKind == JsonValueKind.String ? cond.GetString() : null,
+                placa = datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
+                kmSalida = datosActuales.TryGetProperty("kmSalida", out var kms) && kms.ValueKind == JsonValueKind.Number ? kms.GetInt32() : 0,
                 kmIngreso = dto.KmIngreso,
-                origen = datosActuales.GetProperty("origen").GetString(),
-                destino = datosActuales.GetProperty("destino").GetString(),
-                guardiaSalida = datosActuales.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
-                    ? gs.GetString()
-                    : null,
+                origen = datosActuales.TryGetProperty("origen", out var orig) && orig.ValueKind == JsonValueKind.String ? orig.GetString() : null,
+                destino = datosActuales.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String ? dest.GetString() : null,
+                guardiaSalida = datosActuales.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind == JsonValueKind.String ? gs.GetString() : null,
                 guardiaIngreso = guardiaNombre,
-                observacion = dto.Observacion ?? datosActuales.GetProperty("observacion").GetString()
+                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
             // NUEVO: Pasar horaIngreso y fechaIngreso como columnas

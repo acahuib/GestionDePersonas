@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuaderno Vehículos Empresa - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>🚗 Cuaderno de Vehículos de Empresa</h2>
+            <div class="header-actions">
+                <a href="index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <a href="vehiculo_empresa_historial.html" class="card-link">
+                <button class="btn-inline">📚 Ver Historial</button>
+            </a>
+        </div>
+
+        <!-- FORMULARIO DE REGISTRO DE SALIDA -->
+        <div class="form-card">
+            <h3>Registrar Salida de Vehículo</h3>
+
+            <label>DNI del Conductor *</label>
+            <input type="text" id="dni" placeholder="Ingrese DNI del conductor" maxlength="8">
+
+            <label>Nombre del Conductor <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+            <input type="text" id="conductor" placeholder="Nombre completo del conductor">
+
+            <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+            </div>
+
+            <label>Placa del Vehículo *</label>
+            <input type="text" id="placa" placeholder="Placa del vehículo">
+
+            <label>Kilometraje de Salida *</label>
+            <input type="number" id="kmSalida" placeholder="Kilometraje actual" min="0">
+
+            <label>Origen *</label>
+            <input type="text" id="origen" placeholder="Origen del viaje">
+
+            <label>Destino *</label>
+            <input type="text" id="destino" placeholder="Destino del viaje">
+
+            <label>Observación</label>
+            <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
+
+            <div>
+                <button onclick="registrarSalida()" class="btn-danger btn-block">
+                    🚗 Registrar SALIDA
+                </button>
+            </div>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <!-- LISTA DE VEHÍCULOS ACTIVOS (EN RUTA) -->
+        <div>
+            <div class="toolbar">
+                <h3>Vehículos en Ruta (Sin ingreso)</h3>
+                <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+            </div>
+            
+            <div id="lista-activos">
+                <p class="text-center muted">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vehiculo_empresa.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarActivos();
+
+    // Auto-actualizar lista cada 15 segundos
+    setInterval(cargarActivos, 15000);
+
+    // Si venimos de registrar ingreso, limpiar query y refrescar
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("refresh") === "1") {
+        cargarActivos();
+        window.history.replaceState({}, document.title, "vehiculo_empresa.html");
+    }
+
+    // Detectar ENTER y BLUR en el campo DNI
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
+    addEnterListener("conductor", () => document.getElementById("placa").focus());
+    addEnterListener("placa", () => document.getElementById("kmSalida").focus());
+    addEnterListener("kmSalida", () => document.getElementById("origen").focus());
+    addEnterListener("origen", () => document.getElementById("destino").focus());
+    addEnterListener("destino", registrarSalida);
+});
+</script>
+
+</body>
+</html>

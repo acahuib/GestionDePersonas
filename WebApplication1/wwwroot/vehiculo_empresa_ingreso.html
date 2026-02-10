@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ingreso Vehículo Empresa - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>✅ Registrar Ingreso de Vehículo de Empresa</h2>
+            <div class="header-actions">
+                <a href="vehiculo_empresa.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Datos del Vehículo</h3>
+
+            <label>DNI del Conductor</label>
+            <input type="text" id="dni" readonly>
+
+            <label>Nombre del Conductor</label>
+            <input type="text" id="conductor" readonly>
+
+            <label>Placa</label>
+            <input type="text" id="placa" readonly>
+
+            <label>Kilometraje de Salida</label>
+            <input type="number" id="kmSalida" readonly>
+
+            <label>Origen</label>
+            <input type="text" id="origen" readonly>
+
+            <label>Destino</label>
+            <input type="text" id="destino" readonly>
+
+            <label>Kilometraje de Ingreso *</label>
+            <input type="number" id="kmIngreso" placeholder="Kilometraje actual al regresar" min="0">
+
+            <label>Observación (editable)</label>
+            <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
+
+            <div>
+                <button onclick="registrarIngreso()" class="btn-success btn-block">✅ Registrar INGRESO</button>
+            </div>
+            <div>
+                <button onclick="volver()" class="btn-secondary btn-block">Volver</button>
+            </div>
+
+            <p id="mensaje"></p>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vehiculo_empresa_ingreso.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarDatosDesdeUrl();
+});
+</script>
+
+</body>
+</html>

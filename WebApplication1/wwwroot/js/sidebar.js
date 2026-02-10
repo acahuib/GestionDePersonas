@@ -23,7 +23,7 @@ function crearSidebar() {
                     </a>
                     <ul class="sidebar-submenu-items">
                         <li><a href="proveedor.html">Proveedores</a></li>
-                        <li><a class="disabled">Vehículos Empresa</a></li>
+                        <li><a href="vehiculo_empresa.html">Vehículos Empresa</a></li>
                         <li><a href="vehiculos_proveedores.html">Vehículos Proveedores</a></li>
                         <li><a class="disabled">Personal Local</a></li>
                         <li><a class="disabled">Permisos Personal</a></li>
