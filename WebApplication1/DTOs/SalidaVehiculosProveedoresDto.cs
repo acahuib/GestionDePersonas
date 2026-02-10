@@ -28,6 +28,6 @@ namespace WebApplication1.DTOs
         // Opcional: Se llena cuando sale (via PUT)
         public DateTime? HoraSalida { get; set; }
         
-        public string? Observaciones { get; set; }
+        public string? Observacion { get; set; }
     }
 }

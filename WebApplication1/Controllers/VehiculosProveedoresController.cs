@@ -132,7 +132,7 @@ namespace WebApplication1.Controllers
                         procedencia = dto.Procedencia,
                         guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
                         guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
-                        observaciones = dto.Observaciones
+                        observacion = dto.Observacion
                     },
                     usuarioId,
                     horaIngresoCol,     // NUEVO: Pasar a columnas
@@ -202,7 +202,7 @@ namespace WebApplication1.Controllers
                     ? gi.GetString()
                     : null,
                 guardiaSalida = guardiaNombre,
-                observaciones = dto.Observaciones ?? (datosActuales.TryGetProperty("observaciones", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
+                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas

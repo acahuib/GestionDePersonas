@@ -293,7 +293,7 @@ async function cargarActivos() {
             html += `<td>${cantidad}</td>`;
             html += `<td>${procedencia}</td>`;
             html += `<td>${horaIngreso}</td>`;
-            html += `<td><button class="btn-danger btn-small" onclick='irASalida(${s.id}, "${dni}", "${nombreCompleto}", "${proveedor}", "${placa}", "${tipo}", "${lote}", "${cantidad}", "${procedencia}", "${observacion}", "${fechaIngreso}", "${horaIngreso}", "${guardiaIngreso}")'>Salida</button></td>`;
+            html += `<td><button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button></td>`;
             html += '</tr>';
         });
 

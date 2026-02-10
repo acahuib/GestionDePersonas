@@ -7,6 +7,6 @@ namespace WebApplication1.DTOs
     public class ActualizarSalidaVehiculosProveedoresDto
     {
         public required DateTime HoraSalida { get; set; }
-        public string? Observaciones { get; set; }
+        public string? Observacion { get; set; }
     }
 }
