@@ -3,6 +3,11 @@
 // =========================================
 
 function crearSidebar() {
+    // Detectar la profundidad de la ruta para calcular el path correcto
+    const path = window.location.pathname;
+    const depth = (path.match(/\//g) || []).length - 1;
+    const basePath = depth > 0 ? '../'.repeat(depth) : '';
+    
     const sidebar = `
         <div class="sidebar">
             <div class="sidebar-header">
@@ -11,7 +16,7 @@ function crearSidebar() {
             
             <ul class="sidebar-menu">
                 <li>
-                    <a href="index.html">
+                    <a href="${basePath}index.html">
                         🏠 Home
                     </a>
                 </li>
@@ -22,10 +27,10 @@ function crearSidebar() {
                         <span>▼</span>
                     </a>
                     <ul class="sidebar-submenu-items">
-                        <li><a href="proveedor.html">Proveedores</a></li>
-                        <li><a href="vehiculo_empresa.html">Vehículos Empresa</a></li>
-                        <li><a href="vehiculos_proveedores.html">Vehículos Proveedores</a></li>
-                        <li><a href="personal_local.html">Personal Local</a></li>
+                        <li><a href="${basePath}Proveedores/html/proveedor.html">Proveedores</a></li>
+                        <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">Vehículos Empresa</a></li>
+                        <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehículos Proveedores</a></li>
+                        <li><a href="${basePath}PersonalLocal/html/personal_local.html">Personal Local</a></li>
                         <li><a class="disabled">Permisos Personal</a></li>
                         <li><a class="disabled">Ocurrencias</a></li>
                         <li><a class="disabled">Control de Bienes</a></li>

@@ -2,16 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>🚪 Registrar Salida - Personal Local</title>
+    <title>🍽️ Salida a Almuerzo - Personal Local</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="../../css/styles.css">
 </head>
 <body>
 
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>🚪 Registrar Salida Final de Personal Local</h2>
+            <h2>🍽️ Registrar Salida a Almuerzo</h2>
         </div>
 
         <hr>
@@ -19,7 +19,7 @@
         <div class="form-card">
             <h3>Datos del Personal</h3>
             
-            <form id="form-salida" onsubmit="event.preventDefault(); registrarSalida();">
+            <form id="form-almuerzo-salida" onsubmit="event.preventDefault(); registrarSalidaAlmuerzo();">
                 <div class="form-row">
                     <div class="form-group">
                         <label>DNI:</label>
@@ -44,18 +44,6 @@
                     </div>
                 </div>
 
-                <div class="form-row" id="almuerzo-info" style="display:none;">
-                    <div class="form-group">
-                        <label>Salida Almuerzo:</label>
-                        <input type="text" id="horaSalidaAlmuerzo" readonly>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Ingreso Almuerzo:</label>
-                        <input type="text" id="horaEntradaAlmuerzo" readonly>
-                    </div>
-                </div>
-
                 <div class="form-group">
                     <label for="observaciones">Observaciones:</label>
                     <textarea id="observaciones" rows="3" placeholder="Opcional"></textarea>
@@ -64,7 +52,7 @@
                 <div id="mensaje" class="message"></div>
 
                 <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn-danger">🚪 Registrar SALIDA</button>
+                    <button type="submit" class="btn-warning">🍽️ Registrar Salida Almuerzo</button>
                     <button type="button" onclick="volver()" class="btn-secondary">Volver</button>
                 </div>
             </form>
@@ -72,10 +60,10 @@
     </div>
 </div>
 
-<script src="js/sidebar.js"></script>
-<script src="js/api.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/personal_local_salida.js"></script>
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/personal_local_almuerzo_salida.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
