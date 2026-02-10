@@ -275,6 +275,393 @@ namespace WebApplication1.Controllers
         }
 
         /// <summary>
+        /// NUEVO: Crea solicitud de permiso desde Google Forms
+        /// POST /api/permisos-personal/solicitar
+        /// </summary>
+        [HttpPost("solicitar")]
+        [AllowAnonymous] // Permitir sin autenticación (viene desde Google Script)
+        public async Task<IActionResult> CrearSolicitud([FromBody] SolicitudPermisoPersonalDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.Dni))
+                    return BadRequest("DNI es requerido");
+
+                // Validar formato DNI
+                var dniNormalizado = dto.Dni.Trim();
+                if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
+                    return BadRequest("DNI debe tener 8 dígitos numéricos");
+
+                // Verificar si la persona existe, si no, crearla
+                var persona = await _context.Personas.FindAsync(dniNormalizado);
+                if (persona == null)
+                {
+                    // Crear nueva persona con tipo "Personal"
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = dto.NombreRegistrado,
+                        Tipo = "Personal"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Crear movimiento inicial (sin salida física aún)
+                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniNormalizado,
+                    1,
+                    "Salida", // Tipo genérico para la tabla Movimientos
+                    null // Sin usuario porque viene de Google Forms
+                );
+
+                if (movimiento == null)
+                    return StatusCode(500, "Error al crear movimiento");
+
+                // Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+
+                // Crear registro con estado "Pendiente"
+                var datosJSON = new
+                {
+                    nombreRegistrado = dto.NombreRegistrado,
+                    area = dto.Area,
+                    tipoSalida = dto.TipoSalida,
+                    fechaSalidaSolicitada = dto.FechaSalidaSolicitada,
+                    horaSalidaSolicitada = dto.HoraSalidaSolicitada,
+                    motivoSalida = dto.MotivoSalida,
+                    correo = dto.Correo,
+                    autorizador = dto.Autorizador,
+                    estado = "Pendiente",
+                    fechaSolicitud = ahoraLocal.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    fechaAprobacion = (string?)null,
+                    comentariosAutorizador = (string?)null
+                };
+
+                // NO registrar horaSalida ni fechaSalida aún (son para salida física)
+                var salidaDetalle = await _salidasService.CrearSalidaDetalle(
+                    movimiento.Id,
+                    "PermisosPersonal",
+                    datosJSON,
+                    null, // Sin usuarioId (viene de Forms)
+                    null, // Sin horaIngreso
+                    null, // Sin fechaIngreso
+                    null, // Sin horaSalida (aún no sale físicamente)
+                    null, // Sin fechaSalida
+                    dniNormalizado
+                );
+
+                if (salidaDetalle == null)
+                    return StatusCode(500, "Error al crear solicitud de permiso");
+
+                return CreatedAtAction(
+                    nameof(ObtenerSalidaPorId),
+                    new { id = salidaDetalle.Id },
+                    new
+                    {
+                        mensaje = "Solicitud de permiso creada exitosamente",
+                        permisoId = salidaDetalle.Id,
+                        dni = dniNormalizado,
+                        estado = "Pendiente",
+                        autorizador = dto.Autorizador
+                    });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// NUEVO: Actualiza estado del permiso (Aprobado/Rechazado)
+        /// PUT /api/permisos-personal/{id}/estado
+        /// </summary>
+        [HttpPut("{id}/estado")]
+        [AllowAnonymous] // Permitir sin autenticación (viene desde Google Script)
+        public async Task<IActionResult> ActualizarEstado(int id, [FromBody] ActualizarEstadoPermisoDto dto)
+        {
+            try
+            {
+                var salidaExistente = await _salidasService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Solicitud de permiso no encontrada");
+
+                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                    return BadRequest("Este endpoint es solo para permisos de personal");
+
+                // Validar estado
+                if (dto.Estado != "Aprobado" && dto.Estado != "Rechazado")
+                    return BadRequest("Estado debe ser 'Aprobado' o 'Rechazado'");
+
+                // Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+
+                // Deserializar datos actuales y actualizar estado
+                using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
+                {
+                    var root = doc.RootElement;
+
+                    var datosActualizados = new
+                    {
+                        nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
+                        area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
+                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
+                        horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
+                        motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
+                        correo = root.TryGetProperty("correo", out var co) ? co.GetString() : null,
+                        autorizador = root.TryGetProperty("autorizador", out var au) ? au.GetString() : null,
+                        estado = dto.Estado, // ACTUALIZADO
+                        fechaSolicitud = root.TryGetProperty("fechaSolicitud", out var fs) ? fs.GetString() : null,
+                        fechaAprobacion = ahoraLocal.ToString("yyyy-MM-ddTHH:mm:ss"), // ACTUALIZADO
+                        comentariosAutorizador = dto.ComentariosAutorizador, // ACTUALIZADO
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) ? gs.GetString() : null,
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) ? gi.GetString() : null
+                    };
+
+                    await _salidasService.ActualizarSalidaDetalle(
+                        id,
+                        datosActualizados,
+                        null, // Sin usuarioId (viene de script)
+                        null, null, null, null // Sin modificar fechas de salida/ingreso físico
+                    );
+
+                    return Ok(new
+                    {
+                        mensaje = $"Permiso {dto.Estado.ToLower()}",
+                        permisoId = id,
+                        estado = dto.Estado,
+                        fechaAprobacion = ahoraLocal.ToString("yyyy-MM-dd HH:mm:ss")
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// NUEVO: Registra salida física (guardia en garita)
+        /// PUT /api/permisos-personal/{id}/registrar-salida
+        /// </summary>
+        [HttpPut("{id}/registrar-salida")]
+        public async Task<IActionResult> RegistrarSalidaFisica(int id)
+        {
+            try
+            {
+                var salidaExistente = await _salidasService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Permiso no encontrado");
+
+                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                    return BadRequest("Este endpoint es solo para permisos de personal");
+
+                // Validar que esté aprobado
+                using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
+                {
+                    var root = doc.RootElement;
+                    var estado = root.TryGetProperty("estado", out var est) ? est.GetString() : "Pendiente";
+
+                    if (estado != "Aprobado")
+                        return BadRequest($"No se puede registrar salida. Estado actual: {estado}");
+
+                    // Extraer datos del guardia
+                    var usuarioId = ExtractUsuarioIdFromToken();
+                    var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                    var guardiaNombre = usuarioId.HasValue
+                        ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                            ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                            : null);
+                    guardiaNombre ??= "S/N";
+
+                    // Usar hora local del servidor (Perú UTC-5)
+                    var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                    var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    var fechaActual = ahoraLocal.Date;
+
+                    // Actualizar JSON agregando guardiaSalida
+                    var datosActualizados = new
+                    {
+                        nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
+                        area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
+                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
+                        horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
+                        motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
+                        correo = root.TryGetProperty("correo", out var co) ? co.GetString() : null,
+                        autorizador = root.TryGetProperty("autorizador", out var au) ? au.GetString() : null,
+                        estado = estado,
+                        fechaSolicitud = root.TryGetProperty("fechaSolicitud", out var fs) ? fs.GetString() : null,
+                        fechaAprobacion = root.TryGetProperty("fechaAprobacion", out var fa) ? fa.GetString() : null,
+                        comentariosAutorizador = root.TryGetProperty("comentariosAutorizador", out var ca) ? ca.GetString() : null,
+                        guardiaSalida = guardiaNombre, // NUEVO
+                        guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) ? gi.GetString() : null
+                    };
+
+                    // Actualizar con horaSalida y fechaSalida en COLUMNAS
+                    await _salidasService.ActualizarSalidaDetalle(
+                        id,
+                        datosActualizados,
+                        usuarioId,
+                        null, null, // Sin modificar ingreso
+                        ahoraLocal, // horaSalida en columna
+                        fechaActual // fechaSalida en columna
+                    );
+
+                    return Ok(new
+                    {
+                        mensaje = "Salida física registrada",
+                        permisoId = id,
+                        horaSalida = ahoraLocal.ToString("yyyy-MM-dd HH:mm:ss"),
+                        guardia = guardiaNombre
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// NUEVO: Registra ingreso físico (retorno)
+        /// PUT /api/permisos-personal/{id}/registrar-ingreso
+        /// </summary>
+        [HttpPut("{id}/registrar-ingreso")]
+        public async Task<IActionResult> RegistrarIngresoFisico(int id)
+        {
+            try
+            {
+                var salidaExistente = await _salidasService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Permiso no encontrado");
+
+                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                    return BadRequest("Este endpoint es solo para permisos de personal");
+
+                // Validar que ya tenga salida registrada
+                if (salidaExistente.HoraSalida == null)
+                    return BadRequest("Debe registrar la salida antes del ingreso");
+
+                // Extraer datos del guardia
+                var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                // Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
+
+                // Actualizar JSON agregando guardiaIngreso
+                using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
+                {
+                    var root = doc.RootElement;
+
+                    var datosActualizados = new
+                    {
+                        nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
+                        area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
+                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
+                        horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
+                        motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
+                        correo = root.TryGetProperty("correo", out var co) ? co.GetString() : null,
+                        autorizador = root.TryGetProperty("autorizador", out var au) ? au.GetString() : null,
+                        estado = root.TryGetProperty("estado", out var est) ? est.GetString() : null,
+                        fechaSolicitud = root.TryGetProperty("fechaSolicitud", out var fs) ? fs.GetString() : null,
+                        fechaAprobacion = root.TryGetProperty("fechaAprobacion", out var fa) ? fa.GetString() : null,
+                        comentariosAutorizador = root.TryGetProperty("comentariosAutorizador", out var ca) ? ca.GetString() : null,
+                        guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) ? gs.GetString() : null,
+                        guardiaIngreso = guardiaNombre // NUEVO
+                    };
+
+                    // Actualizar con horaIngreso y fechaIngreso en COLUMNAS
+                    await _salidasService.ActualizarSalidaDetalle(
+                        id,
+                        datosActualizados,
+                        usuarioId,
+                        ahoraLocal,  // horaIngreso en columna
+                        fechaActual, // fechaIngreso en columna
+                        null, null   // Sin modificar salida
+                    );
+
+                    // Registrar movimiento de entrada
+                    if (salidaExistente.Movimiento != null)
+                    {
+                        await _movimientosService.RegistrarMovimientoEnBD(
+                            salidaExistente.Movimiento.Dni,
+                            1,
+                            "Entrada",
+                            usuarioId);
+                    }
+
+                    return Ok(new
+                    {
+                        mensaje = "Ingreso físico registrado",
+                        permisoId = id,
+                        horaIngreso = ahoraLocal.ToString("yyyy-MM-dd HH:mm:ss"),
+                        guardia = guardiaNombre
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// NUEVO: Consulta permisos por DNI (para guardias)
+        /// GET /api/permisos-personal/consultar/{dni}
+        /// </summary>
+        [HttpGet("consultar/{dni}")]
+        public async Task<IActionResult> ConsultarPorDni(string dni)
+        {
+            try
+            {
+                var dniNormalizado = dni.Trim();
+
+                var permisos = await _context.SalidasDetalle
+                    .Include(s => s.Movimiento!)
+                        .ThenInclude(m => m.Persona)
+                    .Where(s => s.TipoSalida == "PermisosPersonal" && s.Dni == dniNormalizado)
+                    .OrderByDescending(s => s.FechaCreacion)
+                    .Take(10) // Últimos 10 permisos
+                    .Select(s => new
+                    {
+                        id = s.Id,
+                        dni = s.Dni,
+                        nombreCompleto = s.Movimiento != null && s.Movimiento.Persona != null
+                            ? s.Movimiento.Persona.Nombre
+                            : null,
+                        datos = s.DatosJSON,
+                        horaSalida = s.HoraSalida,
+                        fechaSalida = s.FechaSalida,
+                        horaIngreso = s.HoraIngreso,
+                        fechaIngreso = s.FechaIngreso,
+                        fechaCreacion = s.FechaCreacion
+                    })
+                    .ToListAsync();
+
+                return Ok(permisos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Extrae el ID de usuario (guardia) desde el token JWT
         /// </summary>
         private int? ExtractUsuarioIdFromToken()
