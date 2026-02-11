@@ -5,6 +5,7 @@
     <title>Ocurrencias - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body>
 
@@ -14,7 +15,7 @@
             <h2>📝 Cuaderno de Ocurrencias</h2>
             <div class="header-actions">
                 <a href="../../index.html">
-                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                    <button class="btn-inline btn-secondary"><i class="bi bi-arrow-left"></i> Volver al Menú</button>
                 </a>
             </div>
         </div>
@@ -23,7 +24,7 @@
 
         <div class="toolbar">
             <a href="ocurrencias_historial.html" class="card-link">
-                <button class="btn-inline">📚 Ver Historial</button>
+                <button class="btn-inline"><i class="bi bi-book"></i> Ver Historial</button>
             </a>
         </div>
 
@@ -36,7 +37,7 @@
             <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
 
             <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+                <strong><i class="bi bi-info-circle"></i> Persona encontrada:</strong> <span id="persona-nombre"></span>
             </div>
 
             <label>Nombre <span class="muted">(Opcional)</span></label>
@@ -47,7 +48,7 @@
 
             <div style="margin-top: 10px;">
                 <button onclick="registrarIngreso()" class="btn-success btn-block">
-                    ✅ Registrar INGRESO
+                    <i class="bi bi-check-lg"></i> Registrar INGRESO
                 </button>
             </div>
 
@@ -60,7 +61,7 @@
         <div>
             <div class="toolbar">
                 <h3>Ocurrencias Activas (Sin salida registrada)</h3>
-                <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+                <button onclick="cargarActivos()" class="btn-inline btn-small"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
             </div>
             
             <div id="tabla-activos">
