@@ -6,42 +6,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="css/styles.css">
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /* Fondo animado */
+        .background {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            z-index: -1;
+        }
+
+        .background span {
+            position: absolute;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            animation: animate 25s linear infinite;
+            bottom: -150px;
+            border-radius: 50%;
+        }
+
+        @keyframes animate {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Login Card */
+        .login-wrapper {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            background: rgba(255,255,255,0.95);
+            padding: 40px 35px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #2c3e50;
+        }
+
+        .login-card input {
+            margin-bottom: 15px;
+        }
+
+        .login-card button {
+            width: 100%;
+            font-weight: bold;
+        }
+
+        #mensaje {
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
 
-<div class="container container-sm">
+<div class="background">
+    <!-- Partículas -->
+    <span style="left:10%; animation-delay:0s;"></span>
+    <span style="left:20%; animation-delay:5s;"></span>
+    <span style="left:35%; animation-delay:2s;"></span>
+    <span style="left:50%; animation-delay:8s;"></span>
+    <span style="left:65%; animation-delay:3s;"></span>
+    <span style="left:80%; animation-delay:6s;"></span>
+    <span style="left:90%; animation-delay:1s;"></span>
+</div>
 
-    <h2>Iniciar sesión</h2>
+<div class="login-wrapper">
+    <div class="login-card">
+        <h2>Control de Accesos</h2>
 
-    <label>Usuario</label>
-    <input type="text" id="usuario" placeholder="Ingrese usuario">
+        <label>Usuario</label>
+        <input type="text" id="usuario" placeholder="Ingrese usuario">
 
-    <label>Contraseña</label>
-    <input type="password" id="password" placeholder="Ingrese contraseña">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="Ingrese contraseña">
 
-    <button onclick="login()">Ingresar</button>
+        <button onclick="login()">Ingresar</button>
 
-    <p id="mensaje"></p>
-
+        <p id="mensaje"></p>
+    </div>
 </div>
 
 <script src="js/api.js"></script>
 <script src="js/login.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const token = localStorage.getItem("token");
-    const rol = localStorage.getItem("rol");
-
-    // Si ya está logueado, redirigir
-    if (token && rol) {
-        window.location.href = "index.html";
-    }
-
-    // Detecta ENTER en usuario y contraseña (función de api.js)
-    addEnterListener("usuario", login);
-    addEnterListener("password", login);
-});
-</script>
 
 </body>
 </html>

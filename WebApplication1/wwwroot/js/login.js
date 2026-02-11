@@ -35,7 +35,7 @@ async function login() {
         localStorage.setItem("nombreCompleto", data.nombreCompleto || usuario);
 
         // Redirigir al menú principal
-        window.location.href = "index.html";
+        window.location.href = "/index.html";
 
     } catch (err) {
         mensaje.className = "error";

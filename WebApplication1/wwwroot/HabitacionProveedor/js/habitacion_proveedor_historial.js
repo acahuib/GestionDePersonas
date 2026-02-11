@@ -74,9 +74,11 @@ function renderizarTabla() {
         }
 
         const fechaIngreso = item.fechaIngreso ? new Date(item.fechaIngreso).toLocaleDateString('es-PE') : '-';
-        const horaIngreso = item.horaIngreso || '-';
+
         const fechaSalida = item.fechaSalida ? new Date(item.fechaSalida).toLocaleDateString('es-PE') : '-';
-        const horaSalida = item.horaSalida || '-';
+        const horaIngreso = item.horaIngreso ? new Date(item.horaIngreso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-';
+        const horaSalida = item.horaSalida ? new Date(item.horaSalida).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-';
+        
         const origen = datos.origen || '-';
         const cuarto = datos.cuarto || '-';
         const frazadas = datos.frazadas !== undefined && datos.frazadas !== null ? datos.frazadas : '-';
