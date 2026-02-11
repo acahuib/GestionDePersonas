@@ -33,7 +33,7 @@ function crearSidebar() {
                         <li><a href="${basePath}PersonalLocal/html/personal_local.html">Personal Local</a></li>
                         <li><a href="${basePath}DiasLibre/html/dias_libre.html">Días Libre</a></li>
                         <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">Habitación Proveedor</a></li>
-                        <li><a href="${basePath}PermisosPersonal/html/permisos_personal.html">Permisos Personal</a></li>
+                        <li><a href="${basePath}OficialPermisos/html/oficial_permisos.html">Permisos Personal</a></li>
                         <li><a href="${basePath}Ocurrencias/html/ocurrencias.html">Ocurrencias</a></li>
                         <li><a href="${basePath}ControlBienes/html/control_bienes.html">Control de Bienes</a></li>
                     </ul>

@@ -5,16 +5,20 @@
     <title>Control de Bienes - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
 </head>
 <body>
 
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>📦 Cuaderno de Control de Bienes</h2>
+            <h2>Cuaderno de Control de Bienes</h2>
             <div class="header-actions">
                 <a href="../../index.html">
-                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                    <button class="btn-inline btn-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        Volver al Menú</button>
                 </a>
             </div>
         </div>
@@ -23,7 +27,7 @@
 
     <div class="toolbar">
         <a href="control_bienes_historial.html" class="card-link">
-            <button class="btn-inline">📚 Ver Historial</button>
+            <button class="btn-inline">Ver Historial</button>
         </a>
     </div>
 
@@ -45,20 +49,23 @@
         </div>
 
         <hr>
-        <h4>📦 Bienes que Ingresa</h4>
+        <h4>Bienes que Ingresa</h4>
         
         <div id="bienes-container">
             <!-- Los bienes se agregarán dinámicamente aquí -->
         </div>
 
-        <button onclick="agregarBien()" class="btn-inline btn-small" style="margin-bottom: 15px;">➕ Agregar Bien</button>
+        <button onclick="agregarBien()" class="btn-inline btn-small" style="margin-bottom: 15px;">
+            <i class="bi bi-plus-lg"></i>
+            Agregar Bien</button>
 
         <label>Observación</label>
         <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
 
         <div>
             <button onclick="registrarIngreso()" class="btn-success btn-block">
-                ✅ Registrar INGRESO
+                <i class="bi bi-check-lg"></i>
+                Registrar INGRESO
             </button>
         </div>
 
@@ -69,7 +76,9 @@
     <div>
         <div class="toolbar">
             <h3>Personal Dentro (Con bienes sin salida)</h3>
-            <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+            <button onclick="cargarActivos()" class="btn-inline btn-small">
+                <i class="bi bi-arrow-repeat"></i>
+                Actualizar</button>
         </div>
         
         <div id="lista-activos">
