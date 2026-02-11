@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Salida Control de Bienes - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>❌ Registrar Salida - Control de Bienes</h2>
+            <div class="header-actions">
+                <a href="control_bienes.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="form-card">
+        <h3>Datos del Ingreso</h3>
+
+        <label>DNI</label>
+        <input type="text" id="ver-dni" readonly>
+
+        <label>Nombre Completo</label>
+        <input type="text" id="ver-nombre" readonly>
+
+        <label>Bienes Declarados</label>
+        <div id="ver-bienes" style="padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; min-height: 50px;"></div>
+
+        <label>Fecha y Hora de Ingreso</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <input type="text" id="ver-fecha-ingreso" readonly>
+            <input type="text" id="ver-hora-ingreso" readonly>
+        </div>
+
+        <label>Guardia de Ingreso</label>
+        <input type="text" id="ver-guardia-ingreso" readonly>
+
+        <label>Observación de Ingreso</label>
+        <textarea id="ver-observacion" readonly rows="2"></textarea>
+
+        <hr style="margin: 20px 0;">
+
+        <h3>Registrar SALIDA</h3>
+
+        <label>Observación de Salida (opcional)</label>
+        <textarea id="observacion-salida" placeholder="Notas sobre la salida..." rows="3"></textarea>
+
+        <div>
+            <button onclick="registrarSalida()" class="btn-danger btn-block">❌ Registrar SALIDA</button>
+        </div>
+        <div>
+            <button onclick="window.location.href='control_bienes.html'" class="btn-secondary btn-block">Cancelar</button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+</div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/control_bienes_salida.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+});
+</script>
+
+</body>
+</html>

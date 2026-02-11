@@ -32,64 +32,108 @@ namespace WebApplication1.Controllers
         // Registra INGRESO con bienes
         // ======================================================
         [HttpPost]
-        public async Task<IActionResult> RegistrarIngreso(SalidaControlBienesDto dto)
+        public async Task<IActionResult> RegistrarIngreso([FromBody] SalidaControlBienesDto dto)
         {
-            var ultimoMovimiento = await _context.Movimientos
-                .Where(m => m.Dni == dto.Dni && m.PuntoControlId == 1)
-                .OrderByDescending(m => m.FechaHora)
-                .FirstOrDefaultAsync();
-
-            if (ultimoMovimiento == null)
-                return BadRequest("No existe movimiento de entrada en garita para este DNI.");
-
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
-            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
-            var guardiaNombre = usuarioId.HasValue
-                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                : (!string.IsNullOrWhiteSpace(usuarioLogin)
-                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
-                    : null);
-            guardiaNombre ??= "S/N";
-
-            // NUEVO: Usar hora local del servidor (Perú UTC-5) - NO confiar en hora del cliente
-            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
-            
-            // NUEVO: Generar hora/fecha de ingreso desde el servidor
-            var horaIngresoCol = ahoraLocal;
-            var fechaIngresoCol = ahoraLocal.Date;
-            var horaSalidaCol = (DateTime?)null;  // Salida se registra después vía PUT
-            var fechaSalidaCol = (DateTime?)null;
-
-            // NUEVO: DatosJSON ya NO contiene fechaIngreso ni fechaSalida
-            // DNI se guarda en columna para JOIN directo con Personas
-            var salida = await _salidasService.CrearSalidaDetalle(
-                ultimoMovimiento.Id,
-                "ControlBienes",
-                new
-                {
-                    nombre = dto.Nombre,
-                    bienesDeclarados = dto.BienesDeclarados,
-                    guardiaIngreso = guardiaNombre,
-                    guardiaSalida = (string?)null,
-                    observacion = dto.Observacion
-                },
-                usuarioId,
-                horaIngresoCol,     // NUEVO: Pasar a columnas
-                fechaIngresoCol,    // NUEVO: Pasar a columnas
-                horaSalidaCol,      // NUEVO: Pasar a columnas
-                fechaSalidaCol,     // NUEVO: Pasar a columnas
-                dto.Dni?.Trim()     // NUEVO: DNI va a columna
-            );
-
-            return Ok(new
+            try
             {
-                mensaje = "Control de bienes registrado",
-                salidaId = salida.Id,
-                tipoSalida = "ControlBienes",
-                estado = "Pendiente de salida"
-            });
+                // Validar que tenga al menos un bien
+                if (dto.Bienes == null || !dto.Bienes.Any())
+                    return BadRequest("Debe declarar al menos un bien");
+
+                // ===== Buscar o crear en tabla Personas =====
+                var dniNormalizado = dto.Dni.Trim();
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                
+                if (persona == null)
+                {
+                    // DNI no existe: validar que se envíen nombres y apellidos
+                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                        return BadRequest("DNI no registrado. Debe proporcionar Nombres y Apellidos para registrar la persona.");
+
+                    // Crear nuevo registro en tabla Personas
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}",
+                        Tipo = "ControlBienes"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                // Obtener último movimiento
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
+                    .OrderByDescending(m => m.FechaHora)
+                    .FirstOrDefaultAsync();
+
+                // Auto-corrección: si no hay movimiento o tipo no coincide, crear con tipo Entrada
+                if (ultimoMovimiento == null || ultimoMovimiento.TipoMovimiento != "Entrada")
+                {
+                    var movimientosService = HttpContext.RequestServices.GetRequiredService<MovimientosService>();
+                    ultimoMovimiento = await movimientosService.RegistrarMovimientoEnBD(
+                        dniNormalizado, 1, "Entrada", usuarioId);
+                }
+
+                if (ultimoMovimiento == null)
+                    return StatusCode(500, "Error al crear movimiento");
+
+                // Usar hora local del servidor (Perú UTC-5)
+                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var fechaActual = ahoraLocal.Date;
+                
+                var horaIngresoCol = ahoraLocal;
+                var fechaIngresoCol = fechaActual;
+                var horaSalidaCol = (DateTime?)null;
+                var fechaSalidaCol = (DateTime?)null;
+
+                // DNI en columna, bienes en JSON
+                var salida = await _salidasService.CrearSalidaDetalle(
+                    ultimoMovimiento.Id,
+                    "ControlBienes",
+                    new
+                    {
+                        bienes = dto.Bienes,
+                        guardiaIngreso = guardiaNombre,
+                        guardiaSalida = (string?)null,
+                        observacion = dto.Observacion
+                    },
+                    usuarioId,
+                    horaIngresoCol,
+                    fechaIngresoCol,
+                    horaSalidaCol,
+                    fechaSalidaCol,
+                    dniNormalizado
+                );
+
+                return Ok(new
+                {
+                    mensaje = "Ingreso con control de bienes registrado",
+                    salidaId = salida.Id,
+                    tipoSalida = "ControlBienes",
+                    dni = dniNormalizado,
+                    nombreCompleto = persona.Nombre,
+                    cantidadBienes = dto.Bienes.Count,
+                    estado = "Pendiente de salida"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
 
         // ======================================================
@@ -123,16 +167,17 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
 
             // NUEVO: fechaSalida ya NO va al JSON, va a columnas (hora actual del servidor)
-            // DNI ya NO está en JSON, está en columna
             var datosActualizados = new
             {
-                nombre = datosActuales.TryGetProperty("nombre", out var nom) && nom.ValueKind == JsonValueKind.String ? nom.GetString() : null,
-                bienesDeclarados = datosActuales.TryGetProperty("bienesDeclarados", out var bd) && bd.ValueKind == JsonValueKind.String ? bd.GetString() : null,
+                bienes = datosActuales.TryGetProperty("bienes", out var bienes) ? bienes : (JsonElement?)null,
                 guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
                     ? gi.GetString()
                     : null,
                 guardiaSalida = guardiaNombre,
-                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
+                observacion = datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String 
+                    ? obs.GetString() 
+                    : null,
+                observacionSalida = dto.Observacion
             };
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas (hora actual del servidor)
@@ -152,6 +197,39 @@ namespace WebApplication1.Controllers
                 salidaId = id,
                 tipoSalida = "ControlBienes",
                 estado = "Salida completada"
+            });
+        }
+
+        // ======================================================
+        // GET: /api/control-bienes/{id}
+        // Obtiene detalle con información de tabla Personas
+        // ======================================================
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ObtenerControlBienesPorId(int id)
+        {
+            var salida = await _context.SalidasDetalle
+                .Include(s => s.Movimiento)
+                .ThenInclude(m => m!.Persona)
+                .FirstOrDefaultAsync(s => s.Id == id && s.TipoSalida == "ControlBienes");
+
+            if (salida == null)
+                return NotFound("Control de bienes no encontrado");
+
+            var datosJSON = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            return Ok(new
+            {
+                id = salida.Id,
+                dni = salida.Dni,
+                nombreCompleto = salida.Movimiento?.Persona?.Nombre ?? "Desconocido",
+                bienes = datosJSON.TryGetProperty("bienes", out var bienes) ? bienes : (JsonElement?)null,
+                horaIngreso = salida.HoraIngreso ?? _salidasService.ObtenerHoraIngreso(salida),
+                fechaIngreso = salida.FechaIngreso ?? _salidasService.ObtenerFechaIngreso(salida),
+                horaSalida = salida.HoraSalida ?? _salidasService.ObtenerHoraSalida(salida),
+                fechaSalida = salida.FechaSalida ?? _salidasService.ObtenerFechaSalida(salida),
+                guardiaIngreso = datosJSON.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String ? gi.GetString() : null,
+                guardiaSalida = datosJSON.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind == JsonValueKind.String ? gs.GetString() : null,
+                observacion = datosJSON.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null
             });
         }
 

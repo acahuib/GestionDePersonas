@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control de Bienes - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📦 Cuaderno de Control de Bienes</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="toolbar">
+        <a href="control_bienes_historial.html" class="card-link">
+            <button class="btn-inline">📚 Ver Historial</button>
+        </a>
+    </div>
+
+    <!-- FORMULARIO DE REGISTRO DE INGRESO -->
+    <div class="form-card">
+        <h3>Registrar Ingreso con Bienes</h3>
+
+        <label>DNI *</label>
+        <input type="text" id="dni" placeholder="Ingrese DNI" maxlength="8">
+
+        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombres" placeholder="Nombres">
+
+        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="apellidos" placeholder="Apellidos">
+
+        <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+            <strong>ℹ️ Persona encontrada:</strong> <span id="persona-nombre"></span>
+        </div>
+
+        <hr>
+        <h4>📦 Bienes que Ingresa</h4>
+        
+        <div id="bienes-container">
+            <!-- Los bienes se agregarán dinámicamente aquí -->
+        </div>
+
+        <button onclick="agregarBien()" class="btn-inline btn-small" style="margin-bottom: 15px;">➕ Agregar Bien</button>
+
+        <label>Observación</label>
+        <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
+
+        <div>
+            <button onclick="registrarIngreso()" class="btn-success btn-block">
+                ✅ Registrar INGRESO
+            </button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <!-- LISTA DE PERSONAL ACTIVO (DENTRO CON BIENES) -->
+    <div>
+        <div class="toolbar">
+            <h3>Personal Dentro (Con bienes sin salida)</h3>
+            <button onclick="cargarActivos()" class="btn-inline btn-small">🔄 Actualizar</button>
+        </div>
+        
+        <div id="lista-activos">
+            <p class="text-center muted">Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/control_bienes.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    agregarBien(); // Agregar primer bien por defecto
+    cargarActivos();
+
+    // Auto-actualizar lista cada 15 segundos
+    setInterval(cargarActivos, 15000);
+
+    // Si venimos de registrar salida, limpiar query y refrescar
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("refresh") === "1") {
+        cargarActivos();
+        window.history.replaceState({}, document.title, "control_bienes.html");
+    }
+
+    // Detectar ENTER en los campos
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+    
+    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
+    addEnterListener("apellidos", () => {
+        const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
+        if (primerBien) primerBien.focus();
+    });
+});
+</script>
+
+</body>
+</html>
