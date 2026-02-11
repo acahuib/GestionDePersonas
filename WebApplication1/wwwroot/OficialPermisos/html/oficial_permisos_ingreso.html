@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ingreso Personal - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>✅ Registrar Ingreso de Personal</h2>
+            <div class="header-actions">
+                <a href="oficial_permisos.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+    <div class="form-card">
+        <h3>Datos del Personal</h3>
+
+        <label>DNI</label>
+        <input type="text" id="dni" readonly>
+
+        <label>Nombre Completo</label>
+        <input type="text" id="nombreCompleto" readonly>
+
+        <label>De Dónde (Área)</label>
+        <input type="text" id="deDonde" readonly>
+
+        <label>Tipo de Permiso</label>
+        <input type="text" id="tipo" readonly>
+
+        <label>Autorizado por</label>
+        <input type="text" id="quienAutoriza" readonly>
+
+        <label>Fecha y Hora de Salida</label>
+        <input type="text" id="salidaInfo" readonly>
+
+        <label>Observación (editable)</label>
+        <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
+
+        <div>
+            <button onclick="registrarIngreso()" class="btn-success btn-block">✅ Registrar INGRESO</button>
+        </div>
+        <div>
+            <button onclick="volver()" class="btn-secondary btn-block">Volver</button>
+        </div>
+
+        <p id="mensaje"></p>
+    </div>
+</div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/oficial_permisos_ingreso.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarDatosDesdeUrl();
+});
+</script>
+
+</body>
+</html>

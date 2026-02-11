@@ -84,7 +84,7 @@ El backend ya está listo con los siguientes endpoints:
 // Herramientas > Editor de secuencias de comandos
 // ============================================
 
-const API_BASE = "https://tu-servidor.com/api/permisos-personal";
+const API_BASE = "http://localhost:5170/api/permisos-personal";
 const EMAIL_ADMINISTRACION = "acahuib@unsa.edu.pe";
 const EMAIL_ING_ROMEL = "acahuib@unsa.edu.pe";
 

@@ -1,0 +1,55 @@
+<!--
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>📚 Historial de Permisos - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📚 Historial de Permisos de Personal</h2>
+            <div class="header-actions">
+                <a href="permisos_personal.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <h3>Historial</h3>
+            <button onclick="cargarHistorial()" class="btn-inline btn-small">🔄 Refrescar</button>
+        </div>
+
+        <p id="mensaje"></p>
+
+        <!-- Tabla de historial -->
+        <div id="historial-container">
+            <p class="text-center muted">Cargando historial...</p>
+        </div>
+
+        <!-- Paginación -->
+        <div id="paginacion" class="paginacion" style="display: none;"></div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/permisos_personal_historial.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    cargarHistorial();
+});
+</script>
+
+</body>
+</html>
+-->

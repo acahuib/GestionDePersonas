@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+/*using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
@@ -287,10 +287,20 @@ namespace WebApplication1.Controllers
                 if (string.IsNullOrWhiteSpace(dto.Dni))
                     return BadRequest("DNI es requerido");
 
-                // Validar formato DNI
-                var dniNormalizado = dto.Dni.Trim();
-                if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                    return BadRequest("DNI debe tener 8 dígitos numéricos");
+                // Limpiar y normalizar DNI (eliminar espacios y caracteres no numéricos)
+                var dniNormalizado = new string(dto.Dni.Trim().Where(char.IsDigit).ToArray());
+                
+                // Validar que tenga al menos algún dígito
+                if (string.IsNullOrEmpty(dniNormalizado))
+                    return BadRequest("DNI inválido: debe contener al menos un dígito");
+                
+                // Si tiene menos de 8 dígitos, rellenar con ceros a la izquierda
+                if (dniNormalizado.Length < 8)
+                    dniNormalizado = dniNormalizado.PadLeft(8, '0');
+                
+                // Si tiene más de 8 dígitos, tomar solo los primeros 8
+                if (dniNormalizado.Length > 8)
+                    dniNormalizado = dniNormalizado.Substring(0, 8);
 
                 // Verificar si la persona existe, si no, crearla
                 var persona = await _context.Personas.FindAsync(dniNormalizado);
@@ -674,3 +684,4 @@ namespace WebApplication1.Controllers
         }
     }
 }
+*/

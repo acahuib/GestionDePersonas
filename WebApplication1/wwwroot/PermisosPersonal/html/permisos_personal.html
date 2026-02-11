@@ -1,0 +1,83 @@
+<!--
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>📋 Permisos Personal - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📋 Permisos de Salida - Personal</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary">⬅️ Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <a href="permisos_personal_historial.html" class="card-link">
+                <button class="btn-inline">📚 Ver Historial</button>
+            </a>
+        </div>
+
+        <div class="form-card">
+            <h3>Consultar Permisos por DNI</h3>
+            <p class="muted">💡 Los permisos deben ser solicitados previamente mediante el formulario de Google Forms</p>
+
+            <label>DNI del Personal *</label>
+            <input type="text" id="dni" placeholder="Ingrese DNI del personal" maxlength="8" autofocus>
+
+            <div>
+                <button onclick="buscarPermisos()" class="btn-primary btn-block">
+                    🔍 Buscar Permisos
+                </button>
+            </div>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <hr>
+
+        <div id="resultado-busqueda" style="display: none;">
+            <div class="toolbar">
+                <h3>Permisos Encontrados</h3>
+                <button onclick="buscarPermisos()" class="btn-inline btn-small">🔄 Actualizar</button>
+            </div>
+            
+            <div id="permisos-container">
+                <p class="text-center muted">Buscando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/permisos_personal.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+
+    // Enter listener para buscar al presionar Enter
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPermisos();
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+-->
