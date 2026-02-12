@@ -44,7 +44,7 @@ function crearSidebar() {
                 <div style="text-align: center; margin-bottom: 10px; color: #ecf0f1; font-size: 0.9rem;">
                     <span id="sidebar-usuario-info">Cargando...</span>
                 </div>
-                <button onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
+                <button onclick="cerrarSesion()"><img src="/images/door-open-fill.svg" class="icon-brown"> Cerrar Sesión</button>
             </div>
         </div>
     `;

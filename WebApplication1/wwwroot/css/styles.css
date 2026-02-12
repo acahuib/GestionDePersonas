@@ -525,3 +525,16 @@ button:hover {
 .icon-white {
     filter: brightness(0) invert(1);
 }
+.icon-brown {
+    filter: 
+        brightness(0)
+        saturate(100%)
+        invert(18%)
+        sepia(91%)
+        saturate(744%)
+        hue-rotate(357deg)
+        brightness(95%)
+        contrast(95%);
+        width: 25px;
+        height: 25px;
+}

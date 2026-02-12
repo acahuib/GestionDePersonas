@@ -73,19 +73,11 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Obtener último movimiento
-                var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
-                    .OrderByDescending(m => m.FechaHora)
-                    .FirstOrDefaultAsync();
-
-                // Auto-corrección: si no hay movimiento o tipo no coincide, crear con tipo Entrada
-                if (ultimoMovimiento == null || ultimoMovimiento.TipoMovimiento != "Entrada")
-                {
-                    var movimientosService = HttpContext.RequestServices.GetRequiredService<MovimientosService>();
-                    ultimoMovimiento = await movimientosService.RegistrarMovimientoEnBD(
-                        dniNormalizado, 1, "Entrada", usuarioId);
-                }
+                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento de tipo Entrada
+                // Cada registro de Control de Bienes es una entrada
+                var movimientosService = HttpContext.RequestServices.GetRequiredService<MovimientosService>();
+                var ultimoMovimiento = await movimientosService.RegistrarMovimientoEnBD(
+                    dniNormalizado, 1, "Entrada", usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al crear movimiento");

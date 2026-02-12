@@ -65,7 +65,7 @@ namespace WebApplication1.Controllers
                 {
                     FechaHora = m.FechaHora,
                     Dni = m.Dni,
-                    Nombre = m.Persona.Nombre,
+                    Nombre = m.Persona != null ? m.Persona.Nombre : "Desconocido",
                     PuntoControl = m.PuntoControlId.ToString(), // ID en lugar de nombre
                     TipoMovimiento = m.TipoMovimiento
                 })
@@ -77,6 +77,81 @@ namespace WebApplication1.Controllers
                 page,
                 pageSize,
                 data
+            });
+        }
+
+        // ======================================================
+        // GET: api/reportes/dashboard
+        // Reporte extendido para dashboard de administrador
+        // Incluye información de Persona.Tipo y SalidaDetalle.TipoSalida
+        // ======================================================
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> ObtenerDashboard(
+            [FromQuery] DateTime? fechaInicio,
+            [FromQuery] DateTime? fechaFin,
+            [FromQuery] string? tipoMovimiento,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0 || pageSize > 1000) pageSize = 50;
+
+            // Si no se especifica rango, usar solo fechaInicio como un día
+            if (!fechaInicio.HasValue)
+                return BadRequest("Se requiere fechaInicio");
+
+            var inicio = fechaInicio.Value.Date;
+            var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : inicio.AddDays(1);
+
+            var query = _context.Movimientos
+                .AsNoTracking()
+                .Include(m => m.Persona)
+                .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
+
+            if (!string.IsNullOrEmpty(tipoMovimiento))
+                query = query.Where(m => m.TipoMovimiento == tipoMovimiento);
+
+            var total = await query.CountAsync();
+
+            // Obtener movimientos con sus detalles
+            var movimientos = await query
+                .OrderByDescending(m => m.FechaHora)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Obtener IDs de movimientos para buscar SalidaDetalle
+            var movimientoIds = movimientos.Select(m => m.Id).ToList();
+            var salidasDetalle = await _context.SalidasDetalle
+                .Where(s => movimientoIds.Contains(s.MovimientoId))
+                .ToListAsync();
+
+            // Crear diccionario para búsqueda rápida
+            var salidasPorMovimiento = salidasDetalle
+                .GroupBy(s => s.MovimientoId)
+                .ToDictionary(g => g.Key, g => g.FirstOrDefault());
+
+            // Mapear a DTO
+            var data = movimientos.Select(m => new DashboardMovimientoDto
+            {
+                Id = m.Id,
+                FechaHora = m.FechaHora,
+                Dni = m.Dni,
+                NombrePersona = m.Persona?.Nombre ?? "Desconocido",
+                TipoPersona = m.Persona?.Tipo,
+                TipoMovimiento = m.TipoMovimiento,
+                TipoSalida = salidasPorMovimiento.ContainsKey(m.Id) 
+                    ? salidasPorMovimiento[m.Id]?.TipoSalida 
+                    : null,
+                PuntoControlId = m.PuntoControlId
+            }).ToList();
+
+            return Ok(new
+            {
+                total,
+                page,
+                pageSize,
+                movimientos = data
             });
         }
 
@@ -115,7 +190,7 @@ namespace WebApplication1.Controllers
                 {
                     m.FechaHora,
                     m.Dni,
-                    Nombre = m.Persona.Nombre,
+                    Nombre = m.Persona != null ? m.Persona.Nombre : "Desconocido",
                     PuntoControl = m.PuntoControlId.ToString(), // ID en lugar de nombre
                     m.TipoMovimiento
                 })

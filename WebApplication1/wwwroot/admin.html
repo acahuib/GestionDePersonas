@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Administrador - Sistema de Garita</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>📊 Dashboard Administrador</h1>
+                <p class="subtitle">Sistema de Control de Garita</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="nombreUsuario">Admin</span>
+                    <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesión</button>
+                </div>
+                <div class="last-update">
+                    <span>Última actualización: <span id="lastUpdate">--:--</span></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Estadísticas Cards -->
+        <section class="stats-grid">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="totalDentro">--</h3>
+                    <p>Personas Dentro</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">📅</div>
+                <div class="stat-content">
+                    <h3 id="movimientosHoy">--</h3>
+                    <p>Movimientos Hoy</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">📥</div>
+                <div class="stat-content">
+                    <h3 id="ingresosHoy">--</h3>
+                    <p>Ingresos Hoy</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-info">
+                <div class="stat-icon">📤</div>
+                <div class="stat-content">
+                    <h3 id="salidasHoy">--</h3>
+                    <p>Salidas Hoy</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contenido Principal -->
+        <div class="main-content">
+            <!-- Personas Actualmente Dentro -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>🏢 Personas Actualmente Dentro</h2>
+                    <button onclick="actualizarDashboard()" class="btn-refresh">🔄 Actualizar</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Tipo Salida</th>
+                                <th>Hora Ingreso</th>
+                                <th>Tiempo Dentro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPersonasDentro">
+                            <tr>
+                                <td colspan="6" class="loading">Cargando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Últimos Movimientos -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📋 Últimos Movimientos del Día</h2>
+                    <div class="filter-controls">
+                        <select id="filtroTipo" onchange="actualizarDashboard()">
+                            <option value="">Todos los tipos</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Salida">Salida</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Tipo Persona</th>
+                                <th>Tipo Movimiento</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaUltimosMovimientos">
+                            <tr>
+                                <td colspan="6" class="loading">Cargando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button onclick="cambiarPagina(-1)" id="btnAnterior" class="btn-page">← Anterior</button>
+                    <span id="paginaActual">Página 1</span>
+                    <button onclick="cambiarPagina(1)" id="btnSiguiente" class="btn-page">Siguiente →</button>
+                </div>
+            </section>
+
+            <!-- Resumen por Tipo de Cuaderno -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📊 Resumen por Tipo de Cuaderno</h2>
+                </div>
+                <div class="summary-grid-cuadernos">
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">👔</div>
+                        <h4>Personal Local</h4>
+                        <p class="summary-number" id="totalPersonalLocal">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🏭</div>
+                        <h4>Proveedores</h4>
+                        <p class="summary-number" id="totalProveedores">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🚗</div>
+                        <h4>Vehículo Empresa</h4>
+                        <p class="summary-number" id="totalVehiculoEmpresa">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🚚</div>
+                        <h4>Vehículos Proveedores</h4>
+                        <p class="summary-number" id="totalVehiculosProveedores">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">📝</div>
+                        <h4>Permisos Personal</h4>
+                        <p class="summary-number" id="totalPermisosPersonal">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🎖️</div>
+                        <h4>Oficial Permisos</h4>
+                        <p class="summary-number" id="totalOficialPermisos">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">📋</div>
+                        <h4>Control Bienes</h4>
+                        <p class="summary-number" id="totalControlBienes">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🏖️</div>
+                        <h4>Días Libre</h4>
+                        <p class="summary-number" id="totalDiasLibre">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">🛏️</div>
+                        <h4>Habitación Proveedor</h4>
+                        <p class="summary-number" id="totalHabitacionProveedor">--</p>
+                    </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">⚠️</div>
+                        <h4>Ocurrencias</h4>
+                        <p class="summary-number" id="totalOcurrencias">--</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>Sistema de Control de Garita © 2026 | Dashboard Administrativo</p>
+        </footer>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

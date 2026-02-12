@@ -34,8 +34,12 @@ async function login() {
         localStorage.setItem("usuario", usuario);
         localStorage.setItem("nombreCompleto", data.nombreCompleto || usuario);
 
-        // Redirigir al menú principal
-        window.location.href = "/index.html";
+        // Redirigir al menú de cada uno
+        if (data.rol === "Admin") {
+            window.location.href = "/admin.html";
+        } else {
+            window.location.href = "/index.html";
+        }
 
     } catch (err) {
         mensaje.className = "error";

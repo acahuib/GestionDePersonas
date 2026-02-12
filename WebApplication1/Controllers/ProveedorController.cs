@@ -84,24 +84,10 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Obtener último movimiento
-                var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dniNormalizado && m.PuntoControlId == 1)
-                    .OrderByDescending(m => m.FechaHora)
-                    .FirstOrDefaultAsync();
-
-                // Auto-corrección: si hay movimiento previo y tipo no coincide, crear nuevo con tipo correcto
-                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
-                {
-                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dniNormalizado, 1, tipoMovimiento, usuarioId);
-                }
-                else if (ultimoMovimiento == null)
-                {
-                    // Si no existe movimiento, crear con tipo determinado
-                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dniNormalizado, 1, tipoMovimiento, usuarioId);
-                }
+                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
+                // Cada ingreso/salida debe tener su propio MovimientoId único
+                var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniNormalizado, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");

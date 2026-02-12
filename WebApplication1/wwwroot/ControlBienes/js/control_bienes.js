@@ -85,7 +85,7 @@ function agregarBien() {
     bienDiv.style.cssText = "border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; position: relative; background: #f9f9f9;";
     
     bienDiv.innerHTML = `
-        <button type="button" onclick="eliminarBien(${bienId})" class="btn-danger btn-small" style="position: absolute; top: 10px; right: 10px;"><i class="bi bi-x-lg"></i></button>
+        <button type="button" onclick="eliminarBien(${bienId})" class="btn-danger btn-small" style="position: absolute; top: 10px; right: 10px;"><img src="/images/x-circle.svg" class="icon-white"></button>
         <h4 style="margin-top: 0;">Bien #${bienId}</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>

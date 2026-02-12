@@ -85,32 +85,10 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // Obtener último movimiento para verificar auto-corrección si es necesario
-                var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dni && m.PuntoControlId == 1)
-                    .OrderByDescending(m => m.FechaHora)
-                    .FirstOrDefaultAsync();
-
-                // Para Ocurrencias: auto-corregir si último movimiento NO coincide con tipo esperado
-                // Esta es lógica flexible: si envía horaIngreso→Entrada, si envía horaSalida→Salida
-                if (ultimoMovimiento != null && ultimoMovimiento.TipoMovimiento != tipoMovimiento)
-                {
-                    // Crear nuevo movimiento con el tipo correcto
-                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dni,
-                        1,
-                        tipoMovimiento,
-                        usuarioId);
-                }
-                else if (ultimoMovimiento == null)
-                {
-                    // Si no existe movimiento previo, crear uno
-                    ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                        dni,
-                        1,
-                        tipoMovimiento,
-                        usuarioId);
-                }
+                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
+                // Cada ingreso/salida debe tener su propio MovimientoId único
+                var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                    dni, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
