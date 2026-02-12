@@ -5,7 +5,7 @@
     <title>Cuaderno Proveedores - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!--   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">-->
 </head>
 <body>
 
@@ -15,7 +15,7 @@
             <h2>📋 Cuaderno de Proveedores (Sin Vehículo)</h2>
             <div class="header-actions">
                 <a href="../../index.html">
-                    <button class="btn-inline btn-secondary"><i class="bi bi-arrow-left"></i> Volver al Menú</button>
+                    <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
                 </a>
             </div>
         </div>
@@ -24,7 +24,7 @@
 
     <div class="toolbar">
         <a href="proveedor_historial.html" class="card-link">
-            <button class="btn-inline"><i class="bi bi-book"></i> Ver Historial</button>
+            <button class="btn-inline"><img src="/images/book.svg" class="icon-white"> Ver Historial</button>
         </a>
     </div>
 
@@ -42,7 +42,7 @@
         <input type="text" id="apellidos" placeholder="Apellidos del proveedor">
 
         <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
-            <strong><i class="bi bi-info-circle"></i> Persona encontrada:</strong> <span id="persona-nombre"></span>
+            <strong><img src="/images/info-circle.svg" class="icon-white"> Persona encontrada:</strong> <span id="persona-nombre"></span>
         </div>
 
         <label>Procedencia *</label>
@@ -56,7 +56,7 @@
 
         <div>
             <button onclick="registrarEntrada()" class="btn-success btn-block">
-                <i class="bi bi-check-circle"></i> Registrar ENTRADA
+                <img src="/images/check-circle.svg" class="icon-white"> Registrar ENTRADA
             </button>
         </div>
 
@@ -67,7 +67,7 @@
     <div>
         <div class="toolbar">
             <h3>Proveedores Activos (Sin salida)</h3>
-            <button onclick="cargarActivos()" class="btn-inline btn-small"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+            <button onclick="cargarActivos()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
         </div>
         
         <div id="lista-activos">

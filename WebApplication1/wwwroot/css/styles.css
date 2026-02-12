@@ -522,3 +522,6 @@ button:hover {
         padding-left: 10px;
     }
 }
+.icon-white {
+    filter: brightness(0) invert(1);
+}

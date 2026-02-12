@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Días Libres - Control de Accesos</title>
     <link rel="stylesheet" href="../../css/styles.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
 </head>
 <body>
@@ -15,12 +14,11 @@
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>
-                <i class="bi bi-book"></i> Cuaderno de Días Libres</h2>
+            <h2><img src="/images/book.svg" class="icon-white"> Cuaderno de Días Libres</h2>
             <div class="header-actions">
                 <a href="../../index.html">
                     <button class="btn-inline btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Volver al Menú</button>
+                        <img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
                 </a>
             </div>
         </div>
@@ -29,7 +27,7 @@
 
     <div class="toolbar">
         <a href="dias_libre_historial.html" class="card-link">
-            <button class="btn-inline">Ver Historial</button>
+            <button class="btn-inline"><img src="/images/book.svg" class="icon-white"> Ver Historial</button>
         </a>
     </div>
 
@@ -44,7 +42,7 @@
             <input type="text" id="dni" name="dni" required maxlength="8" pattern="[0-9]{8}" placeholder="Ingrese DNI">
             
             <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                <strong><i class="bi bi-exclamation-circle-fill"></i>Persona encontrada:</strong> <span id="persona-nombre"></span>
+                <strong><img src="/images/exclamation-circle-fill.svg" class="icon-white"> Persona encontrada:</strong> <span id="persona-nombre"></span>
             </div>
 
             <label>Nombres y Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
@@ -69,7 +67,7 @@
             <label>Observaciones</label>
             <textarea id="observaciones" name="observaciones" rows="3" placeholder="Observaciones (opcional)"></textarea>
 
-            <button type="submit" class="btn-success btn-block"><i class="bi bi-check-lg"></i> Registrar Permiso</button>
+            <button type="submit" class="btn-success btn-block"><img src="/images/check-lg.svg" class="icon-white"> Registrar Permiso</button>
         </form>
     </div>
 
@@ -80,7 +78,7 @@
         <div class="table-header">
             <h3>Permisos de Días Libres Registrados Hoy</h3>
             <button onclick="cargarDiasLibreHoy()" class="btn-inline btn-small">
-                <i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                <img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
         </div>
         
         <div class="table-container">
