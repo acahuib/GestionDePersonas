@@ -132,6 +132,10 @@ namespace WebApplication1.Controllers
 
                 return CreatedAtAction(nameof(ObtenerSalidaPorId), new { id = salidaDetalle.Id }, salidaDetalle);
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error: {ex.Message}");
@@ -325,9 +329,20 @@ namespace WebApplication1.Controllers
                         fechaSalidaColumna);
 
                     // Registrar movimiento de salida final
-                    if (salidaExistente.Movimiento != null && dni != null)
+                    var dniMovimiento = dni;
+                    if (string.IsNullOrWhiteSpace(dniMovimiento))
                     {
-                        await _movimientosService.RegistrarMovimientoEnBD(dni, 1, "Salida", usuarioId);
+                        dniMovimiento = await _context.Movimientos
+                            .Where(m => m.Id == salidaExistente.MovimientoId)
+                            .Select(m => m.Dni)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(dniMovimiento))
+                    {
+                        var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(dniMovimiento, 1, "Salida", usuarioId);
+                        salidaExistente.MovimientoId = movimientoSalida.Id;
+                        await _context.SaveChangesAsync();
                     }
 
                     return Ok(salidaActualizada);

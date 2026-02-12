@@ -139,6 +139,10 @@ namespace WebApplication1.Controllers
                         estado = "Registrado"
                     });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error: {ex.Message}");

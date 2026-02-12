@@ -41,7 +41,7 @@ function verificarAutenticacion() {
 function cerrarSesion() {
     if (confirm("¿Está seguro de cerrar sesión?")) {
         localStorage.clear();
-        window.location.href = "login.html";
+        window.location.href = "/login.html";
     }
 }
 

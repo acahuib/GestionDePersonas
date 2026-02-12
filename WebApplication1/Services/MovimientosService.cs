@@ -88,10 +88,38 @@ namespace WebApplication1.Services
         }
 
         // =========================
+        // VALIDAR ENTRADA DUPLICADA
+        // =========================
+        private async Task ValidarEntradaDuplicada(string dni, int puntoControlId, string tipoMovimiento)
+        {
+            // Solo validar en Garita y solo cuando el movimiento es Entrada/Ingreso
+            if (puntoControlId != GARITA_ID)
+                return;
+
+            if (tipoMovimiento != "Entrada" && tipoMovimiento != "Ingreso")
+                return;
+
+            // Obtener último movimiento de esta persona en Garita
+            var ultimoMovimiento = await GetLastMovimiento(dni, GARITA_ID);
+
+            if (ultimoMovimiento == null)
+                return; // Primera vez, permitir entrada
+
+            // Si el último movimiento fue Entrada/Ingreso, rechazar
+            if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
+            {
+                throw new InvalidOperationException($"Esta persona ya está adentro con el DNI {dni}");
+            }
+        }
+
+        // =========================
         // REGISTRAR MOVIMIENTO EN BD
         // =========================
         public async Task<Movimiento> RegistrarMovimientoEnBD(string dni, int puntoControlId, string tipoMovimiento, int? usuarioId)
         {
+            // Validar que no se registre una entrada duplicada
+            await ValidarEntradaDuplicada(dni, puntoControlId, tipoMovimiento);
+
             var movimiento = new Movimiento
             {
                 Dni = dni,

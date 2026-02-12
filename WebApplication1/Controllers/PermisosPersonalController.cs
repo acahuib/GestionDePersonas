@@ -138,6 +138,10 @@ namespace WebApplication1.Controllers
                         estado = "Pendiente de ingreso"
                     });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error: {ex.Message}");
@@ -208,13 +212,25 @@ namespace WebApplication1.Controllers
                     );
 
                     // Registrar movimiento de entrada
-                    if (salidaExistente.Movimiento != null)
+                    var dniMovimiento = salidaExistente.Dni;
+                    if (string.IsNullOrWhiteSpace(dniMovimiento))
                     {
-                        await _movimientosService.RegistrarMovimientoEnBD(
-                            salidaExistente.Movimiento.Dni,
+                        dniMovimiento = await _context.Movimientos
+                            .Where(m => m.Id == salidaExistente.MovimientoId)
+                            .Select(m => m.Dni)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(dniMovimiento))
+                    {
+                        var movimientoEntrada = await _movimientosService.RegistrarMovimientoEnBD(
+                            dniMovimiento,
                             1,
                             "Entrada",
                             usuarioId);
+
+                        salidaExistente.MovimientoId = movimientoEntrada.Id;
+                        await _context.SaveChangesAsync();
                     }
 
                     return Ok(new

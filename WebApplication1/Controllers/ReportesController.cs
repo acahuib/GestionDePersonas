@@ -94,14 +94,15 @@ namespace WebApplication1.Controllers
             [FromQuery] int pageSize = 50)
         {
             if (page <= 0) page = 1;
-            if (pageSize <= 0 || pageSize > 1000) pageSize = 50;
+            if (pageSize <= 0 || pageSize > 50000) pageSize = 50; // Aumentado límite para consultas históricas
 
             // Si no se especifica rango, usar solo fechaInicio como un día
             if (!fechaInicio.HasValue)
                 return BadRequest("Se requiere fechaInicio");
 
             var inicio = fechaInicio.Value.Date;
-            var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : inicio.AddDays(1);
+            // Si fechaFin no se especifica, buscar hasta HOY (no solo 1 día)
+            var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : DateTime.Now.Date.AddDays(1);
 
             var query = _context.Movimientos
                 .AsNoTracking()

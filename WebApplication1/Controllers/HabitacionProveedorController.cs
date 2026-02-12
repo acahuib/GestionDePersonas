@@ -88,9 +88,9 @@ namespace WebApplication1.Controllers
                     : null;
                 string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
-                // Crear movimiento de Ingreso
+                // Crear movimiento de Entrada
                 var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                    dto.Dni, 1, "Ingreso", usuarioId);
+                    dto.Dni, 1, "Entrada", usuarioId);
 
                 if (movimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
@@ -136,6 +136,10 @@ namespace WebApplication1.Controllers
                         dni = dto.Dni,
                         estado = "Aguardando salida"
                     });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {

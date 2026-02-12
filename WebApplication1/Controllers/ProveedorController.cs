@@ -38,15 +38,14 @@ namespace WebApplication1.Controllers
         {
             try
             {
-                // Validar que solo se envía UNO: horaIngreso O horaSalida
-                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("Proveedor: solo envíe horaIngreso O horaSalida, no ambos");
+                // Flujo estricto Proveedor: este endpoint es solo para INGRESO
+                if (dto.HoraSalida.HasValue)
+                    return BadRequest("Proveedor: este endpoint solo registra ingreso. Use PUT /api/proveedor/{id}/salida para la salida.");
 
-                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
-                    return BadRequest("Proveedor: debe enviar horaIngreso O horaSalida");
+                if (!dto.HoraIngreso.HasValue)
+                    return BadRequest("Proveedor: debe enviar horaIngreso en el registro inicial.");
 
-                // Determinar tipo de movimiento basado en cuál campo se proporciona
-                string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
+                string tipoMovimiento = "Entrada";
 
                 // ===== NUEVO: Buscar o crear en tabla Personas =====
                 // Normalizar DNI (trim y uppercase por si hay inconsistencias)
@@ -99,10 +98,10 @@ namespace WebApplication1.Controllers
                 
                 // NUEVO: Extraer horaIngreso/fechaIngreso para guardar en columnas
                 // Ya no usamos la hora del cliente, usamos la hora del servidor
-                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
-                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
+                var horaIngresoCol = ahoraLocal;
+                var fechaIngresoCol = fechaActual;
+                DateTime? horaSalidaCol = null;
+                DateTime? fechaSalidaCol = null;
 
                 // NUEVO: DatosJSON ya NO contiene nombres/apellidos/dni (están en tabla Personas)
                 // DNI se guarda en columna Dni de SalidaDetalle para JOIN directo
@@ -114,8 +113,8 @@ namespace WebApplication1.Controllers
                     {
                         procedencia = dto.Procedencia,
                         destino = dto.Destino,
-                        guardiaIngreso = dto.HoraIngreso.HasValue ? guardiaNombre : null,
-                        guardiaSalida = dto.HoraSalida.HasValue ? guardiaNombre : null,
+                        guardiaIngreso = guardiaNombre,
+                        guardiaSalida = (string?)null,
                         observacion = dto.Observacion
                     },
                     usuarioId,
@@ -133,6 +132,10 @@ namespace WebApplication1.Controllers
                     tipoSalida = "Proveedor",
                     estado = "Pendiente de salida"
                 });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -199,6 +202,27 @@ namespace WebApplication1.Controllers
                 ahoraLocal,         // NUEVO: horaSalida va a columna (hora del servidor)
                 fechaActual         // NUEVO: fechaSalida va a columna
             );
+
+            var dniMovimiento = salida.Dni;
+            if (string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                dniMovimiento = await _context.Movimientos
+                    .Where(m => m.Id == salida.MovimientoId)
+                    .Select(m => m.Dni)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniMovimiento,
+                    1,
+                    "Salida",
+                    usuarioId);
+
+                salida.MovimientoId = movimientoSalida.Id;
+                await _context.SaveChangesAsync();
+            }
 
             return Ok(new
             {

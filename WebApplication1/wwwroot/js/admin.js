@@ -105,53 +105,68 @@ async function cargarEstadisticas() {
 // Cargar personas actualmente dentro
 async function cargarPersonasDentro() {
     try {
-        const hoy = new Date();
-        const fechaInicio = hoy.toISOString().split('T')[0];
-        
         console.log('🏢 Cargando personas dentro...');
         
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-            `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=1000`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            }
-        );
+        // Para determinar quién está dentro, necesitamos consultar TODO el historial
+        // No solo el día de hoy, porque alguien pudo haber entrado días antes
+        const fechaInicio = '2020-01-01'; // Fecha antigua para obtener todo el historial
         
-        if (!response.ok) throw new Error('Error al cargar personas dentro');
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=10000`;
+        
+        console.log('🌐 URL personas dentro:', url);
+        console.log('🔑 Token presente:', !!token);
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        console.log('📡 Response status personas dentro:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Error response personas dentro:', errorText);
+            throw new Error('Error al cargar personas dentro: ' + response.status);
+        }
         
         const data = await response.json();
         const movimientos = data.movimientos || [];
         
-        console.log('🏢 Procesando', movimientos.length, 'movimientos...');
+        console.log('🏢 Procesando', movimientos.length, 'movimientos históricos...');
         
-        // Agrupar por DNI y determinar quién está dentro
-        const personasPorDni = {};
+        // Agrupar por DNI y obtener el ÚLTIMO movimiento de cada persona
+        const ultimoMovimientoPorDni = {};
         
         movimientos.forEach(mov => {
-            if (!personasPorDni[mov.dni]) {
-                personasPorDni[mov.dni] = [];
+            const dni = mov.dni;
+            if (!ultimoMovimientoPorDni[dni]) {
+                ultimoMovimientoPorDni[dni] = mov;
+            } else {
+                // Mantener solo el movimiento más reciente
+                const fechaActual = new Date(mov.fechaHora);
+                const fechaGuardada = new Date(ultimoMovimientoPorDni[dni].fechaHora);
+                if (fechaActual > fechaGuardada) {
+                    ultimoMovimientoPorDni[dni] = mov;
+                }
             }
-            personasPorDni[mov.dni].push(mov);
         });
         
-        console.log('👥 DNIs únicos:', Object.keys(personasPorDni).length);
+        console.log('👥 DNIs únicos:', Object.keys(ultimoMovimientoPorDni).length);
         
         // Determinar quién está actualmente dentro
         const personasDentro = [];
         
-        for (const dni in personasPorDni) {
-            const movs = personasPorDni[dni].sort((a, b) => 
-                new Date(b.fechaHora) - new Date(a.fechaHora)
-            );
+        for (const dni in ultimoMovimientoPorDni) {
+            const ultimoMov = ultimoMovimientoPorDni[dni];
+            const tipoMov = (ultimoMov.tipoMovimiento || '').toLowerCase();
             
-            const ultimoMov = movs[0];
+            console.log(`👤 ${dni}: Último movimiento = ${ultimoMov.tipoMovimiento} @ ${ultimoMov.fechaHora} (tipo: ${tipoMov})`);
             
-            console.log(`👤 ${dni}: Último movimiento = ${ultimoMov.tipoMovimiento}`);
-            
-            if (ultimoMov.tipoMovimiento === 'Entrada') {
+            // Una persona está DENTRO si su último movimiento es "Entrada" o "Ingreso"
+            // Está FUERA si su último movimiento es "Salida"
+            if (tipoMov === 'entrada' || tipoMov === 'ingreso') {
                 personasDentro.push({
                     dni: ultimoMov.dni,
                     nombre: ultimoMov.nombrePersona,
@@ -267,7 +282,7 @@ function calcularResumenPorTipo(movimientos) {
         'Proveedor': 0,
         'VehiculoEmpresa': 0,
         'VehiculosProveedores': 0,
-        'PermisosPersonal': 0,
+        'SalidasPermisosPersonal': 0,
         'OficialPermisos': 0,
         'ControlBienes': 0,
         'DiasLibre': 0,
@@ -287,7 +302,7 @@ function calcularResumenPorTipo(movimientos) {
     document.getElementById('totalProveedores').textContent = contadores['Proveedor'];
     document.getElementById('totalVehiculoEmpresa').textContent = contadores['VehiculoEmpresa'];
     document.getElementById('totalVehiculosProveedores').textContent = contadores['VehiculosProveedores'];
-    document.getElementById('totalPermisosPersonal').textContent = contadores['PermisosPersonal'];
+    document.getElementById('totalPermisosPersonal').textContent = contadores['SalidasPermisosPersonal'];
     document.getElementById('totalOficialPermisos').textContent = contadores['OficialPermisos'];
     document.getElementById('totalControlBienes').textContent = contadores['ControlBienes'];
     document.getElementById('totalDiasLibre').textContent = contadores['DiasLibre'];
