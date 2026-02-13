@@ -101,7 +101,7 @@ function onFormSubmit(e) {
   var apellidoPaterno = sheet.getRange(lastRow, 4).getValue().toString().trim();
   var apellidoMaterno = sheet.getRange(lastRow, 5).getValue().toString().trim();
   var area = sheet.getRange(lastRow, 6).getValue().toString().trim();
-  var tipoSalida = sheet.getRange(lastRow, 7).getValue().toString().trim();
+  var tipoOperacion = sheet.getRange(lastRow, 7).getValue().toString().trim();
   var fechaSalida = sheet.getRange(lastRow, 8).getValue();
   var horaSalida = sheet.getRange(lastRow, 9).getValue();
   var motivo = sheet.getRange(lastRow, 10).getValue().toString().trim();
@@ -113,10 +113,10 @@ function onFormSubmit(e) {
   // Determinar autorizador según tipo de salida
   var autorizador = "";
   var emailAutorizador = "";
-  if (tipoSalida.toLowerCase().includes("normal")) {
+  if (tipoOperacion.toLowerCase().includes("normal")) {
     autorizador = "Administración";
     emailAutorizador = EMAIL_ADMINISTRACION;
-  } else if (tipoSalida.toLowerCase().includes("pernoctar")) {
+  } else if (tipoOperacion.toLowerCase().includes("pernoctar")) {
     autorizador = "Ing. Romel";
     emailAutorizador = EMAIL_ING_ROMEL;
   } else {
@@ -126,15 +126,15 @@ function onFormSubmit(e) {
   }
   
   // 1. ENVIAR AL BACKEND
-  var permisoId = enviarAlBackend(dni, nombreCompleto, area, tipoSalida, fechaSalida, horaSalida, motivo, correo, autorizador, lastRow, sheet);
+  var permisoId = enviarAlBackend(dni, nombreCompleto, area, tipoOperacion, fechaSalida, horaSalida, motivo, correo, autorizador, lastRow, sheet);
   
   // 2. ENVIAR CORREO AL AUTORIZADOR (solo si se envió correctamente al backend)
   if (permisoId) {
-    enviarCorreoAutorizacion(nombreCompleto, dni, area, tipoSalida, fechaSalida, horaSalida, motivo, emailAutorizador, permisoId);
+    enviarCorreoAutorizacion(nombreCompleto, dni, area, tipoOperacion, fechaSalida, horaSalida, motivo, emailAutorizador, permisoId);
   }
 }
 
-function enviarAlBackend(dni, nombreCompleto, area, tipoSalida, fechaSalida, horaSalida, motivo, correo, autorizador, fila, sheet) {
+function enviarAlBackend(dni, nombreCompleto, area, tipoOperacion, fechaSalida, horaSalida, motivo, correo, autorizador, fila, sheet) {
   try {
     // Formatear fechas
     var fechaSalidaFormateada = Utilities.formatDate(new Date(fechaSalida), "GMT-5", "yyyy-MM-dd");
@@ -145,7 +145,7 @@ function enviarAlBackend(dni, nombreCompleto, area, tipoSalida, fechaSalida, hor
       dni: dni,
       nombreRegistrado: nombreCompleto,
       area: area,
-      tipoSalida: tipoSalida,
+      tipoOperacion: tipoOperacion,
       fechaSalidaSolicitada: fechaSalidaFormateada,
       horaSalidaSolicitada: horaSalidaFormateada,
       motivoSalida: motivo,
@@ -191,9 +191,9 @@ function enviarAlBackend(dni, nombreCompleto, area, tipoSalida, fechaSalida, hor
   }
 }
 
-function enviarCorreoAutorizacion(nombre, dni, area, tipoSalida, fechaSalida, horaSalida, motivo, emailDestino, permisoId) {
+function enviarCorreoAutorizacion(nombre, dni, area, tipoOperacion, fechaSalida, horaSalida, motivo, emailDestino, permisoId) {
   try {
-    var asunto = "PERMISO DE SALIDA - " + nombre + " - " + tipoSalida;
+    var asunto = "PERMISO DE SALIDA - " + nombre + " - " + tipoOperacion;
     
     var mensaje = "Se solicita autorización de permiso de salida:\n\n" +
                   "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -202,7 +202,7 @@ function enviarCorreoAutorizacion(nombre, dni, area, tipoSalida, fechaSalida, ho
                   "DNI: " + dni + "\n" +
                   "NOMBRE: " + nombre + "\n" +
                   "ÁREA: " + area + "\n" +
-                  "TIPO: " + tipoSalida + "\n" +
+                  "TIPO: " + tipoOperacion + "\n" +
                   "FECHA SOLICITADA: " + Utilities.formatDate(new Date(fechaSalida), "GMT-5", "dd/MM/yyyy") + "\n" +
                   "HORA SOLICITADA: " + Utilities.formatDate(new Date(horaSalida), "GMT-5", "HH:mm") + "\n\n" +
                   "MOTIVO:\n" + motivo + "\n\n" +
@@ -410,7 +410,7 @@ El backend guarda en `DatosJSON`:
 {
   "nombreRegistrado": "Juan Pérez López",
   "area": "Mantenimiento",
-  "tipoSalida": "Normal",
+  "tipoOperacion": "Normal",
   "fechaSalidaSolicitada": "2026-02-15",
   "horaSalidaSolicitada": "18:00",
   "motivoSalida": "Trámite bancario",

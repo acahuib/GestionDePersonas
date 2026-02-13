@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace WebApplication1.Controllers
 {
     /// <summary>
-    /// Controller genérico para operaciones CRUD de SalidasDetalle
+    /// Controller genérico para operaciones CRUD de OperacionDetalle
     /// Para endpoints específicos por tipo, ver los controllers individuales:
     /// - ProveedorController
     /// - VehiculoEmpresaController
@@ -36,7 +36,7 @@ namespace WebApplication1.Controllers
         // Para tipos no predefinidos o dinámicos
         // ======================================================
         [HttpPost]
-        public async Task<IActionResult> RegistrarSalidaGeneral(SalidaDetalleCreateDto dto)
+        public async Task<IActionResult> RegistrarSalidaGeneral(OperacionDetalleCreateDto dto)
         {
             var movimiento = await _context.Movimientos.FindAsync(dto.MovimientoId);
             if (movimiento == null)
@@ -51,7 +51,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Salida registrada",
                 salidaId = salida.Id,
-                tipoSalida = dto.TipoSalida
+                tipoOperacion = dto.TipoOperacion
             });
         }
 
@@ -64,7 +64,7 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
             var datosObj = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
@@ -72,7 +72,7 @@ namespace WebApplication1.Controllers
             {
                 id = salida.Id,
                 movimientoId = salida.MovimientoId,
-                tipoSalida = salida.TipoSalida,
+                tipoOperacion = salida.TipoOperacion,
                 datos = datosObj,
                 fechaCreacion = salida.FechaCreacion,
                 usuarioId = salida.UsuarioId,
@@ -85,22 +85,22 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
-        // GET: /api/salidas/tipo/{tipoSalida}
+        // GET: /api/salidas/tipo/{tipoOperacion}
         // Obtiene todas las salidas de un tipo específico
         // JOIN directo con Personas usando campo Dni
         // ======================================================
-        [HttpGet("tipo/{tipoSalida}")]
-        public async Task<IActionResult> ObtenerSalidasPorTipo(string tipoSalida)
+        [HttpGet("tipo/{tipoOperacion}")]
+        public async Task<IActionResult> ObtenerSalidasPorTipo(string tipoOperacion)
         {
             try
             {
-                var salidas = await _context.SalidasDetalle
-                    .Where(s => s.TipoSalida == tipoSalida)
+                var salidas = await _context.OperacionDetalle
+                    .Where(s => s.TipoOperacion == tipoOperacion)
                     .Select(s => new
                     {
                         s.Id,
                         s.MovimientoId,
-                        s.TipoSalida,
+                        s.TipoOperacion,
                         s.DatosJSON,
                         s.FechaCreacion,
                         s.UsuarioId,
@@ -133,7 +133,7 @@ namespace WebApplication1.Controllers
                     {
                         id = s.Id,
                         movimientoId = s.MovimientoId,
-                        tipoSalida = s.TipoSalida,
+                        tipoOperacion = s.TipoOperacion,
                         datos = datosJson,
                         fechaCreacion = s.FechaCreacion,
                         usuarioId = s.UsuarioId,

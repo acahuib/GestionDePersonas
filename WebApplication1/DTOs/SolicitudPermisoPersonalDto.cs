@@ -8,7 +8,7 @@ namespace WebApplication1.DTOs
         public required string Dni { get; set; }
         public required string NombreRegistrado { get; set; }
         public required string Area { get; set; }
-        public required string TipoSalida { get; set; }
+        public required string TipoOperacion { get; set; }
         public required string FechaSalidaSolicitada { get; set; }
         public required string HoraSalidaSolicitada { get; set; }
         public required string MotivoSalida { get; set; }

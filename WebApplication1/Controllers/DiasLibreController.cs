@@ -98,7 +98,7 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
             var fechaActual = ahoraLocal.Date;
 
-            // Crear SalidaDetalle - JSON solo contiene datos específicos (sin nombre/dni)
+            // Crear OperacionDetalle - JSON solo contiene datos específicos (sin nombre/dni)
             var salida = await _salidasService.CrearSalidaDetalle(
                 movimiento.Id,
                 "DiasLibre",
@@ -123,7 +123,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Permiso DiasLibre registrado",
                 salidaId = salida.Id,
-                tipoSalida = "DiasLibre",
+                tipoOperacion = "DiasLibre",
                 nombreCompleto = persona.Nombre,
                 dni = dto.Dni,
                 del = dto.Del.Date,
@@ -145,9 +145,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "DiasLibre")
+            if (salida.TipoOperacion != "DiasLibre")
                 return BadRequest("Este endpoint es solo para DiasLibre");
 
             var datosActuales = System.Text.Json.JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -200,7 +200,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Regreso de DiasLibre registrado",
                 salidaId = id,
-                tipoSalida = "DiasLibre",
+                tipoOperacion = "DiasLibre",
                 estado = "Regreso completado"
             });
         }

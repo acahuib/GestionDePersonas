@@ -171,7 +171,7 @@ async function cargarPersonasDentro() {
                     dni: ultimoMov.dni,
                     nombre: ultimoMov.nombrePersona,
                     tipoPersona: ultimoMov.tipoPersona || 'Desconocido',
-                    tipoSalida: ultimoMov.tipoSalida || 'N/A',
+                    tipoOperacion: ultimoMov.tipoOperacion || 'N/A',
                     horaIngreso: ultimoMov.fechaHora,
                     tiempoDentro: calcularTiempoDentro(ultimoMov.fechaHora)
                 });
@@ -247,7 +247,7 @@ function renderizarTablaPersonasDentro(personas) {
             <td><strong>${p.dni}</strong></td>
             <td>${p.nombre}</td>
             <td><span class="badge badge-${getTipoBadge(p.tipoPersona)}">${p.tipoPersona}</span></td>
-            <td>${p.tipoSalida}</td>
+            <td>${p.tipoOperacion}</td>
             <td>${formatearFechaHora(p.horaIngreso)}</td>
             <td>${p.tiempoDentro}</td>
         </tr>
@@ -270,12 +270,12 @@ function renderizarTablaUltimosMovimientos(movimientos) {
             <td>${m.nombrePersona}</td>
             <td><span class="badge badge-${getTipoBadge(m.tipoPersona)}">${m.tipoPersona}</span></td>
             <td><span class="badge badge-${m.tipoMovimiento === 'Entrada' ? 'success' : 'warning'}">${m.tipoMovimiento}</span></td>
-            <td>${m.tipoSalida || 'N/A'}</td>
+            <td>${m.tipoOperacion || 'N/A'}</td>
         </tr>
     `).join('');
 }
 
-// Calcular resumen por tipo de cuaderno (TipoSalida)
+// Calcular resumen por tipo de cuaderno (TipoOperacion)
 function calcularResumenPorTipo(movimientos) {
     const contadores = {
         'PersonalLocal': 0,
@@ -291,9 +291,9 @@ function calcularResumenPorTipo(movimientos) {
     };
     
     movimientos.forEach(m => {
-        const tipoSalida = m.tipoSalida;
-        if (tipoSalida && contadores.hasOwnProperty(tipoSalida)) {
-            contadores[tipoSalida]++;
+        const tipoOperacion = m.tipoOperacion;
+        if (tipoOperacion && contadores.hasOwnProperty(tipoOperacion)) {
+            contadores[tipoOperacion]++;
         }
     });
     

@@ -106,7 +106,7 @@ namespace WebApplication1.Controllers
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // DNI se guarda en columna para JOIN directo con Personas
-                // Crear SalidaDetalle
+                // Crear OperacionDetalle
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Ocurrencias",
@@ -135,7 +135,7 @@ namespace WebApplication1.Controllers
                     {
                         mensaje = "Ocurrencia registrada",
                         salidaId = salidaDetalle.Id,
-                        tipoSalida = "Ocurrencias",
+                        tipoOperacion = "Ocurrencias",
                         estado = "Registrado"
                     });
             }
@@ -162,7 +162,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Ocurrencia no encontrada");
 
-                if (salidaExistente.TipoSalida != "Ocurrencias")
+                if (salidaExistente.TipoOperacion != "Ocurrencias")
                     return BadRequest("Este endpoint es solo para ocurrencias");
 
                 // Deserializar datos actuales
@@ -182,7 +182,7 @@ namespace WebApplication1.Controllers
                     _context.Personas.Update(persona);
                     await _context.SaveChangesAsync();
 
-                    // Actualizar en SalidaDetalle
+                    // Actualizar en OperacionDetalle
                     // Mantener datos existentes del JSON
                     var datosActualizados = new
                     {
@@ -221,7 +221,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Ocurrencia no encontrada");
 
-                if (salidaExistente.TipoSalida != "Ocurrencias")
+                if (salidaExistente.TipoOperacion != "Ocurrencias")
                     return BadRequest("Este endpoint es solo para ocurrencias");
 
                 // Deserializar datos actuales

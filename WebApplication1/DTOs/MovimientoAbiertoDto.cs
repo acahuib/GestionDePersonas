@@ -13,9 +13,9 @@ namespace WebApplication1.DTOs
         public required string TipoMovimiento { get; set; }
         public DateTime FechaHora { get; set; }
 
-        // SalidaDetalle info
-        public int SalidaDetalleId { get; set; }
-        public required string TipoSalida { get; set; }
+        // OperacionDetalle info
+        public int OperacionDetalleId { get; set; }
+        public required string TipoOperacion { get; set; }
         public Dictionary<string, object>? Datos { get; set; }
         public bool EstaAbierto { get; set; }
         public required string MotivoApertura { get; set; }

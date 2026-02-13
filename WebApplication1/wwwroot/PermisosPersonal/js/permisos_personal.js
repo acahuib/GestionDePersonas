@@ -57,7 +57,7 @@ function renderizarPermisos(permisos) {
         
         const estado = datos.estado || "Desconocido";
         const area = datos.area || "-";
-        const tipoSalida = datos.tipoSalida || "-";
+        const tipoOperacion = datos.tipoOperacion || "-";
         const fechaSalidaSolicitada = datos.fechaSalidaSolicitada || "-";
         const horaSalidaSolicitada = datos.horaSalidaSolicitada || "-";
         const motivoSalida = datos.motivoSalida || "-";
@@ -93,7 +93,7 @@ function renderizarPermisos(permisos) {
         html += `<div><strong>Nombre:</strong> ${nombreCompleto}</div>`;
         html += `<div><strong>DNI:</strong> ${permiso.dni}</div>`;
         html += `<div><strong>Área:</strong> ${area}</div>`;
-        html += `<div><strong>Tipo:</strong> ${tipoSalida}</div>`;
+        html += `<div><strong>Tipo:</strong> ${tipoOperacion}</div>`;
         html += `<div><strong>Fecha Solicitada:</strong> ${fechaSalidaSolicitada}</div>`;
         html += `<div><strong>Hora Solicitada:</strong> ${horaSalidaSolicitada}</div>`;
         html += `<div><strong>Autorizador:</strong> ${autorizador}</div>`;

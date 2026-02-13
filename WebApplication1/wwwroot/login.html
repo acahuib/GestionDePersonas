@@ -8,10 +8,19 @@
     <link rel="stylesheet" href="css/styles.css">
 
     <style>
-        body {
+        html, body {
             margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
             font-family: Arial, Helvetica, sans-serif;
+            position: relative;
         }
 
         /* Fondo animado */
@@ -46,14 +55,6 @@
         }
 
         /* Login Card */
-        .login-wrapper {
-            position: relative;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
         .login-card {
             background: rgba(255,255,255,0.95);
             padding: 40px 35px;
@@ -72,11 +73,25 @@
 
         .login-card input {
             margin-bottom: 15px;
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
 
         .login-card button {
             width: 100%;
+            padding: 10px;
             font-weight: bold;
+            border-radius: 6px;
+            border: none;
+            background: #2980b9;
+            color: white;
+            cursor: pointer;
+        }
+
+        .login-card button:hover {
+            background: #1f6391;
         }
 
         #mensaje {
@@ -84,6 +99,7 @@
             margin-top: 10px;
         }
     </style>
+
 </head>
 <body>
 

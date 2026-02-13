@@ -132,7 +132,7 @@ namespace WebApplication1.Controllers
                 {
                     mensaje = "Vehiculo de proveedor registrado",
                     salidaId = salida.Id,
-                    tipoSalida = "VehiculosProveedores",
+                        tipoOperacion = "VehiculosProveedores",
                     estado = "Pendiente de salida"
                 });
             }
@@ -155,9 +155,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "VehiculosProveedores")
+            if (salida.TipoOperacion != "VehiculosProveedores")
                 return BadRequest("Este endpoint es solo para vehiculos de proveedores");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -210,7 +210,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Salida de vehiculo de proveedor registrada",
                 salidaId = id,
-                tipoSalida = "VehiculosProveedores",
+                tipoOperacion = "VehiculosProveedores",
                 estado = "Salida completada"
             });
         }

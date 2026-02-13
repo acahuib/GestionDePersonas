@@ -20,12 +20,12 @@ namespace WebApplication1.Services
         }
 
         /// <summary>
-        /// Crea un registro de SalidaDetalle con JSON genérico
+        /// Crea un registro de OperacionDetalle con JSON genérico
         /// NUEVO: Acepta parámetros opcionales para columnas de fecha/hora y DNI
         /// </summary>
-        public async Task<SalidaDetalle> CrearSalidaDetalle(
+        public async Task<OperacionDetalle> CrearSalidaDetalle(
             int movimientoId, 
-            string tipoSalida, 
+            string tipoOperacion, 
             object datosObj, 
             int? usuarioId,
             DateTime? horaIngreso = null,
@@ -40,10 +40,10 @@ namespace WebApplication1.Services
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
 
-            var salida = new SalidaDetalle
+            var salida = new OperacionDetalle
             {
                 MovimientoId = movimientoId,
-                TipoSalida = tipoSalida,
+                TipoOperacion = tipoOperacion,
                 DatosJSON = datosJSON,
                 FechaCreacion = DateTime.Now,
                 UsuarioId = usuarioId,
@@ -55,27 +55,27 @@ namespace WebApplication1.Services
                 Dni = dni  // NUEVO: Guardar DNI en columna
             };
 
-            _context.SalidasDetalle.Add(salida);
+            _context.OperacionDetalle.Add(salida);
             await _context.SaveChangesAsync();
 
             return salida;
         }
 
         /// <summary>
-        /// Crea SalidaDetalle desde DTO genérico (si ya tienes JSON serializado)
+        /// Crea OperacionDetalle desde DTO genérico (si ya tienes JSON serializado)
         /// </summary>
-        public async Task<SalidaDetalle> CrearSalidaDetalleFromDto(SalidaDetalleCreateDto dto, int? usuarioId)
+        public async Task<OperacionDetalle> CrearSalidaDetalleFromDto(OperacionDetalleCreateDto dto, int? usuarioId)
         {
-            var salida = new SalidaDetalle
+            var salida = new OperacionDetalle
             {
                 MovimientoId = dto.MovimientoId,
-                TipoSalida = dto.TipoSalida,
+                TipoOperacion = dto.TipoOperacion,
                 DatosJSON = dto.DatosJSON,
                 FechaCreacion = DateTime.Now,
                 UsuarioId = usuarioId
             };
 
-            _context.SalidasDetalle.Add(salida);
+            _context.OperacionDetalle.Add(salida);
             await _context.SaveChangesAsync();
 
             return salida;
@@ -84,10 +84,10 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene todas las salidas de un tipo específico
         /// </summary>
-        public async Task<List<SalidaDetalle>> ObtenerSalidasPorTipo(string tipoSalida)
+        public async Task<List<OperacionDetalle>> ObtenerSalidasPorTipo(string tipoOperacion)
         {
-            return await _context.SalidasDetalle
-                .Where(s => s.TipoSalida == tipoSalida)
+            return await _context.OperacionDetalle
+                .Where(s => s.TipoOperacion == tipoOperacion)
                 .OrderByDescending(s => s.FechaCreacion)
                 .ToListAsync();
         }
@@ -95,9 +95,9 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene salidas de un movimiento específico
         /// </summary>
-        public async Task<List<SalidaDetalle>> ObtenerSalidasPorMovimiento(int movimientoId)
+        public async Task<List<OperacionDetalle>> ObtenerSalidasPorMovimiento(int movimientoId)
         {
-            return await _context.SalidasDetalle
+            return await _context.OperacionDetalle
                 .Where(s => s.MovimientoId == movimientoId)
                 .ToListAsync();
         }
@@ -105,16 +105,16 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene salida por ID
         /// </summary>
-        public async Task<SalidaDetalle?> ObtenerSalidaPorId(int id)
+        public async Task<OperacionDetalle?> ObtenerSalidaPorId(int id)
         {
-            return await _context.SalidasDetalle.FindAsync(id);
+            return await _context.OperacionDetalle.FindAsync(id);
         }
 
         /// <summary>
         /// Actualiza los datos JSON de una salida existente
         /// NUEVO: Acepta parámetros opcionales para actualizar columnas de fecha/hora
         /// </summary>
-        public async Task<SalidaDetalle> ActualizarSalidaDetalle(
+        public async Task<OperacionDetalle> ActualizarSalidaDetalle(
             int id, 
             object datosObj, 
             int? usuarioId,
@@ -123,9 +123,9 @@ namespace WebApplication1.Services
             DateTime? horaSalida = null,
             DateTime? fechaSalida = null)
         {
-            var salida = await _context.SalidasDetalle.FindAsync(id);
+            var salida = await _context.OperacionDetalle.FindAsync(id);
             if (salida == null)
-                throw new Exception("SalidaDetalle no encontrada");
+                throw new Exception("OperacionDetalle no encontrada");
 
             salida.DatosJSON = JsonSerializer.Serialize(datosObj, new JsonSerializerOptions
             {
@@ -139,21 +139,21 @@ namespace WebApplication1.Services
             if (horaSalida.HasValue) salida.HoraSalida = horaSalida;
             if (fechaSalida.HasValue) salida.FechaSalida = fechaSalida;
 
-            _context.SalidasDetalle.Update(salida);
+            _context.OperacionDetalle.Update(salida);
             await _context.SaveChangesAsync();
 
             return salida;
         }
 
         /// <summary>
-        /// Elimina una SalidaDetalle
+        /// Elimina una OperacionDetalle
         /// </summary>
         public async Task EliminarSalidaDetalle(int id)
         {
-            var salida = await _context.SalidasDetalle.FindAsync(id);
+            var salida = await _context.OperacionDetalle.FindAsync(id);
             if (salida != null)
             {
-                _context.SalidasDetalle.Remove(salida);
+                _context.OperacionDetalle.Remove(salida);
                 await _context.SaveChangesAsync();
             }
         }
@@ -163,7 +163,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene HoraIngreso desde columna, o desde JSON si columna es null (fallback)
         /// </summary>
-        public DateTime? ObtenerHoraIngreso(SalidaDetalle salida)
+        public DateTime? ObtenerHoraIngreso(OperacionDetalle salida)
         {
             if (salida.HoraIngreso.HasValue)
                 return salida.HoraIngreso.Value;
@@ -183,7 +183,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene FechaIngreso desde columna, o desde JSON si columna es null (fallback)
         /// </summary>
-        public DateTime? ObtenerFechaIngreso(SalidaDetalle salida)
+        public DateTime? ObtenerFechaIngreso(OperacionDetalle salida)
         {
             if (salida.FechaIngreso.HasValue)
                 return salida.FechaIngreso.Value;
@@ -203,7 +203,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene HoraSalida desde columna, o desde JSON si columna es null (fallback)
         /// </summary>
-        public DateTime? ObtenerHoraSalida(SalidaDetalle salida)
+        public DateTime? ObtenerHoraSalida(OperacionDetalle salida)
         {
             if (salida.HoraSalida.HasValue)
                 return salida.HoraSalida.Value;
@@ -223,7 +223,7 @@ namespace WebApplication1.Services
         /// <summary>
         /// Obtiene FechaSalida desde columna, o desde JSON si columna es null (fallback)
         /// </summary>
-        public DateTime? ObtenerFechaSalida(SalidaDetalle salida)
+        public DateTime? ObtenerFechaSalida(OperacionDetalle salida)
         {
             if (salida.FechaSalida.HasValue)
                 return salida.FechaSalida.Value;

@@ -134,7 +134,7 @@ namespace WebApplication1.Controllers
                     {
                         mensaje = "Permiso de salida registrado",
                         salidaId = salidaDetalle.Id,
-                        tipoSalida = "SalidasPermisosPersonal",
+                        tipoOperacion = "SalidasPermisosPersonal",
                         estado = "Pendiente de ingreso"
                     });
             }
@@ -161,7 +161,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Registro de salida no encontrado");
 
-                if (salidaExistente.TipoSalida != "SalidasPermisosPersonal")
+                if (salidaExistente.TipoOperacion != "SalidasPermisosPersonal")
                     return BadRequest("Este endpoint es solo para permisos de personal");
 
                 if (dto.HoraIngreso == default)
@@ -237,7 +237,7 @@ namespace WebApplication1.Controllers
                     {
                         mensaje = "Ingreso de permiso registrado",
                         salidaId = id,
-                        tipoSalida = "SalidasPermisosPersonal",
+                        tipoOperacion = "SalidasPermisosPersonal",
                         estado = "Completado"
                     });
                 }
@@ -333,7 +333,7 @@ namespace WebApplication1.Controllers
                 {
                     nombreRegistrado = dto.NombreRegistrado,
                     area = dto.Area,
-                    tipoSalida = dto.TipoSalida,
+                    tipoOperacion = dto.TipoOperacion,
                     fechaSalidaSolicitada = dto.FechaSalidaSolicitada,
                     horaSalidaSolicitada = dto.HoraSalidaSolicitada,
                     motivoSalida = dto.MotivoSalida,
@@ -393,7 +393,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Solicitud de permiso no encontrada");
 
-                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                if (salidaExistente.TipoOperacion != "PermisosPersonal")
                     return BadRequest("Este endpoint es solo para permisos de personal");
 
                 // Validar estado
@@ -413,7 +413,7 @@ namespace WebApplication1.Controllers
                     {
                         nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
                         area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
-                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        tipoOperacion = root.TryGetProperty("tipoOperacion", out var ts) ? ts.GetString() : null,
                         fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
                         horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
                         motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
@@ -462,7 +462,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Permiso no encontrado");
 
-                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                if (salidaExistente.TipoOperacion != "PermisosPersonal")
                     return BadRequest("Este endpoint es solo para permisos de personal");
 
                 // Validar que esté aprobado
@@ -494,7 +494,7 @@ namespace WebApplication1.Controllers
                     {
                         nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
                         area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
-                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        tipoOperacion = root.TryGetProperty("tipoOperacion", out var ts) ? ts.GetString() : null,
                         fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
                         horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
                         motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
@@ -546,7 +546,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Permiso no encontrado");
 
-                if (salidaExistente.TipoSalida != "PermisosPersonal")
+                if (salidaExistente.TipoOperacion != "PermisosPersonal")
                     return BadRequest("Este endpoint es solo para permisos de personal");
 
                 // Validar que ya tenga salida registrada
@@ -577,7 +577,7 @@ namespace WebApplication1.Controllers
                     {
                         nombreRegistrado = root.TryGetProperty("nombreRegistrado", out var nr) ? nr.GetString() : null,
                         area = root.TryGetProperty("area", out var ar) ? ar.GetString() : null,
-                        tipoSalida = root.TryGetProperty("tipoSalida", out var ts) ? ts.GetString() : null,
+                        tipoOperacion = root.TryGetProperty("tipoOperacion", out var ts) ? ts.GetString() : null,
                         fechaSalidaSolicitada = root.TryGetProperty("fechaSalidaSolicitada", out var fss) ? fss.GetString() : null,
                         horaSalidaSolicitada = root.TryGetProperty("horaSalidaSolicitada", out var hss) ? hss.GetString() : null,
                         motivoSalida = root.TryGetProperty("motivoSalida", out var ms) ? ms.GetString() : null,
@@ -637,10 +637,10 @@ namespace WebApplication1.Controllers
             {
                 var dniNormalizado = dni.Trim();
 
-                var permisos = await _context.SalidasDetalle
+                var permisos = await _context.OperacionDetalle
                     .Include(s => s.Movimiento!)
                         .ThenInclude(m => m.Persona)
-                    .Where(s => s.TipoSalida == "PermisosPersonal" && s.Dni == dniNormalizado)
+                    .Where(s => s.TipoOperacion == "PermisosPersonal" && s.Dni == dniNormalizado)
                     .OrderByDescending(s => s.FechaCreacion)
                     .Take(10) // Últimos 10 permisos
                     .Select(s => new

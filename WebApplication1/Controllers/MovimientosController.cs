@@ -117,7 +117,7 @@ namespace WebApplication1.Controllers
         [HttpGet("persona/{dni}/abierto")]
         public async Task<ActionResult<List<MovimientoAbiertoDto>>> ObtenerMovimientosAbiertos(string dni)
         {
-            // Buscar movimientos de la persona con sus SalidaDetalle
+            // Buscar movimientos de la persona con sus OperacionDetalle
             var movimientos = await _context.Movimientos
                 .Where(m => m.Dni == dni)
                 .OrderByDescending(m => m.FechaHora)
@@ -130,12 +130,12 @@ namespace WebApplication1.Controllers
 
             foreach (var mov in movimientos)
             {
-                // Buscar SalidaDetalle asociado
-                var salida = await _context.SalidasDetalle
+                // Buscar OperacionDetalle asociado
+                var salida = await _context.OperacionDetalle
                     .FirstOrDefaultAsync(s => s.MovimientoId == mov.Id);
 
                 if (salida == null)
-                    continue; // Solo interesa SalidaDetalle
+                    continue; // Solo interesa OperacionDetalle
 
                 // Deserializar JSON
                 var datos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(salida.DatosJSON) 
@@ -145,43 +145,43 @@ namespace WebApplication1.Controllers
                 bool estaAbierto = false;
                 string motivo = "";
 
-                if (salida.TipoSalida == "Proveedor")
+                if (salida.TipoOperacion == "Proveedor")
                 {
                     // Proveedor está abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "VehiculoEmpresa")
+                else if (salida.TipoOperacion == "VehiculoEmpresa")
                 {
                     // VehiculoEmpresa esta abierto si no tiene horaIngreso
                     estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "ControlBienes")
+                else if (salida.TipoOperacion == "ControlBienes")
                 {
                     // ControlBienes esta abierto si no tiene fechaSalida
                     estaAbierto = !datos.ContainsKey("fechaSalida") || string.IsNullOrEmpty(datos["fechaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar fechaSalida" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "VehiculosProveedores")
+                else if (salida.TipoOperacion == "VehiculosProveedores")
                 {
                     // VehiculosProveedores esta abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "DiasLibre")
+                else if (salida.TipoOperacion == "DiasLibre")
                 {
                     // DiasLibre se registra completo en un solo paso
                     estaAbierto = false;
                     motivo = "Permiso registrado";
                 }
-                else if (salida.TipoSalida == "SalidasPermisosPersonal")
+                else if (salida.TipoOperacion == "SalidasPermisosPersonal")
                 {
                     // SalidasPermisosPersonal esta abierto si no tiene horaIngreso
                     estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "Ocurrencias")
+                else if (salida.TipoOperacion == "Ocurrencias")
                 {
                     // Ocurrencias esta abierto si le falta o ingreso o salida
                     bool tieneIngreso = datos.ContainsKey("horaIngreso") && !string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
@@ -189,7 +189,7 @@ namespace WebApplication1.Controllers
                     estaAbierto = !tieneIngreso || !tieneSalida;
                     motivo = estaAbierto ? "Falta completar horarios" : "Cerrado";
                 }
-                else if (salida.TipoSalida == "PersonalLocal")
+                else if (salida.TipoOperacion == "PersonalLocal")
                 {
                     // PersonalLocal esta abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
@@ -203,8 +203,8 @@ namespace WebApplication1.Controllers
                     PuntoControlId = mov.PuntoControlId,
                     TipoMovimiento = mov.TipoMovimiento,
                     FechaHora = mov.FechaHora,
-                    SalidaDetalleId = salida.Id,
-                    TipoSalida = salida.TipoSalida,
+                    OperacionDetalleId = salida.Id,
+                    TipoOperacion = salida.TipoOperacion,
                     Datos = datos,
                     EstaAbierto = estaAbierto,
                     MotivoApertura = motivo

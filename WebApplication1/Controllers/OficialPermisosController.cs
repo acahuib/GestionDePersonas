@@ -128,7 +128,7 @@ namespace WebApplication1.Controllers
                 {
                     mensaje = dto.HoraSalida.HasValue ? "Salida registrada" : "Ingreso registrado",
                     salidaId = salida.Id,
-                    tipoSalida = "OficialPermisos",
+                    tipoOperacion = "OficialPermisos",
                     dni = dniNormalizado,
                     nombreCompleto = persona.Nombre,
                     estado = dto.HoraSalida.HasValue ? "Pendiente de ingreso" : "Ingreso completado"
@@ -153,9 +153,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "OficialPermisos")
+            if (salida.TipoOperacion != "OficialPermisos")
                 return BadRequest("Este endpoint es solo para permisos oficiales");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -230,7 +230,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Ingreso registrado",
                 salidaId = id,
-                tipoSalida = "OficialPermisos",
+                tipoOperacion = "OficialPermisos",
                 estado = "Completado"
             });
         }
@@ -242,10 +242,10 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPermisoPorId(int id)
         {
-            var salida = await _context.SalidasDetalle
+            var salida = await _context.OperacionDetalle
                 .Include(s => s.Movimiento)
                 .ThenInclude(m => m!.Persona)
-                .FirstOrDefaultAsync(s => s.Id == id && s.TipoSalida == "OficialPermisos");
+                .FirstOrDefaultAsync(s => s.Id == id && s.TipoOperacion == "OficialPermisos");
 
             if (salida == null)
                 return NotFound("Permiso oficial no encontrado");
@@ -279,10 +279,10 @@ namespace WebApplication1.Controllers
         {
             var dniNormalizado = dni.Trim();
             
-            var permisos = await _context.SalidasDetalle
+            var permisos = await _context.OperacionDetalle
                 .Include(s => s.Movimiento)
                 .ThenInclude(m => m!.Persona)
-                .Where(s => s.Dni == dniNormalizado && s.TipoSalida == "OficialPermisos")
+                .Where(s => s.Dni == dniNormalizado && s.TipoOperacion == "OficialPermisos")
                 .OrderByDescending(s => s.FechaCreacion)
                 .Take(10)
                 .ToListAsync();

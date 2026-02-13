@@ -104,7 +104,7 @@ namespace WebApplication1.Controllers
                 DateTime? fechaSalidaCol = null;
 
                 // NUEVO: DatosJSON ya NO contiene nombres/apellidos/dni (están en tabla Personas)
-                // DNI se guarda en columna Dni de SalidaDetalle para JOIN directo
+                // DNI se guarda en columna Dni de OperacionDetalle para JOIN directo
                 // Solo datos variables del evento específico
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
@@ -129,7 +129,7 @@ namespace WebApplication1.Controllers
                 {
                     mensaje = "Ingreso de proveedor registrado",
                     salidaId = salida.Id,
-                    tipoSalida = "Proveedor",
+                    tipoOperacion = "Proveedor",
                     estado = "Pendiente de salida"
                 });
             }
@@ -152,9 +152,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "Proveedor")
+            if (salida.TipoOperacion != "Proveedor")
                 return BadRequest("Este endpoint es solo para proveedores");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -228,7 +228,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Salida de proveedor registrada",
                 salidaId = id,
-                tipoSalida = "Proveedor",
+                tipoOperacion = "Proveedor",
                 estado = "Salida completada"
             });
         }
@@ -240,10 +240,10 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerProveedorPorId(int id)
         {
-            var salida = await _context.SalidasDetalle
+            var salida = await _context.OperacionDetalle
                 .Include(s => s.Movimiento)
                 .ThenInclude(m => m!.Persona)
-                .FirstOrDefaultAsync(s => s.Id == id && s.TipoSalida == "Proveedor");
+                .FirstOrDefaultAsync(s => s.Id == id && s.TipoOperacion == "Proveedor");
 
             if (salida == null)
                 return NotFound("Proveedor no encontrado");

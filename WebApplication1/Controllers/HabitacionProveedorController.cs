@@ -100,7 +100,7 @@ namespace WebApplication1.Controllers
                 var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
                 var fechaActual = ahoraLocal.Date;
 
-                // Crear SalidaDetalle con datos de HabitacionProveedor
+                // Crear OperacionDetalle con datos de HabitacionProveedor
                 // JSON solo contiene datos específicos (sin nombre/dni/fechas/horas)
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     movimiento.Id,
@@ -131,7 +131,7 @@ namespace WebApplication1.Controllers
                     {
                         mensaje = "Ingreso a Habitación Proveedor registrado",
                         salidaId = salidaDetalle.Id,
-                        tipoSalida = "HabitacionProveedor",
+                        tipoOperacion = "HabitacionProveedor",
                         nombreCompleto = persona.Nombre,
                         dni = dto.Dni,
                         estado = "Aguardando salida"
@@ -161,7 +161,7 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Registro no encontrado");
 
-                if (salidaExistente.TipoSalida != "HabitacionProveedor")
+                if (salidaExistente.TipoOperacion != "HabitacionProveedor")
                     return BadRequest("Este endpoint es solo para HabitacionProveedor");
 
                 // Obtener UsuarioId y nombre del guardia que registra salida

@@ -3,10 +3,10 @@ using System.Text.Json.Serialization;
 namespace WebApplication1.DTOs
 {
     /// <summary>
-    /// DTO genérico para crear/actualizar SalidaDetalle
-    /// Permite enviar JSON flexible para cualquier tipo de salida
+    /// DTO genérico para crear/actualizar OperacionDetalle
+    /// Permite enviar JSON flexible para cualquier tipo de operación
     /// </summary>
-    public class SalidaDetalleCreateDto
+    public class OperacionDetalleCreateDto
     {
         /// <summary>
         /// ID del movimiento (salida) ya creado
@@ -14,9 +14,9 @@ namespace WebApplication1.DTOs
         public required int MovimientoId { get; set; }
 
         /// <summary>
-        /// Tipo de salida: "Proveedor", "VehiculoEmpresa", "ControlBienes", "VehiculosProveedores", "Visita", etc.
+        /// Tipo de operación: "Proveedor", "VehiculoEmpresa", "ControlBienes", "VehiculosProveedores", "Visita", etc.
         /// </summary>
-        public required string TipoSalida { get; set; }
+        public required string TipoOperacion { get; set; }
 
         /// <summary>
         /// JSON con los datos específicos del tipo

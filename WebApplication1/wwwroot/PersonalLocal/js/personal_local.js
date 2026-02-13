@@ -287,14 +287,14 @@ async function cargarActivos() {
             // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {
                 // No ha salido a almuerzo: puede salir a almuerzo O salir directo
-                html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">🍽️ Salida Almuerzo</button> `;
-                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '', '', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">🚪 Salida</button>`;
+                html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">Salida Almuerzo</button> `;
+                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '', '', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">Salida</button>`;
             } else if (!tieneEntradaAlmuerzo) {
                 // Ha salido a almuerzo pero no ha regresado: debe registrar ingreso de almuerzo
-                html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${fechaSalidaAlmuerzo}', '${guardiaIngreso}', '${datos.guardiaSalidaAlmuerzo || ""}', '${observacion.replace(/'/g, "\\'")}')">🍴 Ingreso Almuerzo</button>`;
+                html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${fechaSalidaAlmuerzo}', '${guardiaIngreso}', '${datos.guardiaSalidaAlmuerzo || ""}', '${observacion.replace(/'/g, "\\'")}')">Ingreso Almuerzo</button>`;
             } else {
                 // Ya regresó del almuerzo: solo puede salir
-                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${horaEntradaAlmuerzo}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">🚪 Salida</button>`;
+                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${horaEntradaAlmuerzo}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">+Salida</button>`;
             }
             
             html += '</td>';

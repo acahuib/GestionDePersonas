@@ -83,7 +83,7 @@ namespace WebApplication1.Controllers
         // ======================================================
         // GET: api/reportes/dashboard
         // Reporte extendido para dashboard de administrador
-        // Incluye información de Persona.Tipo y SalidaDetalle.TipoSalida
+        // Incluye información de Persona.Tipo y OperacionDetalle.TipoOperacion
         // ======================================================
         [HttpGet("dashboard")]
         public async Task<IActionResult> ObtenerDashboard(
@@ -121,9 +121,9 @@ namespace WebApplication1.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Obtener IDs de movimientos para buscar SalidaDetalle
+            // Obtener IDs de movimientos para buscar OperacionDetalle
             var movimientoIds = movimientos.Select(m => m.Id).ToList();
-            var salidasDetalle = await _context.SalidasDetalle
+            var salidasDetalle = await _context.OperacionDetalle
                 .Where(s => movimientoIds.Contains(s.MovimientoId))
                 .ToListAsync();
 
@@ -141,8 +141,8 @@ namespace WebApplication1.Controllers
                 NombrePersona = m.Persona?.Nombre ?? "Desconocido",
                 TipoPersona = m.Persona?.Tipo,
                 TipoMovimiento = m.TipoMovimiento,
-                TipoSalida = salidasPorMovimiento.ContainsKey(m.Id) 
-                    ? salidasPorMovimiento[m.Id]?.TipoSalida 
+                TipoOperacion = salidasPorMovimiento.ContainsKey(m.Id) 
+                    ? salidasPorMovimiento[m.Id]?.TipoOperacion 
                     : null,
                 PuntoControlId = m.PuntoControlId
             }).ToList();

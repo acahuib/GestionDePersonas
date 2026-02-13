@@ -63,7 +63,7 @@ function renderizarHistorial() {
     html += '<th>DNI</th>';
     html += '<th>Nombre</th>';
     html += '<th>Área</th>';
-    html += '<th>Tipo Salida</th>';
+    html += '<th>Tipo Operación</th>';
     html += '<th>Estado</th>';
     html += '<th>Fecha Solicitada</th>';
     html += '<th>Hora Solicitada</th>';
@@ -79,7 +79,7 @@ function renderizarHistorial() {
         
         const estado = datos.estado || "Desconocido";
         const area = datos.area || "-";
-        const tipoSalida = datos.tipoSalida || "-";
+        const tipoOperacion = datos.tipoOperacion || "-";
         const fechaSalidaSolicitada = datos.fechaSalidaSolicitada || "-";
         const horaSalidaSolicitada = datos.horaSalidaSolicitada || "-";
         const autorizador = datos.autorizador || "-";
@@ -119,7 +119,7 @@ function renderizarHistorial() {
         html += `<td>${permiso.dni}</td>`;
         html += `<td>${nombreCompleto}</td>`;
         html += `<td>${area}</td>`;
-        html += `<td>${tipoSalida}</td>`;
+        html += `<td>${tipoOperacion}</td>`;
         html += `<td class="${estadoClase}">${estadoIcono} ${estado}</td>`;
         html += `<td>${fechaSalidaSolicitada}</td>`;
         html += `<td>${horaSalidaSolicitada}</td>`;

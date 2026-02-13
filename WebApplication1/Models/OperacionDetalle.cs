@@ -1,10 +1,10 @@
 namespace WebApplication1.Models
 {
     /// <summary>
-    /// Detalles específicos de cada tipo de salida (Proveedor, Vehículo, etc.)
+    /// Detalles específicos de cada tipo de operación (Proveedor, Vehículo, etc.)
     /// Almacena datos en JSON flexible para cada tipo de cuaderno
     /// </summary>
-    public class SalidaDetalle
+    public class OperacionDetalle
     {
         public int Id { get; set; }
 
@@ -20,12 +20,12 @@ namespace WebApplication1.Models
         public string? Dni { get; set; }
 
         /// <summary>
-        /// Tipo de salida: "Proveedor", "VehiculoEmpresa", "ControlBienes", "VehiculosProveedores", "Visita", etc.
+        /// Tipo de operación: "Proveedor", "VehiculoEmpresa", "ControlBienes", "VehiculosProveedores", "Visita", etc.
         /// </summary>
-        public required string TipoSalida { get; set; }
+        public required string TipoOperacion { get; set; }
 
         /// <summary>
-        /// JSON con los datos específicos del tipo de salida
+        /// JSON con los datos específicos del tipo de operación
         /// Ejemplo Proveedor: {"horaIngreso":"...", "horaSalida":"...", "nombres":"...", "dni":"..."}
         /// Ejemplo Vehículo: {"conductor":"...", "placa":"...", "kmSalida":45230, "kmIngreso":45450}
         /// </summary>
@@ -63,7 +63,7 @@ namespace WebApplication1.Models
 
         // ===== AUDITORÍA =====
         /// <summary>
-        /// ID del guardia/usuario que registró/actualizó esta salida
+        /// ID del guardia/usuario que registró/actualizó esta operación
         /// </summary>
         public int? UsuarioId { get; set; }
 

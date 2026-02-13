@@ -115,7 +115,7 @@ namespace WebApplication1.Controllers
                 {
                     mensaje = "Ingreso con control de bienes registrado",
                     salidaId = salida.Id,
-                    tipoSalida = "ControlBienes",
+                    tipoOperacion = "ControlBienes",
                     dni = dniNormalizado,
                     nombreCompleto = persona.Nombre,
                     cantidadBienes = dto.Bienes.Count,
@@ -141,9 +141,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "ControlBienes")
+            if (salida.TipoOperacion != "ControlBienes")
                 return BadRequest("Este endpoint es solo para control de bienes");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -191,7 +191,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Salida de control de bienes registrada",
                 salidaId = id,
-                tipoSalida = "ControlBienes",
+                tipoOperacion = "ControlBienes",
                 estado = "Salida completada"
             });
         }
@@ -203,10 +203,10 @@ namespace WebApplication1.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerControlBienesPorId(int id)
         {
-            var salida = await _context.SalidasDetalle
+            var salida = await _context.OperacionDetalle
                 .Include(s => s.Movimiento)
                 .ThenInclude(m => m!.Persona)
-                .FirstOrDefaultAsync(s => s.Id == id && s.TipoSalida == "ControlBienes");
+                .FirstOrDefaultAsync(s => s.Id == id && s.TipoOperacion == "ControlBienes");
 
             if (salida == null)
                 return NotFound("Control de bienes no encontrado");
@@ -244,8 +244,8 @@ namespace WebApplication1.Controllers
             if (!movimientos.Any())
                 return NotFound(new { mensaje = $"No hay movimientos para el DNI {dni}" });
 
-            var salidas = await _context.SalidasDetalle
-                .Where(s => movimientos.Contains(s.MovimientoId) && s.TipoSalida == "ControlBienes")
+            var salidas = await _context.OperacionDetalle
+                .Where(s => movimientos.Contains(s.MovimientoId) && s.TipoOperacion == "ControlBienes")
                 .OrderByDescending(s => s.FechaCreacion)
                 .ToListAsync();
 
@@ -256,7 +256,7 @@ namespace WebApplication1.Controllers
             {
                 id = s.Id,
                 movimientoId = s.MovimientoId,
-                tipoSalida = s.TipoSalida,
+                tipoOperacion = s.TipoOperacion,
                 datos = JsonDocument.Parse(s.DatosJSON).RootElement,
                 fechaCreacion = s.FechaCreacion,
                 usuarioId = s.UsuarioId,

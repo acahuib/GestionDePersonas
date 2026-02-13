@@ -12,7 +12,7 @@ public class AppDbContext : DbContext
     // public DbSet<Alerta> Alertas { get; set; } // Eliminado
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Dispositivo> Dispositivos { get; set; }
-    public DbSet<SalidaDetalle> SalidasDetalle { get; set; }
+    public DbSet<OperacionDetalle> OperacionDetalle { get; set; }
 
 }
 

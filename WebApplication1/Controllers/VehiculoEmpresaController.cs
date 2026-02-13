@@ -131,7 +131,7 @@ namespace WebApplication1.Controllers
                 {
                     mensaje = "Salida de vehiculo de empresa registrada",
                     salidaId = salida.Id,
-                    tipoSalida = "VehiculoEmpresa",
+                    tipoOperacion = "VehiculoEmpresa",
                     estado = "Pendiente de ingreso"
                 });
             }
@@ -154,9 +154,9 @@ namespace WebApplication1.Controllers
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)
-                return NotFound("SalidaDetalle no encontrada");
+                return NotFound("OperacionDetalle no encontrada");
 
-            if (salida.TipoSalida != "VehiculoEmpresa")
+            if (salida.TipoOperacion != "VehiculoEmpresa")
                 return BadRequest("Este endpoint es solo para vehiculos de empresa");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
@@ -227,7 +227,7 @@ namespace WebApplication1.Controllers
             {
                 mensaje = "Ingreso de vehiculo de empresa registrado",
                 salidaId = id,
-                tipoSalida = "VehiculoEmpresa",
+                tipoOperacion = "VehiculoEmpresa",
                 estado = "Ingreso completado"
             });
         }

@@ -12,7 +12,7 @@ namespace WebApplication1.DTOs
         public required string NombrePersona { get; set; }
         public string? TipoPersona { get; set; }
         public required string TipoMovimiento { get; set; }
-        public string? TipoSalida { get; set; }
+        public string? TipoOperacion { get; set; }
         public int PuntoControlId { get; set; }
     }
 }
