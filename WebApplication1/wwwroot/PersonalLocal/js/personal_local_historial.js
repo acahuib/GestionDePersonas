@@ -55,6 +55,7 @@ async function cargarHistorial() {
                 const sesion = {
                     dni,
                     nombre: nombre,
+                    tipoPersonaLocal: tieneValor(datos.tipoPersonaLocal) ? datos.tipoPersonaLocal : "Normal",
                     horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A",
                     fechaIngreso: tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A",
                     horaSalidaAlmuerzo: tieneValor(datos.horaSalidaAlmuerzo) ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE') : "-",
@@ -90,6 +91,7 @@ async function cargarHistorial() {
                     const sesion = {
                         dni,
                         nombre: nombre,
+                        tipoPersonaLocal: tieneValor(datos.tipoPersonaLocal) ? datos.tipoPersonaLocal : "Normal",
                         horaIngreso: "N/A",
                         fechaIngreso: "N/A",
                         horaSalidaAlmuerzo: tieneValor(datos.horaSalidaAlmuerzo) ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE') : "-",
@@ -141,6 +143,7 @@ function mostrarPagina(numeroPagina) {
     html += '<thead><tr>';
     html += '<th>DNI</th>';
     html += '<th>Nombre</th>';
+    html += '<th>Tipo</th>';
     html += '<th>Fecha Ingreso</th>';
     html += '<th>Hora Ingreso</th>';
     html += '<th>Guardia Ingreso</th>';
@@ -158,6 +161,7 @@ function mostrarPagina(numeroPagina) {
         html += '<tr>';
         html += `<td>${f.dni}</td>`;
         html += `<td>${f.nombre}</td>`;
+        html += `<td>${f.tipoPersonaLocal}</td>`;
         html += `<td>${f.fechaIngreso}</td>`;
         html += `<td>${f.horaIngreso}</td>`;
         html += `<td>${f.guardiaIngreso}</td>`;

@@ -50,6 +50,7 @@ namespace WebApplication1.Controllers
                 // POST es SOLO para ingreso de mañana
                 // La salida final debe registrarse vía PUT /{id}/salida
                 string tipoMovimiento = "Entrada";
+                var tipoPersonaLocal = NormalizarTipoPersonaLocal(dto.TipoPersonaLocal);
 
                 // ===== NUEVO: Buscar o crear en tabla Personas =====
                 var dniNormalizado = dto.Dni.Trim();
@@ -104,6 +105,7 @@ namespace WebApplication1.Controllers
                 // DNI, nombre, horaIngreso/Salida, fechaIngreso/Salida están en COLUMNAS
                 var datosPersonalLocal = new
                 {
+                    tipoPersonaLocal,
                     horaSalidaAlmuerzo = (DateTime?)null,
                     fechaSalidaAlmuerzo = (DateTime?)null,
                     horaEntradaAlmuerzo = (DateTime?)null,
@@ -155,6 +157,9 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Registro de salida no encontrado");
 
+                if (EsTipoRetornando(salidaExistente.DatosJSON))
+                    return BadRequest("PersonalLocal retornando no permite salida de almuerzo en este cuaderno");
+
                 if (dto.HoraSalidaAlmuerzo == null || dto.HoraSalidaAlmuerzo == default)
                     return BadRequest("Hora de salida a almuerzo es requerida");
 
@@ -180,6 +185,7 @@ namespace WebApplication1.Controllers
                     // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
+                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
                         horaSalidaAlmuerzo = fechaHoraActual,
                         fechaSalidaAlmuerzo = fechaHoraActual.Date,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -215,6 +221,9 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Registro de salida no encontrado");
 
+                if (EsTipoRetornando(salidaExistente.DatosJSON))
+                    return BadRequest("PersonalLocal retornando no permite ingreso de almuerzo en este cuaderno");
+
                 if (dto.HoraEntradaAlmuerzo == null || dto.HoraEntradaAlmuerzo == default)
                     return BadRequest("Hora de ingreso de almuerzo es requerida");
 
@@ -240,6 +249,7 @@ namespace WebApplication1.Controllers
                     // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
+                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = fechaHoraActual,
@@ -275,6 +285,9 @@ namespace WebApplication1.Controllers
                 if (salidaExistente == null)
                     return NotFound("Registro de salida no encontrado");
 
+                if (EsTipoRetornando(salidaExistente.DatosJSON))
+                    return BadRequest("PersonalLocal retornando no permite salida final en este cuaderno");
+
                 if (dto.HoraSalida == default)
                     return BadRequest("Hora de salida es requerida");
 
@@ -307,6 +320,7 @@ namespace WebApplication1.Controllers
                     // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
+                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -386,6 +400,38 @@ namespace WebApplication1.Controllers
                 return usuarioId;
 
             return null;
+        }
+
+        private static string NormalizarTipoPersonaLocal(string? tipoPersonaLocal)
+        {
+            return string.Equals(tipoPersonaLocal?.Trim(), "Retornando", StringComparison.OrdinalIgnoreCase)
+                ? "Retornando"
+                : "Normal";
+        }
+
+        private static string LeerTipoPersonaLocal(JsonElement root)
+        {
+            if (root.TryGetProperty("tipoPersonaLocal", out var tipo) &&
+                tipo.ValueKind == JsonValueKind.String &&
+                string.Equals(tipo.GetString(), "Retornando", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Retornando";
+            }
+
+            return "Normal";
+        }
+
+        private static bool EsTipoRetornando(string datosJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                return string.Equals(LeerTipoPersonaLocal(doc.RootElement), "Retornando", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

@@ -4,6 +4,13 @@
 
 let personaEncontrada = null;
 
+function actualizarHintRetornando() {
+    const tipo = document.getElementById("tipoPersonaLocal")?.value || "Normal";
+    const hint = document.getElementById("hint-retornando");
+    if (!hint) return;
+    hint.style.display = tipo === "Retornando" ? "block" : "none";
+}
+
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
@@ -68,6 +75,7 @@ async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
     const observaciones = document.getElementById("observaciones").value.trim();
+    const tipoPersonaLocal = document.getElementById("tipoPersonaLocal")?.value || "Normal";
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -97,6 +105,7 @@ async function registrarIngreso() {
         const body = {
             dni,
             horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
+            tipoPersonaLocal,
             observaciones: observaciones || null
         };
 
@@ -123,6 +132,9 @@ async function registrarIngreso() {
         document.getElementById("dni").value = "";
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("observaciones").value = "";
+        const tipoSelect = document.getElementById("tipoPersonaLocal");
+        if (tipoSelect) tipoSelect.value = "Normal";
+        actualizarHintRetornando();
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreApellidos").disabled = false;
         personaEncontrada = null;
@@ -250,6 +262,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
+        html += '<th>Tipo</th>';
         html += '<th>Hora Ingreso</th>';
         html += '<th>Salida Almuerzo</th>';
         html += '<th>Ingreso Almuerzo</th>';
@@ -266,6 +279,7 @@ async function cargarActivos() {
             const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
+            const tipoPersonaLocal = datos.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
             
             // Almuerzo (siempre en JSON)
             const horaSalidaAlmuerzo = datos.horaSalidaAlmuerzo ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE') : "-";
@@ -279,10 +293,18 @@ async function cargarActivos() {
             html += '<tr>';
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
+            html += `<td>${tipoPersonaLocal}</td>`;
             html += `<td>${horaIngreso}</td>`;
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
+
+            if (tipoPersonaLocal === "Retornando") {
+                html += '<span class="muted">Sin salida en este cuaderno</span>';
+                html += '</td>';
+                html += '</tr>';
+                return;
+            }
             
             // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {
@@ -308,3 +330,11 @@ async function cargarActivos() {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const tipoSelect = document.getElementById("tipoPersonaLocal");
+    if (tipoSelect) {
+        tipoSelect.addEventListener("change", actualizarHintRetornando);
+        actualizarHintRetornando();
+    }
+});

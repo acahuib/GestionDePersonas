@@ -159,8 +159,19 @@ async function registrarDiasLibre(e) {
             
             cargarDiasLibreHoy();
         } else {
-            const errorData = await response.json().catch(() => ({ mensaje: 'Error desconocido' }));
-            throw new Error(errorData.mensaje || errorData);
+            let mensajeError = 'No se pudo registrar el permiso';
+            const errorText = await response.text();
+
+            if (errorText) {
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    mensajeError = errorJson.mensaje || errorJson.error || errorText;
+                } catch {
+                    mensajeError = errorText;
+                }
+            }
+
+            throw new Error(mensajeError);
         }
     } catch (error) {
         console.error('Error al registrar permiso:', error);

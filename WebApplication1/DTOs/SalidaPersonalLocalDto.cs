@@ -12,6 +12,11 @@ namespace WebApplication1.DTOs
     public class SalidaPersonalLocalDto
     {
         public required string Dni { get; set; }
+
+        /// <summary>
+        /// Tipo de registro en PersonalLocal: "Normal" o "Retornando"
+        /// </summary>
+        public string? TipoPersonaLocal { get; set; }
         
         /// <summary>
         /// Solo requerido si DNI NO está registrado en tabla Personas

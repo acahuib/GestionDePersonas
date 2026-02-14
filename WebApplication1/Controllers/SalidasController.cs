@@ -100,6 +100,24 @@ namespace WebApplication1.Controllers
                 ? "Entrada"
                 : "Salida";
 
+            if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(tipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("DiasLibre en modo técnico solo permite TipoMovimiento='Salida'.");
+
+                var ultimoMovimiento = await _context.Movimientos
+                    .Where(m => m.Dni == dniNormalizado)
+                    .OrderByDescending(m => m.FechaHora)
+                    .ThenByDescending(m => m.Id)
+                    .FirstOrDefaultAsync();
+
+                if (ultimoMovimiento == null)
+                    return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
+
+                if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
+            }
+
             var movimiento = new Models.Movimiento
             {
                 Dni = dniNormalizado,
@@ -134,6 +152,33 @@ namespace WebApplication1.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.Observacion))
                 datos["observacion"] = dto.Observacion;
+
+            if (string.Equals(dto.TipoOperacion, "PersonalLocal", StringComparison.OrdinalIgnoreCase))
+            {
+                var tipoPersonaLocal = ObtenerTipoPersonaLocalDesdeDatos(datos);
+                datos["tipoPersonaLocal"] = tipoPersonaLocal;
+
+                if (tipoMovimiento == "Salida")
+                {
+                    var ultimaOperacionAbierta = await _context.OperacionDetalle
+                        .Where(o => o.TipoOperacion == "PersonalLocal" &&
+                                    o.Dni == dniNormalizado &&
+                                    o.HoraIngreso != null &&
+                                    o.HoraSalida == null)
+                        .OrderByDescending(o => o.FechaCreacion)
+                        .FirstOrDefaultAsync();
+
+                    if (ultimaOperacionAbierta != null)
+                    {
+                        var tipoAnterior = ObtenerTipoPersonaLocalDesdeJson(ultimaOperacionAbierta.DatosJSON);
+                        if (string.Equals(tipoAnterior, "Retornando", StringComparison.OrdinalIgnoreCase))
+                            return BadRequest("PersonalLocal retornando no permite salida en este cuaderno (modo técnico)");
+                    }
+
+                    if (string.Equals(tipoPersonaLocal, "Retornando", StringComparison.OrdinalIgnoreCase))
+                        return BadRequest("No se puede registrar salida con tipoPersonaLocal=Retornando en PersonalLocal");
+                }
+            }
 
             if (string.Equals(dto.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))
             {
@@ -179,6 +224,42 @@ namespace WebApplication1.Controllers
                 fechaHora = movimiento.FechaHora,
                 dni = dniNormalizado
             });
+        }
+
+        private static string ObtenerTipoPersonaLocalDesdeDatos(Dictionary<string, object?> datos)
+        {
+            if (datos.TryGetValue("tipoPersonaLocal", out var tipoObj))
+            {
+                var texto = tipoObj switch
+                {
+                    JsonElement jsonElement when jsonElement.ValueKind == JsonValueKind.String => jsonElement.GetString(),
+                    _ => tipoObj?.ToString()
+                };
+
+                if (string.Equals(texto?.Trim(), "Retornando", StringComparison.OrdinalIgnoreCase))
+                    return "Retornando";
+            }
+
+            return "Normal";
+        }
+
+        private static string ObtenerTipoPersonaLocalDesdeJson(string datosJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                if (doc.RootElement.TryGetProperty("tipoPersonaLocal", out var tipo) &&
+                    tipo.ValueKind == JsonValueKind.String &&
+                    string.Equals(tipo.GetString(), "Retornando", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Retornando";
+                }
+            }
+            catch
+            {
+            }
+
+            return "Normal";
         }
 
         // ======================================================

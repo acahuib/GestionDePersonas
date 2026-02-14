@@ -32,6 +32,14 @@
             <h3>Registrar Ingreso de Personal Local</h3>
             
             <form id="form-ingreso" onsubmit="event.preventDefault(); registrarIngreso();">
+                <div class="form-group">
+                    <label for="tipoPersonaLocal">¿Tipo de registro?</label>
+                    <select id="tipoPersonaLocal">
+                        <option value="Normal">Local normal</option>
+                        <option value="Retornando">Retornando de vacaciones</option>
+                    </select>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="dni">DNI: (*)</label>
@@ -67,6 +75,10 @@
                 </div>
 
                 <div id="mensaje" class="message"></div>
+
+                <p id="hint-retornando" class="muted" style="display:none; margin-top: 8px;">
+                    Modo Retornando: solo se registrará ingreso. La salida no se realiza en este cuaderno.
+                </p>
 
                 <button type="submit" class="btn-primary"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
             </form>

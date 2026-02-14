@@ -39,6 +39,8 @@ namespace WebApplication1.Controllers
             if (string.IsNullOrWhiteSpace(dto.Dni))
                 return BadRequest("DNI es requerido");
 
+            var dniNormalizado = dto.Dni.Trim();
+
             if (string.IsNullOrWhiteSpace(dto.NumeroBoleta))
                 return BadRequest("Numero de boleta es requerido");
 
@@ -48,9 +50,23 @@ namespace WebApplication1.Controllers
             if (dto.Al.Date < dto.Del.Date)
                 return BadRequest("La fecha Al no puede ser menor que Del");
 
+            // Regla funcional: DiasLibre SOLO registra SALIDA si la persona está DENTRO
+            // (último movimiento debe ser Entrada)
+            var ultimoMovimiento = await _context.Movimientos
+                .Where(m => m.Dni == dniNormalizado)
+                .OrderByDescending(m => m.FechaHora)
+                .ThenByDescending(m => m.Id)
+                .FirstOrDefaultAsync();
+
+            if (ultimoMovimiento == null)
+                return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
+
+            if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
+
             // Buscar persona en tabla Personas
             var persona = await _context.Personas
-                .FirstOrDefaultAsync(p => p.Dni == dto.Dni);
+                .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
             // Si no existe la persona, verificar que se haya proporcionado el nombre
             if (persona == null && string.IsNullOrWhiteSpace(dto.NombresApellidos))
@@ -63,7 +79,7 @@ namespace WebApplication1.Controllers
             {
                 persona = new Models.Persona
                 {
-                    Dni = dto.Dni,
+                    Dni = dniNormalizado,
                     Nombre = dto.NombresApellidos!,
                     Tipo = "DiasLibre"
                 };
@@ -82,7 +98,7 @@ namespace WebApplication1.Controllers
             guardiaNombre ??= "S/N";
 
             var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                dto.Dni,
+                dniNormalizado,
                 1,
                 "Salida",
                 usuarioId);
@@ -116,7 +132,7 @@ namespace WebApplication1.Controllers
                 null,               // fechaIngreso (no aplica - fecha de retorno ya programada)
                 ahoraLocal,         // horaSalida (momento en que se registra el permiso)
                 fechaActual,        // fechaSalida
-                dto.Dni.Trim()      // DNI va a columna
+                dniNormalizado       // DNI va a columna
             );
 
             return Ok(new
@@ -125,7 +141,7 @@ namespace WebApplication1.Controllers
                 salidaId = salida.Id,
                 tipoOperacion = "DiasLibre",
                 nombreCompleto = persona.Nombre,
-                dni = dto.Dni,
+                dni = dniNormalizado,
                 del = dto.Del.Date,
                 al = dto.Al.Date,
                 trabaja = fechaTrabaja,
