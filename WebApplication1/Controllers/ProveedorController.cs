@@ -15,7 +15,6 @@ namespace WebApplication1.Controllers
     /// </summary>
     [ApiController]
     [Route("api/proveedor")]
-    [Authorize(Roles = "Admin,Guardia")]
     public class ProveedorController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -34,6 +33,7 @@ namespace WebApplication1.Controllers
         // Registra INGRESO de Proveedor
         // ======================================================
         [HttpPost]
+        [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> RegistrarIngreso(SalidaProveedorDto dto)
         {
             try
@@ -148,6 +148,7 @@ namespace WebApplication1.Controllers
         // Actualiza hora de SALIDA
         // ======================================================
         [HttpPut("{id}/salida")]
+        [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> ActualizarSalida(int id, ActualizarSalidaProveedorDto dto)
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
@@ -238,6 +239,7 @@ namespace WebApplication1.Controllers
         // Obtiene detalle de proveedor con información de tabla Personas
         // ======================================================
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> ObtenerProveedorPorId(int id)
         {
             var salida = await _context.OperacionDetalle
@@ -268,5 +270,102 @@ namespace WebApplication1.Controllers
                 observacion = datosJSON.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null
             });
         }
+        // ======================================================
+        // POST: /api/proveedor/modo-tecnico-ingreso
+        // Registra INGRESO con fecha antigua (migración operativa)
+        // ======================================================
+        [HttpPost("modo-tecnico-ingreso")]
+        [Authorize(Roles = "Tecnico")]
+        public async Task<IActionResult> RegistrarIngresoManual(
+            ProveedorIngresoManualDto dto)
+        {
+            try
+            {
+                string tipoMovimiento = "Entrada";
+                var dniNormalizado = dto.Dni.Trim();
+
+                if (string.IsNullOrWhiteSpace(dniNormalizado))
+                    return BadRequest("DNI es requerido.");
+
+                if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
+                    return BadRequest("DNI debe tener 8 dígitos numéricos.");
+
+                if (dto.FechaHoraIngresoManual > DateTime.Now)
+                    return BadRequest("La fecha/hora manual no puede ser futura.");
+
+                // ===== Buscar o crear Persona =====
+                var persona = await _context.Personas
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+
+                if (persona == null)
+                {
+                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                        return BadRequest("DNI no registrado. Debe proporcionar nombres y apellidos.");
+
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = $"{dto.Nombres!.Trim()} {dto.Apellidos!.Trim()}",
+                        Tipo = "Proveedor"
+                    };
+
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+                // ===== Crear Movimiento con fecha manual =====
+                var movimiento = new Models.Movimiento
+                {
+                    Dni = dniNormalizado,
+                    PuntoControlId = _movimientosService.GaritaId,
+                    TipoMovimiento = tipoMovimiento,
+                    FechaHora = dto.FechaHoraIngresoManual,
+                    UsuarioId = usuarioId
+                };
+
+                _context.Movimientos.Add(movimiento);
+                await _context.SaveChangesAsync();
+
+                // ===== Crear OperacionDetalle con fecha manual =====
+                var operacion = new Models.OperacionDetalle
+                {
+                    MovimientoId = movimiento.Id,
+                    TipoOperacion = "Proveedor",
+                    DatosJSON = JsonSerializer.Serialize(new
+                    {
+                        procedencia = dto.Procedencia,
+                        destino = dto.Destino,
+                        guardiaIngreso = "MODO_TECNICO",
+                        guardiaSalida = (string?)null,
+                        observacion = dto.Observacion
+                    }),
+                    FechaCreacion = DateTime.Now,
+                    UsuarioId = usuarioId,
+                    HoraIngreso = dto.FechaHoraIngresoManual,
+                    FechaIngreso = dto.FechaHoraIngresoManual.Date,
+                    HoraSalida = null,
+                    FechaSalida = null,
+                    Dni = dniNormalizado
+                };
+
+                _context.OperacionDetalle.Add(operacion);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    mensaje = "Ingreso manual registrado correctamente",
+                    operacionId = operacion.Id,
+                    modo = "Tecnico"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
     }
 }

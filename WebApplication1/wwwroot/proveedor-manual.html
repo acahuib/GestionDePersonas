@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Modo Técnico - Registro Manual</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 24px; }
+        .container { max-width: 860px; margin: auto; background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        h2 { margin-top: 0; }
+        label { display:block; margin-top: 10px; font-weight: 600; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; }
+        textarea { min-height: 170px; font-family: Consolas, monospace; }
+        button { background:#2c3e50; color:#fff; border:none; cursor:pointer; }
+        button:hover { background:#1f2f3e; }
+        .hint { color:#666; font-size:12px; margin-top:6px; }
+        .response { margin-top: 14px; white-space: pre-wrap; background:#f1f1f1; border-radius: 6px; padding: 10px; }
+        .row { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Modo Técnico - Registro Manual</h2>
+
+    <form id="formManual">
+        <div class="row">
+            <div>
+                <label>Tipo Operación</label>
+                <select id="tipoOperacion" required>
+                    <option value="Proveedor">Proveedor</option>
+                    <option value="VehiculosProveedores">VehiculosProveedores</option>
+                    <option value="VehiculoEmpresa">VehiculoEmpresa</option>
+                    <option value="PersonalLocal">PersonalLocal</option>
+                    <option value="DiasLibre">DiasLibre</option>
+                    <option value="HabitacionProveedor">HabitacionProveedor</option>
+                    <option value="Ocurrencias">Ocurrencias</option>
+                    <option value="ControlBienes">ControlBienes</option>
+                    <option value="OficialPermisos">OficialPermisos</option>
+                </select>
+            </div>
+            <div>
+                <label>Tipo Movimiento</label>
+                <select id="tipoMovimiento" required>
+                    <option value="Entrada">Entrada</option>
+                    <option value="Salida">Salida</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>DNI</label>
+                <input id="dni" maxlength="8" required />
+                <div class="hint" id="dniHint"></div>
+            </div>
+            <div>
+                <label>Fecha y Hora Manual</label>
+                <input type="datetime-local" id="fechaHoraManual" required />
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>Nombres</label>
+                <input id="nombres" />
+            </div>
+            <div>
+                <label>Apellidos</label>
+                <input id="apellidos" />
+            </div>
+        </div>
+
+        <label>Datos JSON (editable según operación)</label>
+        <textarea id="datosJson" required></textarea>
+
+        <div id="personalLocalPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fafafa;">
+            <label style="margin-top:0;">Personal Local - Fechas/Horas (opcional)</label>
+            <div class="row">
+                <div>
+                    <label>Hora Salida Almuerzo</label>
+                    <input type="time" id="pl_horaSalidaAlmuerzo" />
+                </div>
+                <div>
+                    <label>Fecha Salida Almuerzo</label>
+                    <input type="date" id="pl_fechaSalidaAlmuerzo" />
+                </div>
+            </div>
+            <div class="row">
+                <div>
+                    <label>Hora Entrada Almuerzo</label>
+                    <input type="time" id="pl_horaEntradaAlmuerzo" />
+                </div>
+                <div>
+                    <label>Fecha Entrada Almuerzo</label>
+                    <input type="date" id="pl_fechaEntradaAlmuerzo" />
+                </div>
+            </div>
+            <div class="hint">Si dejas campos vacíos, se enviarán como null.</div>
+        </div>
+
+        <label>Observación</label>
+        <textarea id="observacion"></textarea>
+
+        <button type="submit">Registrar Manual</button>
+    </form>
+
+    <div class="response" id="response"></div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+const templates = {
+    Proveedor: { procedencia: "", destino: "", guardiaIngreso: null, guardiaSalida: null },
+    VehiculosProveedores: { nombreApellidos: "", proveedor: "", placa: "", tipo: "", lote: "", cantidad: "", procedencia: "" },
+    VehiculoEmpresa: { conductor: "", placa: "", kmSalida: 0, kmIngreso: null, origen: "", destino: "" },
+    PersonalLocal: { horaSalidaAlmuerzo: null, fechaSalidaAlmuerzo: null, horaEntradaAlmuerzo: null, fechaEntradaAlmuerzo: null },
+    DiasLibre: { numeroBoleta: "", del: "", al: "", trabaja: "" },
+    HabitacionProveedor: { origen: "", cuarto: "", frazadas: 0 },
+    Ocurrencias: { nombre: "", ocurrencia: "" },
+    ControlBienes: { bienes: [], guardiaIngreso: null, guardiaSalida: null },
+    OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" }
+};
+
+const tipoOperacionInput = document.getElementById("tipoOperacion");
+const tipoMovimientoInput = document.getElementById("tipoMovimiento");
+const datosJsonInput = document.getElementById("datosJson");
+const dniInput = document.getElementById("dni");
+const nombresInput = document.getElementById("nombres");
+const apellidosInput = document.getElementById("apellidos");
+const dniHint = document.getElementById("dniHint");
+const personalLocalPanel = document.getElementById("personalLocalPanel");
+
+const plFields = {
+    horaSalidaAlmuerzo: document.getElementById("pl_horaSalidaAlmuerzo"),
+    fechaSalidaAlmuerzo: document.getElementById("pl_fechaSalidaAlmuerzo"),
+    horaEntradaAlmuerzo: document.getElementById("pl_horaEntradaAlmuerzo"),
+    fechaEntradaAlmuerzo: document.getElementById("pl_fechaEntradaAlmuerzo")
+};
+
+function dateToIsoDateStart(dateValue) {
+    if (!dateValue) return null;
+    return `${dateValue}T00:00:00`;
+}
+
+function timeWithDateToIso(timeValue, dateValue) {
+    if (!timeValue) return null;
+    const baseDate = dateValue || new Date().toISOString().slice(0, 10);
+    return `${baseDate}T${timeValue}:00`;
+}
+
+function isoToDatetimeLocal(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function isoToDate(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function isoToTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function syncPersonalLocalInputsToJson() {
+    if (tipoOperacionInput.value !== "PersonalLocal") return;
+    let jsonData = {};
+    try {
+        jsonData = JSON.parse(datosJsonInput.value || "{}");
+    } catch {
+        jsonData = {};
+    }
+
+    jsonData.horaSalidaAlmuerzo = timeWithDateToIso(plFields.horaSalidaAlmuerzo.value, plFields.fechaSalidaAlmuerzo.value);
+    jsonData.fechaSalidaAlmuerzo = dateToIsoDateStart(plFields.fechaSalidaAlmuerzo.value);
+    jsonData.horaEntradaAlmuerzo = timeWithDateToIso(plFields.horaEntradaAlmuerzo.value, plFields.fechaEntradaAlmuerzo.value);
+    jsonData.fechaEntradaAlmuerzo = dateToIsoDateStart(plFields.fechaEntradaAlmuerzo.value);
+
+    datosJsonInput.value = JSON.stringify(jsonData, null, 2);
+}
+
+function syncJsonToPersonalLocalInputs() {
+    if (tipoOperacionInput.value !== "PersonalLocal") return;
+    let jsonData = {};
+    try {
+        jsonData = JSON.parse(datosJsonInput.value || "{}");
+    } catch {
+        jsonData = {};
+    }
+
+    plFields.horaSalidaAlmuerzo.value = isoToTime(jsonData.horaSalidaAlmuerzo);
+    plFields.fechaSalidaAlmuerzo.value = isoToDate(jsonData.fechaSalidaAlmuerzo);
+    plFields.horaEntradaAlmuerzo.value = isoToTime(jsonData.horaEntradaAlmuerzo);
+    plFields.fechaEntradaAlmuerzo.value = isoToDate(jsonData.fechaEntradaAlmuerzo);
+}
+
+function refreshTemplate() {
+    const tipo = tipoOperacionInput.value;
+    datosJsonInput.value = JSON.stringify(templates[tipo] ?? {}, null, 2);
+    personalLocalPanel.style.display = tipo === "PersonalLocal" ? "block" : "none";
+    if (tipo === "PersonalLocal") {
+        syncJsonToPersonalLocalInputs();
+    }
+}
+
+function setNamesLocked(locked) {
+    nombresInput.disabled = locked;
+    apellidosInput.disabled = locked;
+    nombresInput.required = !locked;
+    apellidosInput.required = !locked;
+}
+
+function splitNombre(nombreCompleto) {
+    const limpio = (nombreCompleto || "").trim();
+    if (!limpio) return { nombres: "", apellidos: "" };
+    const partes = limpio.split(/\s+/);
+    if (partes.length <= 1) return { nombres: limpio, apellidos: "" };
+    return { nombres: partes.slice(0, -2).join(" ") || partes[0], apellidos: partes.slice(-2).join(" ") };
+}
+
+async function validarDni() {
+    const dni = dniInput.value.trim();
+    if (!/^\d{8}$/.test(dni)) {
+        setNamesLocked(false);
+        dniHint.textContent = "DNI debe tener 8 dígitos.";
+        return;
+    }
+
+    const resp = await fetchAuth(`${API_BASE}/personas/${dni}`);
+    if (!resp) return;
+
+    if (resp.ok) {
+        const persona = await resp.json();
+        const partes = splitNombre(persona.nombre);
+        nombresInput.value = partes.nombres;
+        apellidosInput.value = partes.apellidos;
+        setNamesLocked(true);
+        dniHint.textContent = "DNI encontrado. Nombre bloqueado desde Personas.";
+    } else if (resp.status === 404) {
+        nombresInput.value = "";
+        apellidosInput.value = "";
+        setNamesLocked(false);
+        dniHint.textContent = "DNI no registrado. Debe completar nombres y apellidos.";
+    } else {
+        dniHint.textContent = "No se pudo validar DNI.";
+    }
+}
+
+tipoOperacionInput.addEventListener("change", refreshTemplate);
+dniInput.addEventListener("blur", validarDni);
+datosJsonInput.addEventListener("input", syncJsonToPersonalLocalInputs);
+
+Object.values(plFields).forEach(field => {
+    field.addEventListener("change", syncPersonalLocalInputsToJson);
+});
+
+document.getElementById("formManual").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const fechaHoraManual = document.getElementById("fechaHoraManual").value;
+    let datos;
+    try {
+        datos = JSON.parse(datosJsonInput.value || "{}");
+    } catch {
+        document.getElementById("response").innerText = "JSON inválido en Datos JSON.";
+        return;
+    }
+
+    const payload = {
+        tipoOperacion: tipoOperacionInput.value,
+        tipoMovimiento: tipoMovimientoInput.value,
+        dni: dniInput.value.trim(),
+        nombres: nombresInput.value.trim() || null,
+        apellidos: apellidosInput.value.trim() || null,
+        fechaHoraManual: `${fechaHoraManual}:00`,
+        datos,
+        observacion: document.getElementById("observacion").value.trim() || null
+    };
+
+    const response = await fetchAuth(`${API_BASE}/salidas/modo-tecnico`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
+
+    if (!response) return;
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        document.getElementById("response").innerText = result?.mensaje || result?.error || "No se pudo registrar.";
+        return;
+    }
+
+    document.getElementById("response").innerText = JSON.stringify(result, null, 2);
+});
+
+refreshTemplate();
+</script>
+</body>
+</html>

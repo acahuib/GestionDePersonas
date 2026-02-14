@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
@@ -28,6 +29,138 @@ namespace WebApplication1.Controllers
         {
             _context = context;
             _salidasService = salidasService;
+        }
+
+        [HttpPost("modo-tecnico")]
+        [Authorize(Roles = "Tecnico")]
+        public async Task<IActionResult> RegistrarOperacionManualTecnico([FromBody] OperacionManualTecnicoDto dto)
+        {
+            var tiposPermitidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Proveedor",
+                "VehiculosProveedores",
+                "VehiculoEmpresa",
+                "PersonalLocal",
+                "DiasLibre",
+                "HabitacionProveedor",
+                "Ocurrencias",
+                "ControlBienes",
+                "OficialPermisos"
+            };
+
+            if (!tiposPermitidos.Contains(dto.TipoOperacion))
+                return BadRequest("TipoOperacion no permitido en modo técnico.");
+
+            if (string.IsNullOrWhiteSpace(dto.Dni) || dto.Dni.Trim().Length != 8 || !dto.Dni.Trim().All(char.IsDigit))
+                return BadRequest("DNI debe tener 8 dígitos numéricos.");
+
+            if (!string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("TipoMovimiento debe ser 'Entrada' o 'Salida'.");
+
+            if (dto.FechaHoraManual > DateTime.Now)
+                return BadRequest("FechaHoraManual no puede ser futura.");
+
+            var dniNormalizado = dto.Dni.Trim();
+            var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+            if (persona == null)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                    return BadRequest("Si el DNI no existe, debe ingresar Nombres y Apellidos.");
+
+                var tipoPersona = dto.TipoOperacion switch
+                {
+                    "VehiculosProveedores" => "VehiculoProveedor",
+                    "OficialPermisos" => "OficialPermisosPersonal",
+                    "Ocurrencias" => "Ocurrencia",
+                    _ => dto.TipoOperacion
+                };
+
+                persona = new Models.Persona
+                {
+                    Dni = dniNormalizado,
+                    Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}".Trim(),
+                    Tipo = tipoPersona
+                };
+                _context.Personas.Add(persona);
+                await _context.SaveChangesAsync();
+            }
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            guardiaNombre ??= "MODO_TECNICO";
+
+            var tipoMovimiento = string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase)
+                ? "Entrada"
+                : "Salida";
+
+            var movimiento = new Models.Movimiento
+            {
+                Dni = dniNormalizado,
+                PuntoControlId = 1,
+                TipoMovimiento = tipoMovimiento,
+                FechaHora = dto.FechaHoraManual,
+                UsuarioId = usuarioId
+            };
+            _context.Movimientos.Add(movimiento);
+            await _context.SaveChangesAsync();
+
+            Dictionary<string, object?> datos;
+            try
+            {
+                datos = JsonSerializer.Deserialize<Dictionary<string, object?>>(dto.Datos.GetRawText()) ?? new Dictionary<string, object?>();
+            }
+            catch
+            {
+                datos = new Dictionary<string, object?>();
+            }
+
+            if (tipoMovimiento == "Entrada")
+            {
+                datos["guardiaIngreso"] = guardiaNombre;
+                if (!datos.ContainsKey("guardiaSalida")) datos["guardiaSalida"] = null;
+            }
+            else
+            {
+                datos["guardiaSalida"] = guardiaNombre;
+                if (!datos.ContainsKey("guardiaIngreso")) datos["guardiaIngreso"] = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Observacion))
+                datos["observacion"] = dto.Observacion;
+
+            var operacion = new Models.OperacionDetalle
+            {
+                MovimientoId = movimiento.Id,
+                TipoOperacion = dto.TipoOperacion,
+                DatosJSON = JsonSerializer.Serialize(datos),
+                FechaCreacion = DateTime.Now,
+                UsuarioId = usuarioId,
+                HoraIngreso = tipoMovimiento == "Entrada" ? dto.FechaHoraManual : null,
+                FechaIngreso = tipoMovimiento == "Entrada" ? dto.FechaHoraManual.Date : null,
+                HoraSalida = tipoMovimiento == "Salida" ? dto.FechaHoraManual : null,
+                FechaSalida = tipoMovimiento == "Salida" ? dto.FechaHoraManual.Date : null,
+                Dni = dniNormalizado
+            };
+
+            _context.OperacionDetalle.Add(operacion);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Registro manual técnico creado",
+                operacionId = operacion.Id,
+                tipoOperacion = operacion.TipoOperacion,
+                tipoMovimiento = movimiento.TipoMovimiento,
+                fechaHora = movimiento.FechaHora,
+                dni = dniNormalizado
+            });
         }
 
         // ======================================================
@@ -94,6 +227,28 @@ namespace WebApplication1.Controllers
         {
             try
             {
+                JsonElement FiltrarDatosPorTipo(string tipo, JsonElement datosJson)
+                {
+                    if (!string.Equals(tipo, "Proveedor", StringComparison.OrdinalIgnoreCase))
+                        return datosJson;
+
+                    string? LeerString(string prop)
+                    {
+                        return datosJson.TryGetProperty(prop, out var value) && value.ValueKind == JsonValueKind.String
+                            ? value.GetString()
+                            : null;
+                    }
+
+                    return JsonSerializer.SerializeToElement(new
+                    {
+                        procedencia = LeerString("procedencia"),
+                        destino = LeerString("destino"),
+                        guardiaIngreso = LeerString("guardiaIngreso"),
+                        guardiaSalida = LeerString("guardiaSalida"),
+                        observacion = LeerString("observacion")
+                    });
+                }
+
                 var salidas = await _context.OperacionDetalle
                     .Where(s => s.TipoOperacion == tipoOperacion)
                     .Select(s => new
@@ -134,7 +289,7 @@ namespace WebApplication1.Controllers
                         id = s.Id,
                         movimientoId = s.MovimientoId,
                         tipoOperacion = s.TipoOperacion,
-                        datos = datosJson,
+                        datos = FiltrarDatosPorTipo(s.TipoOperacion, datosJson),
                         fechaCreacion = s.FechaCreacion,
                         usuarioId = s.UsuarioId,
                         dni = s.Dni,
