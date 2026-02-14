@@ -11,7 +11,7 @@
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2><img src="/images/check-circle.svg" class="icon-white"> Registrar Ingreso de Vehículo de Empresa</h2>
+            <h2 id="titulo-movimiento"><img src="/images/check-circle.svg" class="icon-white"> Registrar Movimiento Complementario</h2>
             <div class="header-actions">
                 <a href="vehiculo_empresa.html">
                     <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver</button>
@@ -23,6 +23,9 @@
 
         <div class="form-card">
             <h3>Datos del Vehículo</h3>
+
+            <label>Flujo actual</label>
+            <input type="text" id="flujoActual" readonly>
 
             <label>DNI del Conductor</label>
             <input type="text" id="dni" readonly>
@@ -39,20 +42,51 @@
             <label>Origen</label>
             <input type="text" id="origen" readonly>
 
-            <label>Destino</label>
-            <input type="text" id="destino" readonly>
+            <label>Kilometraje de Salida (registrado)</label>
+            <input type="number" id="kmSalidaRegistrado" readonly>
 
-            <label>Kilometraje de Ingreso *</label>
-            <input type="number" id="kmIngreso" placeholder="Kilometraje actual al regresar" min="0">
+            <label>Origen de Salida (registrado)</label>
+            <input type="text" id="origenSalidaRegistrado" readonly>
 
-            <label>Observación (editable)</label>
-            <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
+            <label>Destino de Salida (registrado)</label>
+            <input type="text" id="destinoSalidaRegistrado" readonly>
+
+            <label>Kilometraje de Ingreso (registrado)</label>
+            <input type="number" id="kmIngresoRegistrado" readonly>
+
+            <label>Origen de Ingreso (registrado)</label>
+            <input type="text" id="origenIngresoRegistrado" readonly>
+
+            <label>Destino de Ingreso (registrado)</label>
+            <input type="text" id="destinoIngresoRegistrado" readonly>
+
+            <div id="bloque-ingreso">
+                <label>Kilometraje de Ingreso *</label>
+                <input type="number" id="kmIngreso" placeholder="Kilometraje actual al ingresar" min="0">
+
+                <label>Origen de Ingreso *</label>
+                <input type="text" id="origenIngreso" placeholder="Origen del ingreso">
+
+                <label>Destino de Ingreso *</label>
+                <input type="text" id="destinoIngreso" placeholder="Destino del ingreso">
+            </div>
+
+            <div id="bloque-salida" style="display:none;">
+                <label>Kilometraje de Salida *</label>
+                <input type="number" id="kmSalida" placeholder="Kilometraje actual al salir" min="0">
+
+                <label>Origen de Salida *</label>
+                <input type="text" id="origenSalida" placeholder="Origen de la salida">
+
+                <label>Destino de Salida *</label>
+                <input type="text" id="destinoSalida" placeholder="Destino de la salida">
+            </div>
 
             <div>
                 <button onclick="registrarIngreso()" class="btn-success btn-block"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
             </div>
             <div>
-                <button onclick="volver()" class="btn-secondary btn-block"><img src="/images/arrow-left.svg" class="icon-white"> Volver</button>
+                <button onclick="registrarMovimientoComplementario()" id="btn-guardar" class="btn-success btn-block"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
             </div>
 
             <p id="mensaje"></p>

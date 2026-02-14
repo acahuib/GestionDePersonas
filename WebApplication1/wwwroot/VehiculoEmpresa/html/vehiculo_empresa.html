@@ -27,9 +27,15 @@
             </a>
         </div>
 
-        <!-- FORMULARIO DE REGISTRO DE SALIDA -->
+        <!-- FORMULARIO DE REGISTRO INICIAL -->
         <div class="form-card">
-            <h3>Registrar Salida de Vehículo</h3>
+            <h3>Registrar Movimiento Inicial de Vehículo</h3>
+
+            <label>Tipo de Movimiento Inicial *</label>
+            <select id="tipoInicial">
+                <option value="Salida">Salida</option>
+                <option value="Ingreso">Ingreso</option>
+            </select>
 
             <label>DNI del Conductor *</label>
             <input type="text" id="dni" placeholder="Ingrese DNI del conductor" maxlength="8">
@@ -44,20 +50,20 @@
             <label>Placa del Vehículo *</label>
             <input type="text" id="placa" placeholder="Placa del vehículo">
 
-            <label>Kilometraje de Salida *</label>
-            <input type="number" id="kmSalida" placeholder="Kilometraje actual" min="0">
+            <label id="label-km">Kilometraje de Salida *</label>
+            <input type="number" id="kmMovimiento" placeholder="Kilometraje actual" min="0">
 
-            <label>Origen *</label>
-            <input type="text" id="origen" placeholder="Origen del viaje">
+            <label id="label-origen">Origen de Salida *</label>
+            <input type="text" id="origenMovimiento" placeholder="Origen del viaje">
 
-            <label>Destino *</label>
-            <input type="text" id="destino" placeholder="Destino del viaje">
+            <label id="label-destino">Destino de Salida *</label>
+            <input type="text" id="destinoMovimiento" placeholder="Destino del viaje">
 
             <label>Observación</label>
             <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
 
             <div>
-                <button onclick="registrarSalida()" class="btn-danger btn-block">
+                <button onclick="registrarMovimientoInicial()" id="btn-registrar" class="btn-danger btn-block">
                     <img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA
                 </button>
             </div>
@@ -68,7 +74,7 @@
         <!-- LISTA DE VEHÍCULOS ACTIVOS (EN RUTA) -->
         <div>
             <div class="toolbar">
-                <h3>Vehículos en Ruta (Sin ingreso)</h3>
+                <h3>Vehículos Pendientes (Sin completar par Ingreso/Salida)</h3>
                 <button onclick="cargarActivos()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
             </div>
             
@@ -100,6 +106,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Detectar ENTER y BLUR en el campo DNI
     const dniInput = document.getElementById("dni");
+    const tipoInicial = document.getElementById("tipoInicial");
+    tipoInicial.addEventListener("change", actualizarFormularioPorTipoInicial);
+    actualizarFormularioPorTipoInicial();
+
     dniInput.addEventListener("blur", buscarPersonaPorDni);
     dniInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
@@ -109,10 +119,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     addEnterListener("conductor", () => document.getElementById("placa").focus());
-    addEnterListener("placa", () => document.getElementById("kmSalida").focus());
-    addEnterListener("kmSalida", () => document.getElementById("origen").focus());
-    addEnterListener("origen", () => document.getElementById("destino").focus());
-    addEnterListener("destino", registrarSalida);
+    addEnterListener("placa", () => document.getElementById("kmMovimiento").focus());
+    addEnterListener("kmMovimiento", () => document.getElementById("origenMovimiento").focus());
+    addEnterListener("origenMovimiento", () => document.getElementById("destinoMovimiento").focus());
+    addEnterListener("destinoMovimiento", registrarMovimientoInicial);
 });
 </script>
 

@@ -58,8 +58,10 @@ async function cargarHistorial() {
                     placa: tieneValor(datos.placa) ? datos.placa : "N/A",
                     kmSalida: tieneValor(datos.kmSalida) ? datos.kmSalida : "N/A",
                     kmIngreso: "N/A",
-                    origen: tieneValor(datos.origen) ? datos.origen : "N/A",
-                    destino: tieneValor(datos.destino) ? datos.destino : "N/A",
+                    origenSalida: tieneValor(datos.origenSalida) ? datos.origenSalida : (tieneValor(datos.origen) ? datos.origen : "N/A"),
+                    destinoSalida: tieneValor(datos.destinoSalida) ? datos.destinoSalida : (tieneValor(datos.destino) ? datos.destino : "N/A"),
+                    origenIngreso: tieneValor(datos.origenIngreso) ? datos.origenIngreso : "N/A",
+                    destinoIngreso: tieneValor(datos.destinoIngreso) ? datos.destinoIngreso : "N/A",
                     observacion: tieneValor(datos.observacion) ? datos.observacion : "",
                     guardiaSalida: tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A",
                     guardiaIngreso: "N/A",
@@ -80,6 +82,8 @@ async function cargarHistorial() {
                     abierta.fechaIngreso = tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A";
                     abierta.horaIngreso = tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A";
                     abierta.kmIngreso = tieneValor(datos.kmIngreso) ? datos.kmIngreso : "N/A";
+                    abierta.origenIngreso = tieneValor(datos.origenIngreso) ? datos.origenIngreso : abierta.origenIngreso;
+                    abierta.destinoIngreso = tieneValor(datos.destinoIngreso) ? datos.destinoIngreso : abierta.destinoIngreso;
                     abierta.guardiaIngreso = tieneValor(datos.guardiaIngreso) ? datos.guardiaIngreso : "N/A";
                     abierta.timestamp = new Date(s.fechaCreacion).getTime();
                     if (tieneValor(datos.observacion)) {
@@ -93,8 +97,10 @@ async function cargarHistorial() {
                         placa: tieneValor(datos.placa) ? datos.placa : "N/A",
                         kmSalida: "N/A",
                         kmIngreso: tieneValor(datos.kmIngreso) ? datos.kmIngreso : "N/A",
-                        origen: tieneValor(datos.origen) ? datos.origen : "N/A",
-                        destino: tieneValor(datos.destino) ? datos.destino : "N/A",
+                        origenSalida: "N/A",
+                        destinoSalida: "N/A",
+                        origenIngreso: tieneValor(datos.origenIngreso) ? datos.origenIngreso : (tieneValor(datos.origen) ? datos.origen : "N/A"),
+                        destinoIngreso: tieneValor(datos.destinoIngreso) ? datos.destinoIngreso : (tieneValor(datos.destino) ? datos.destino : "N/A"),
                         observacion: tieneValor(datos.observacion) ? datos.observacion : "",
                         guardiaSalida: "N/A",
                         guardiaIngreso: tieneValor(datos.guardiaIngreso) ? datos.guardiaIngreso : "N/A",
@@ -144,12 +150,14 @@ function mostrarPagina(numeroPagina) {
     html += '<th>Conductor</th>';
     html += '<th>Placa</th>';
     html += '<th>Km Salida</th>';
-    html += '<th>Origen</th>';
-    html += '<th>Destino</th>';
+    html += '<th>Origen Salida</th>';
+    html += '<th>Destino Salida</th>';
     html += '<th>Fecha Salida</th>';
     html += '<th>Hora Salida</th>';
     html += '<th>Guardia Salida</th>';
     html += '<th>Km Ingreso</th>';
+    html += '<th>Origen Ingreso</th>';
+    html += '<th>Destino Ingreso</th>';
     html += '<th>Fecha Ingreso</th>';
     html += '<th>Hora Ingreso</th>';
     html += '<th>Guardia Ingreso</th>';
@@ -162,12 +170,14 @@ function mostrarPagina(numeroPagina) {
         html += `<td>${f.conductor}</td>`;
         html += `<td>${f.placa}</td>`;
         html += `<td>${f.kmSalida}</td>`;
-        html += `<td>${f.origen}</td>`;
-        html += `<td>${f.destino}</td>`;
+        html += `<td>${f.origenSalida}</td>`;
+        html += `<td>${f.destinoSalida}</td>`;
         html += `<td>${f.fechaSalida}</td>`;
         html += `<td>${f.horaSalida}</td>`;
         html += `<td>${f.guardiaSalida}</td>`;
         html += `<td>${f.kmIngreso}</td>`;
+        html += `<td>${f.origenIngreso}</td>`;
+        html += `<td>${f.destinoIngreso}</td>`;
         html += `<td>${f.fechaIngreso}</td>`;
         html += `<td>${f.horaIngreso}</td>`;
         html += `<td>${f.guardiaIngreso}</td>`;

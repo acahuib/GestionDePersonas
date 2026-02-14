@@ -4,6 +4,21 @@
 
 let personaEncontrada = null;
 
+function actualizarFormularioPorTipoInicial() {
+    const tipoInicial = document.getElementById("tipoInicial").value;
+    const esSalida = tipoInicial === "Salida";
+
+    document.getElementById("label-km").textContent = esSalida ? "Kilometraje de Salida *" : "Kilometraje de Ingreso *";
+    document.getElementById("label-origen").textContent = esSalida ? "Origen de Salida *" : "Origen de Ingreso *";
+    document.getElementById("label-destino").textContent = esSalida ? "Destino de Salida *" : "Destino de Ingreso *";
+
+    const boton = document.getElementById("btn-registrar");
+    boton.className = esSalida ? "btn-danger btn-block" : "btn-success btn-block";
+    boton.innerHTML = esSalida
+        ? '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA'
+        : '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO';
+}
+
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
@@ -63,14 +78,16 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar SALIDA de vehículo de empresa
-async function registrarSalida() {
+// Registrar movimiento inicial (SALIDA o INGRESO)
+async function registrarMovimientoInicial() {
+    const tipoInicial = document.getElementById("tipoInicial").value;
+    const esSalidaInicial = tipoInicial === "Salida";
     const dni = document.getElementById("dni").value.trim();
     const conductor = document.getElementById("conductor").value.trim();
     const placa = document.getElementById("placa").value.trim();
-    const kmSalida = document.getElementById("kmSalida").value.trim();
-    const origen = document.getElementById("origen").value.trim();
-    const destino = document.getElementById("destino").value.trim();
+    const kmMovimiento = document.getElementById("kmMovimiento").value.trim();
+    const origenMovimiento = document.getElementById("origenMovimiento").value.trim();
+    const destinoMovimiento = document.getElementById("destinoMovimiento").value.trim();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -78,7 +95,7 @@ async function registrarSalida() {
     mensaje.className = "";
 
     // Validaciones
-    if (!dni || !placa || !kmSalida || !origen || !destino) {
+    if (!dni || !placa || !kmMovimiento || !origenMovimiento || !destinoMovimiento) {
         mensaje.className = "error";
         mensaje.innerText = "Complete todos los campos obligatorios (*)";
         return;
@@ -98,7 +115,7 @@ async function registrarSalida() {
     }
 
     // Validar kilometraje
-    if (isNaN(kmSalida) || parseInt(kmSalida) < 0) {
+    if (isNaN(kmMovimiento) || parseInt(kmMovimiento) < 0) {
         mensaje.className = "error";
         mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
@@ -108,12 +125,20 @@ async function registrarSalida() {
         const body = {
             dni,
             placa,
-            kmSalida: parseInt(kmSalida),
-            origen,
-            destino,
-            horaSalida: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
             observacion: observacion || null
         };
+
+        if (esSalidaInicial) {
+            body.kmSalida = parseInt(kmMovimiento);
+            body.origenSalida = origenMovimiento;
+            body.destinoSalida = destinoMovimiento;
+            body.horaSalida = new Date().toISOString();
+        } else {
+            body.kmIngreso = parseInt(kmMovimiento);
+            body.origenIngreso = origenMovimiento;
+            body.destinoIngreso = destinoMovimiento;
+            body.horaIngreso = new Date().toISOString();
+        }
 
         // Solo enviar conductor si DNI no existe en tabla Personas
         if (!personaEncontrada) {
@@ -132,15 +157,16 @@ async function registrarSalida() {
 
         const nombreConductor = personaEncontrada ? personaEncontrada.nombre : conductor;
         mensaje.className = "success";
-        mensaje.innerText = `✅ SALIDA registrada para ${nombreConductor} - Placa: ${placa}`;
+        const tipoTexto = esSalidaInicial ? "SALIDA" : "INGRESO";
+        mensaje.innerText = `✅ ${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("conductor").value = "";
         document.getElementById("placa").value = "";
-        document.getElementById("kmSalida").value = "";
-        document.getElementById("origen").value = "";
-        document.getElementById("destino").value = "";
+        document.getElementById("kmMovimiento").value = "";
+        document.getElementById("origenMovimiento").value = "";
+        document.getElementById("destinoMovimiento").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("conductor").disabled = false;
@@ -156,25 +182,16 @@ async function registrarSalida() {
     }
 }
 
-// Navegar a la pantalla de ingreso con datos precargados
-function irAIngreso(salidaId, dni, conductor, placa, kmSalida, origen, destino, observacion, fechaSalida, horaSalida, guardiaSalida) {
+// Navegar a la pantalla de movimiento complementario
+function irAMovimiento(salidaId, modo) {
     const params = new URLSearchParams({
         salidaId,
-        dni,
-        conductor,
-        placa,
-        kmSalida,
-        origen,
-        destino,
-        observacion,
-        fechaSalida,
-        horaSalida,
-        guardiaSalida
+        modo
     });
     window.location.href = `vehiculo_empresa_ingreso.html?${params.toString()}`;
 }
 
-// Cargar vehículos activos (en ruta, sin ingreso)
+// Cargar vehículos pendientes (con solo un lado del flujo completo)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -188,92 +205,86 @@ async function cargarActivos() {
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos en ruta en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
             return;
         }
 
-        // Tomar el ultimo registro por DNI y mostrar solo los que tengan SALIDA pero NO INGRESO
-        const ultimosPorDni = new Map();
+        const pendientes = [];
 
         salidas.forEach(s => {
-            const dni = (s.dni || "").trim();
-            if (!dni) return;
-
-            // Leer desde columnas primero, luego fallback al JSON
             const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
 
             const tieneSalida = horaSalidaValue !== null && horaSalidaValue !== undefined && String(horaSalidaValue).trim() !== "";
             const tieneIngreso = horaIngresoValue !== null && horaIngresoValue !== undefined && String(horaIngresoValue).trim() !== "";
 
-            // Solo mostrar si tiene SALIDA pero NO tiene INGRESO
-            if (!tieneSalida || tieneIngreso) {
+            if (tieneSalida === tieneIngreso) {
                 return;
             }
 
-            const fechaCreacion = s.fechaCreacion ? new Date(s.fechaCreacion).getTime() : 0;
-            const existente = ultimosPorDni.get(dni);
-
-            if (!existente || fechaCreacion > existente.fechaCreacion) {
-                ultimosPorDni.set(dni, {
-                    ...s,
-                    fechaCreacion
-                });
-            }
+            pendientes.push(s);
         });
 
-        if (ultimosPorDni.size === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos en ruta en este momento</p>';
+        if (pendientes.length === 0) {
+            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
             return;
         }
 
-        // Convertir a array y ordenar por hora de salida (más recientes primero)
-        const activos = Array.from(ultimosPorDni.values()).sort((a, b) => {
-            const timeA = new Date(a.horaSalida || a.datos?.horaSalida || 0).getTime();
-            const timeB = new Date(b.horaSalida || b.datos?.horaSalida || 0).getTime();
+        pendientes.sort((a, b) => {
+            const timeA = new Date(a.fechaCreacion || 0).getTime();
+            const timeB = new Date(b.fechaCreacion || 0).getTime();
             return timeB - timeA;
         });
 
-        // Renderizar tabla
         let html = '<div class="table-wrapper">';
         html += '<table class="table">';
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Conductor</th>';
         html += '<th>Placa</th>';
-        html += '<th>Km Salida</th>';
+        html += '<th>Estado Pendiente</th>';
+        html += '<th>Km</th>';
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
-        html += '<th>Hora Salida</th>';
+        html += '<th>Hora</th>';
         html += '<th>Acción</th>';
         html += '</tr></thead><tbody>';
 
-        activos.forEach(s => {
+        pendientes.forEach(s => {
             const datos = s.datos || {};
             const dni = (s.dni || "").trim();
             const conductor = s.nombreCompleto || datos.conductor || "N/A";
             const placa = datos.placa || "N/A";
-            const kmSalida = datos.kmSalida || 0;
-            const origen = datos.origen || "N/A";
-            const destino = datos.destino || "N/A";
-            const observacion = datos.observacion || "";
-            
-            // Leer desde columnas primero
+
             const horaSalidaValue = s.horaSalida || datos.horaSalida;
-            const fechaSalidaValue = s.fechaSalida || datos.fechaSalida;
-            const horaSalida = horaSalidaValue ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A";
-            const fechaSalida = fechaSalidaValue ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A";
-            const guardiaSalida = datos.guardiaSalida || "N/A";
+            const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
+            const tieneSalida = horaSalidaValue !== null && horaSalidaValue !== undefined && String(horaSalidaValue).trim() !== "";
+
+            const pendienteDe = tieneSalida ? "Ingreso" : "Salida";
+            const modo = tieneSalida ? "ingreso" : "salida";
+            const km = tieneSalida
+                ? (datos.kmSalida ?? "N/A")
+                : (datos.kmIngreso ?? "N/A");
+            const origen = tieneSalida
+                ? (datos.origenSalida || datos.origen || "N/A")
+                : (datos.origenIngreso || datos.origen || "N/A");
+            const destino = tieneSalida
+                ? (datos.destinoSalida || datos.destino || "N/A")
+                : (datos.destinoIngreso || datos.destino || "N/A");
+            const hora = tieneSalida
+                ? (horaSalidaValue ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A")
+                : (horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A");
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
             html += `<td>${conductor}</td>`;
             html += `<td>${placa}</td>`;
-            html += `<td>${kmSalida}</td>`;
+            html += `<td>${pendienteDe}</td>`;
+            html += `<td>${km}</td>`;
             html += `<td>${origen}</td>`;
             html += `<td>${destino}</td>`;
-            html += `<td>${horaSalida}</td>`;
-            html += `<td><button class="btn-success btn-small" onclick="irAIngreso(${s.id}, '${dni}', '${conductor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', ${kmSalida}, '${origen.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${destino.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaSalida}', '${horaSalida}', '${guardiaSalida}')">Ingreso</button></td>`;
+            html += `<td>${hora}</td>`;
+            html += `<td><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button></td>`;
             html += '</tr>';
         });
 

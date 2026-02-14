@@ -6,26 +6,78 @@ function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
 
     const salidaId = params.get("salidaId");
+    const modo = (params.get("modo") || "ingreso").toLowerCase();
+
     document.getElementById("dni").dataset.salidaId = salidaId || "";
-    
-    document.getElementById("dni").value = params.get("dni") || "";
-    document.getElementById("conductor").value = params.get("conductor") || "";
-    document.getElementById("placa").value = params.get("placa") || "";
-    document.getElementById("kmSalida").value = params.get("kmSalida") || "";
-    document.getElementById("origen").value = params.get("origen") || "";
-    document.getElementById("destino").value = params.get("destino") || "";
-    document.getElementById("observacion").value = params.get("observacion") || "";
-    
-    // Guardar datos de salida para usarlos al registrar ingreso
-    document.getElementById("dni").dataset.fechaSalida = params.get("fechaSalida") || "";
-    document.getElementById("dni").dataset.horaSalida = params.get("horaSalida") || "";
-    document.getElementById("dni").dataset.guardiaSalida = params.get("guardiaSalida") || "";
+    document.getElementById("dni").dataset.modo = modo;
+
+    configurarVistaPorModo(modo);
+    cargarDetalleOperacion(salidaId);
 }
 
-async function registrarIngreso() {
+function configurarVistaPorModo(modo) {
+    const esIngreso = modo === "ingreso";
+    document.getElementById("bloque-ingreso").style.display = esIngreso ? "block" : "none";
+    document.getElementById("bloque-salida").style.display = esIngreso ? "none" : "block";
+
+    document.getElementById("titulo-movimiento").innerHTML = esIngreso
+        ? '<img src="/images/check-circle.svg" class="icon-white"> Registrar Ingreso de Vehículo de Empresa'
+        : '<img src="/images/check-lg.svg" class="icon-white"> Registrar Salida de Vehículo de Empresa';
+
+    document.getElementById("flujoActual").value = esIngreso
+        ? "Inicio por SALIDA - pendiente INGRESO"
+        : "Inicio por INGRESO - pendiente SALIDA";
+
+    const boton = document.getElementById("btn-guardar");
+    if (esIngreso) {
+        boton.className = "btn-success btn-block";
+        boton.innerHTML = '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO';
+    } else {
+        boton.className = "btn-danger btn-block";
+        boton.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA';
+    }
+}
+
+async function cargarDetalleOperacion(salidaId) {
+    const mensaje = document.getElementById("mensaje");
+    if (!salidaId) {
+        mensaje.className = "error";
+        mensaje.innerText = "Error: No se encontró el ID del registro";
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/${salidaId}`);
+        if (!response.ok) {
+            throw new Error("No se pudo cargar el detalle del registro");
+        }
+
+        const detalle = await response.json();
+        const datos = detalle.datos || {};
+
+        document.getElementById("dni").value = detalle.dni || "";
+        document.getElementById("conductor").value = detalle.nombreCompleto || datos.conductor || "";
+        document.getElementById("placa").value = datos.placa || "";
+
+        document.getElementById("kmSalidaRegistrado").value = datos.kmSalida ?? "";
+        document.getElementById("origenSalidaRegistrado").value = datos.origenSalida || datos.origen || "";
+        document.getElementById("destinoSalidaRegistrado").value = datos.destinoSalida || datos.destino || "";
+
+        document.getElementById("kmIngresoRegistrado").value = datos.kmIngreso ?? "";
+        document.getElementById("origenIngresoRegistrado").value = datos.origenIngreso || "";
+        document.getElementById("destinoIngresoRegistrado").value = datos.destinoIngreso || "";
+
+        document.getElementById("observacion").value = datos.observacion || "";
+    } catch (error) {
+        mensaje.className = "error";
+        mensaje.innerText = `❌ Error: ${error.message}`;
+    }
+}
+
+async function registrarMovimientoComplementario() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
-    const kmIngreso = document.getElementById("kmIngreso").value.trim();
+    const modo = (dniElement.dataset.modo || "ingreso").toLowerCase();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -38,37 +90,65 @@ async function registrarIngreso() {
         return;
     }
 
-    if (!kmIngreso) {
+    const esIngreso = modo === "ingreso";
+    const km = esIngreso
+        ? document.getElementById("kmIngreso").value.trim()
+        : document.getElementById("kmSalida").value.trim();
+    const origen = esIngreso
+        ? document.getElementById("origenIngreso").value.trim()
+        : document.getElementById("origenSalida").value.trim();
+    const destino = esIngreso
+        ? document.getElementById("destinoIngreso").value.trim()
+        : document.getElementById("destinoSalida").value.trim();
+
+    if (!km || !origen || !destino) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje de ingreso es obligatorio";
+        mensaje.innerText = "Complete kilometraje, origen y destino obligatorios";
         return;
     }
 
     // Validar kilometraje
-    if (isNaN(kmIngreso) || parseInt(kmIngreso) < 0) {
+    if (isNaN(km) || parseInt(km) < 0) {
         mensaje.className = "error";
         mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
     }
 
     try {
-        // Usar PUT para actualizar el registro existente
-        const responseIngreso = await fetchAuth(`${API_BASE}/vehiculo-empresa/${salidaId}/ingreso`, {
-            method: "PUT",
-            body: JSON.stringify({
-                horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
-                kmIngreso: parseInt(kmIngreso),
+        const endpoint = esIngreso
+            ? `${API_BASE}/vehiculo-empresa/${salidaId}/ingreso`
+            : `${API_BASE}/vehiculo-empresa/${salidaId}/salida`;
+
+        const body = esIngreso
+            ? {
+                horaIngreso: new Date().toISOString(),
+                kmIngreso: parseInt(km),
+                origenIngreso: origen,
+                destinoIngreso: destino,
                 observacion: observacion || null
-            })
+            }
+            : {
+                horaSalida: new Date().toISOString(),
+                kmSalida: parseInt(km),
+                origenSalida: origen,
+                destinoSalida: destino,
+                observacion: observacion || null
+            };
+
+        const response = await fetchAuth(endpoint, {
+            method: "PUT",
+            body: JSON.stringify(body)
         });
 
-        if (!responseIngreso.ok) {
-            const error = await responseIngreso.text();
+        if (!response.ok) {
+            const error = await response.text();
             throw new Error(error);
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ INGRESO registrado correctamente";
+        mensaje.innerText = esIngreso
+            ? "✅ INGRESO registrado correctamente"
+            : "✅ SALIDA registrada correctamente";
 
         // Redirigir automáticamente después de 500ms
         setTimeout(() => {

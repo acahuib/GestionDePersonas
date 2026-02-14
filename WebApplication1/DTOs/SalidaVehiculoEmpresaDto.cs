@@ -1,15 +1,15 @@
+// SalidaVehiculoEmpresaDto.cs - Updated version
 namespace WebApplication1.DTOs
 {
     /// <summary>
-    /// DTO para registrar salida de Vehiculo de Empresa
-    /// Incluye datos del cuaderno de vehiculos de empresa
+    /// DTO para registrar operaciones de Vehiculo de Empresa
+    /// Ahora soporta comenzar con INGRESO o SALIDA
     /// 
-    /// Flujo:
-    /// 1. POST con datos de SALIDA (horaIngreso y kmIngreso opcionales)
-    /// 2. PUT posterior con datos de INGRESO (horaIngreso, kmIngreso)
+    /// Flujo flexible:
+    /// 1. POST con datos de SALIDA (horaIngreso null) O datos de INGRESO (horaSalida null)
+    /// 2. PUT posterior con el movimiento contrario
     /// 
     /// Nota: Conductor es opcional. Solo se requiere si el DNI no existe en la tabla Personas.
-    /// Si el DNI ya existe, se usa automáticamente el nombre registrado.
     /// </summary>
     public class SalidaVehiculoEmpresaDto
     {
@@ -20,14 +20,18 @@ namespace WebApplication1.DTOs
         /// </summary>
         public string? Conductor { get; set; }
         public required string Placa { get; set; }
-        public required int KmSalida { get; set; }
-        public required string Origen { get; set; }
-        public required string Destino { get; set; }
-        public DateTime? HoraSalida { get; set; }
         
-        // Opcionales: Se llenan cuando ingresa el vehículo (via PUT)
+        // Campos de SALIDA (si se registra salida primero)
+        public int? KmSalida { get; set; }
+        public DateTime? HoraSalida { get; set; }
+        public string? OrigenSalida { get; set; }
+        public string? DestinoSalida { get; set; }
+        
+        // Campos de INGRESO (si se registra ingreso primero)
         public int? KmIngreso { get; set; }
         public DateTime? HoraIngreso { get; set; }
+        public string? OrigenIngreso { get; set; }
+        public string? DestinoIngreso { get; set; }
         
         public string? Observacion { get; set; }
     }

@@ -135,6 +135,24 @@ namespace WebApplication1.Controllers
             if (!string.IsNullOrWhiteSpace(dto.Observacion))
                 datos["observacion"] = dto.Observacion;
 
+            if (string.Equals(dto.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))
+            {
+                if (tipoMovimiento == "Entrada")
+                {
+                    if (!datos.ContainsKey("origenIngreso") && datos.TryGetValue("origen", out var origenLegacy))
+                        datos["origenIngreso"] = origenLegacy;
+                    if (!datos.ContainsKey("destinoIngreso") && datos.TryGetValue("destino", out var destinoLegacy))
+                        datos["destinoIngreso"] = destinoLegacy;
+                }
+                else
+                {
+                    if (!datos.ContainsKey("origenSalida") && datos.TryGetValue("origen", out var origenLegacy))
+                        datos["origenSalida"] = origenLegacy;
+                    if (!datos.ContainsKey("destinoSalida") && datos.TryGetValue("destino", out var destinoLegacy))
+                        datos["destinoSalida"] = destinoLegacy;
+                }
+            }
+
             var operacion = new Models.OperacionDetalle
             {
                 MovimientoId = movimiento.Id,
@@ -199,6 +217,13 @@ namespace WebApplication1.Controllers
             if (salida == null)
                 return NotFound("OperacionDetalle no encontrada");
 
+            var nombreCompleto = !string.IsNullOrWhiteSpace(salida.Dni)
+                ? await _context.Personas
+                    .Where(p => p.Dni == salida.Dni)
+                    .Select(p => p.Nombre)
+                    .FirstOrDefaultAsync()
+                : null;
+
             var datosObj = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
             return Ok(new
@@ -209,6 +234,8 @@ namespace WebApplication1.Controllers
                 datos = datosObj,
                 fechaCreacion = salida.FechaCreacion,
                 usuarioId = salida.UsuarioId,
+                dni = salida.Dni,
+                nombreCompleto,
                 // NUEVO: Incluir columnas con fallback al JSON
                 horaIngreso = _salidasService.ObtenerHoraIngreso(salida),
                 fechaIngreso = _salidasService.ObtenerFechaIngreso(salida),
