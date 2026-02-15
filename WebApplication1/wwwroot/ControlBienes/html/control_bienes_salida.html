@@ -31,6 +31,14 @@
         <input type="text" id="ver-nombre" readonly>
 
         <label>Bienes Declarados</label>
+        <div style="margin-bottom: 8px;">
+            <button type="button" class="btn-inline btn-small" onclick="marcarTodosBienes(true)">
+                <img src="/images/check-lg.svg" class="icon-white"> Seleccionar todos
+            </button>
+            <button type="button" class="btn-inline btn-small" onclick="marcarTodosBienes(false)">
+                <img src="/images/x-circle.svg" class="icon-white"> Limpiar selección
+            </button>
+        </div>
         <div id="ver-bienes" style="padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; min-height: 50px;"></div>
 
         <label>Fecha y Hora de Ingreso</label>
@@ -53,7 +61,7 @@
         <textarea id="observacion-salida" placeholder="Notas sobre la salida..." rows="3"></textarea>
 
         <div>
-            <button onclick="registrarSalida()" class="btn-danger btn-block">
+            <button id="btn-registrar-salida" onclick="registrarSalida()" class="btn-danger btn-block">
                 <img src="/images/box-arrow-right.svg" class="icon-white"> Registrar SALIDA</button>
         </div>
         <div>

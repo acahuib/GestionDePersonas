@@ -6,6 +6,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Text.Json;
 using System.Security.Claims;
+using System.Globalization;
 
 namespace WebApplication1.Controllers
 {
@@ -22,6 +23,21 @@ namespace WebApplication1.Controllers
     // [Authorize(Roles = "Admin,Guardia")]
     public class SalidasController : ControllerBase
     {
+        private const string EstadoActivo = "Activo";
+        private const string EstadoRetirado = "Retirado";
+
+        private class BienControlEstado
+        {
+            public required string Id { get; set; }
+            public required string Descripcion { get; set; }
+            public string? Marca { get; set; }
+            public string? Serie { get; set; }
+            public int Cantidad { get; set; }
+            public DateTime? FechaIngreso { get; set; }
+            public DateTime? FechaSalida { get; set; }
+            public required string Estado { get; set; }
+        }
+
         private readonly AppDbContext _context;
         private readonly SalidasService _salidasService;
 
@@ -99,6 +115,7 @@ namespace WebApplication1.Controllers
             var tipoMovimiento = string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase)
                 ? "Entrada"
                 : "Salida";
+            var esControlBienes = string.Equals(dto.TipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase);
 
             if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
             {
@@ -118,16 +135,20 @@ namespace WebApplication1.Controllers
                     return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
             }
 
-            var movimiento = new Models.Movimiento
+            Models.Movimiento? movimiento = null;
+            if (!esControlBienes)
             {
-                Dni = dniNormalizado,
-                PuntoControlId = 1,
-                TipoMovimiento = tipoMovimiento,
-                FechaHora = dto.FechaHoraManual,
-                UsuarioId = usuarioId
-            };
-            _context.Movimientos.Add(movimiento);
-            await _context.SaveChangesAsync();
+                movimiento = new Models.Movimiento
+                {
+                    Dni = dniNormalizado,
+                    PuntoControlId = 1,
+                    TipoMovimiento = tipoMovimiento,
+                    FechaHora = dto.FechaHoraManual,
+                    UsuarioId = usuarioId
+                };
+                _context.Movimientos.Add(movimiento);
+                await _context.SaveChangesAsync();
+            }
 
             Dictionary<string, object?> datos;
             try
@@ -152,6 +173,144 @@ namespace WebApplication1.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.Observacion))
                 datos["observacion"] = dto.Observacion;
+
+            if (esControlBienes)
+            {
+                if (tipoMovimiento == "Entrada")
+                {
+                    var bienesNuevos = ExtraerBienesNuevosDesdeDatos(datos, dto.FechaHoraManual);
+
+                    var operacionAbierta = await _context.OperacionDetalle
+                        .Where(o => o.TipoOperacion == "ControlBienes" &&
+                                    o.Dni == dniNormalizado &&
+                                    o.HoraIngreso != null &&
+                                    o.HoraSalida == null)
+                        .OrderByDescending(o => o.FechaCreacion)
+                        .FirstOrDefaultAsync();
+
+                    if (operacionAbierta != null)
+                    {
+                        var bienesExistentes = LeerBienesDesdeJson(operacionAbierta.DatosJSON);
+                        var activosPrevios = bienesExistentes.Count(b => string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase));
+
+                        if (activosPrevios == 0 && bienesNuevos.Count == 0)
+                            return BadRequest("ControlBienes requiere al menos un bien activo o nuevo.");
+
+                        if (bienesNuevos.Count > 0)
+                            bienesExistentes.AddRange(bienesNuevos);
+
+                        using var docActual = JsonDocument.Parse(operacionAbierta.DatosJSON);
+                        var rootActual = docActual.RootElement;
+
+                        await _salidasService.ActualizarSalidaDetalle(
+                            operacionAbierta.Id,
+                            new
+                            {
+                                bienes = bienesExistentes,
+                                guardiaIngreso = LeerString(rootActual, "guardiaIngreso") ?? guardiaNombre,
+                                guardiaSalida = LeerString(rootActual, "guardiaSalida"),
+                                observacion = dto.Observacion ?? LeerString(rootActual, "observacion"),
+                                observacionSalida = LeerString(rootActual, "observacionSalida")
+                            },
+                            usuarioId
+                        );
+
+                        return Ok(new
+                        {
+                            mensaje = "Registro manual técnico actualizado en operación abierta de ControlBienes",
+                            operacionId = operacionAbierta.Id,
+                            tipoOperacion = "ControlBienes",
+                            tipoMovimiento = "Entrada",
+                            fechaHora = dto.FechaHoraManual,
+                            dni = dniNormalizado
+                        });
+                    }
+
+                    if (bienesNuevos.Count == 0)
+                        return BadRequest("ControlBienes requiere bienes para crear un nuevo registro.");
+
+                    movimiento = await _context.Movimientos
+                        .Where(m => m.Dni == dniNormalizado)
+                        .OrderByDescending(m => m.FechaHora)
+                        .ThenByDescending(m => m.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (movimiento == null)
+                        return BadRequest("No existe movimiento previo para este DNI. Registre primero a la persona en su cuaderno correspondiente.");
+
+                    datos["bienes"] = bienesNuevos;
+                    datos["guardiaIngreso"] = guardiaNombre;
+                    if (!datos.ContainsKey("guardiaSalida")) datos["guardiaSalida"] = null;
+                }
+                else
+                {
+                    var idsRetiro = ExtraerIdsRetiroDesdeDatos(datos);
+                    if (idsRetiro.Count == 0)
+                        return BadRequest("ControlBienes salida requiere 'bienIds' o 'bienesRetirarIds'.");
+
+                    var operacionAbierta = await _context.OperacionDetalle
+                        .Where(o => o.TipoOperacion == "ControlBienes" &&
+                                    o.Dni == dniNormalizado &&
+                                    o.HoraIngreso != null &&
+                                    o.HoraSalida == null)
+                        .OrderByDescending(o => o.FechaCreacion)
+                        .FirstOrDefaultAsync();
+
+                    if (operacionAbierta == null)
+                        return BadRequest("No existe operación abierta de ControlBienes para salida técnica.");
+
+                    using var docActual = JsonDocument.Parse(operacionAbierta.DatosJSON);
+                    var rootActual = docActual.RootElement;
+                    var bienesActuales = LeerBienesDesdeJson(operacionAbierta.DatosJSON);
+                    var activos = bienesActuales
+                        .Where(b => string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    var idsActivos = activos.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    if (idsRetiro.Any(idBien => !idsActivos.Contains(idBien)))
+                        return BadRequest("Uno o más bienes seleccionados no están activos para salida técnica.");
+
+                    foreach (var bien in bienesActuales.Where(b => idsRetiro.Contains(b.Id) && string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        bien.Estado = EstadoRetirado;
+                        bien.FechaSalida = bien.FechaSalida ?? dto.FechaHoraManual;
+                    }
+
+                    var quedanActivos = bienesActuales.Any(b => string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase));
+
+                    await _salidasService.ActualizarSalidaDetalle(
+                        operacionAbierta.Id,
+                        new
+                        {
+                            bienes = bienesActuales,
+                            guardiaIngreso = LeerString(rootActual, "guardiaIngreso"),
+                            guardiaSalida = guardiaNombre,
+                            observacion = LeerString(rootActual, "observacion"),
+                            observacionSalida = dto.Observacion ?? LeerString(rootActual, "observacionSalida")
+                        },
+                        usuarioId,
+                        null,
+                        null,
+                        quedanActivos ? null : dto.FechaHoraManual,
+                        quedanActivos ? null : dto.FechaHoraManual.Date
+                    );
+
+                    return Ok(new
+                    {
+                        mensaje = "Salida técnica parcial/completa aplicada en ControlBienes",
+                        operacionId = operacionAbierta.Id,
+                        tipoOperacion = "ControlBienes",
+                        tipoMovimiento = "Salida",
+                        fechaHora = dto.FechaHoraManual,
+                        dni = dniNormalizado,
+                        bienesRetirados = idsRetiro.Count,
+                        estado = quedanActivos ? "Salida parcial" : "Salida completada"
+                    });
+                }
+            }
+
+            if (movimiento == null)
+                return BadRequest("No se pudo determinar el movimiento de referencia.");
 
             if (string.Equals(dto.TipoOperacion, "PersonalLocal", StringComparison.OrdinalIgnoreCase))
             {
@@ -241,6 +400,147 @@ namespace WebApplication1.Controllers
             }
 
             return "Normal";
+        }
+
+        private static List<BienControlEstado> ExtraerBienesNuevosDesdeDatos(Dictionary<string, object?> datos, DateTime fechaIngreso)
+        {
+            var bienes = new List<BienControlEstado>();
+
+            if (!datos.TryGetValue("bienes", out var bienesObj) || bienesObj is null)
+                return bienes;
+
+            if (bienesObj is JsonElement bienesElement && bienesElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in bienesElement.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var descripcion = LeerString(item, "descripcion");
+                    if (string.IsNullOrWhiteSpace(descripcion))
+                        continue;
+
+                    bienes.Add(new BienControlEstado
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        Descripcion = descripcion.Trim(),
+                        Marca = LeerString(item, "marca"),
+                        Serie = LeerString(item, "serie"),
+                        Cantidad = LeerInt(item, "cantidad") ?? 1,
+                        FechaIngreso = fechaIngreso,
+                        FechaSalida = null,
+                        Estado = EstadoActivo
+                    });
+                }
+            }
+
+            return bienes;
+        }
+
+        private static HashSet<string> ExtraerIdsRetiroDesdeDatos(Dictionary<string, object?> datos)
+        {
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            JsonElement? arreglo = null;
+            if (datos.TryGetValue("bienIds", out var bienIdsObj) && bienIdsObj is JsonElement bienIdsElement && bienIdsElement.ValueKind == JsonValueKind.Array)
+                arreglo = bienIdsElement;
+            else if (datos.TryGetValue("bienesRetirarIds", out var retirarObj) && retirarObj is JsonElement retirarElement && retirarElement.ValueKind == JsonValueKind.Array)
+                arreglo = retirarElement;
+
+            if (!arreglo.HasValue)
+                return ids;
+
+            foreach (var item in arreglo.Value.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String)
+                    continue;
+
+                var valor = item.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(valor))
+                    ids.Add(valor);
+            }
+
+            return ids;
+        }
+
+        private static List<BienControlEstado> LeerBienesDesdeJson(string datosJson)
+        {
+            var resultado = new List<BienControlEstado>();
+
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                if (!doc.RootElement.TryGetProperty("bienes", out var bienes) || bienes.ValueKind != JsonValueKind.Array)
+                    return resultado;
+
+                foreach (var bien in bienes.EnumerateArray())
+                {
+                    if (bien.ValueKind != JsonValueKind.Object)
+                        continue;
+
+                    var descripcion = LeerString(bien, "descripcion");
+                    if (string.IsNullOrWhiteSpace(descripcion))
+                        continue;
+
+                    var id = LeerString(bien, "id");
+                    var fechaIngreso = LeerFecha(bien, "fechaIngreso");
+                    var fechaSalida = LeerFecha(bien, "fechaSalida");
+                    var estado = LeerString(bien, "estado");
+                    var estaRetirado = string.Equals(estado, EstadoRetirado, StringComparison.OrdinalIgnoreCase) || fechaSalida.HasValue;
+
+                    resultado.Add(new BienControlEstado
+                    {
+                        Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id,
+                        Descripcion = descripcion.Trim(),
+                        Marca = LeerString(bien, "marca"),
+                        Serie = LeerString(bien, "serie"),
+                        Cantidad = LeerInt(bien, "cantidad") ?? 1,
+                        FechaIngreso = fechaIngreso,
+                        FechaSalida = fechaSalida,
+                        Estado = estaRetirado ? EstadoRetirado : EstadoActivo
+                    });
+                }
+            }
+            catch
+            {
+                return resultado;
+            }
+
+            return resultado;
+        }
+
+        private static DateTime? LeerFecha(JsonElement element, string propiedad)
+        {
+            if (!element.TryGetProperty(propiedad, out var valor))
+                return null;
+
+            if (valor.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(valor.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+                return parsed;
+
+            return null;
+        }
+
+        private static int? LeerInt(JsonElement element, string propiedad)
+        {
+            if (!element.TryGetProperty(propiedad, out var valor))
+                return null;
+
+            if (valor.ValueKind == JsonValueKind.Number && valor.TryGetInt32(out var numero))
+                return numero;
+
+            if (valor.ValueKind == JsonValueKind.String && int.TryParse(valor.GetString(), out var numeroTexto))
+                return numeroTexto;
+
+            return null;
+        }
+
+        private static string? LeerString(JsonElement element, string propiedad)
+        {
+            if (!element.TryGetProperty(propiedad, out var valor) || valor.ValueKind != JsonValueKind.String)
+                return null;
+
+            return valor.GetString();
         }
 
         private static string ObtenerTipoPersonaLocalDesdeJson(string datosJson)

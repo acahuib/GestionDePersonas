@@ -82,9 +82,15 @@ function mostrarPagina() {
                 const cant = b.cantidad || 1;
                 const desc = b.descripcion || "N/A";
                 const marca = b.marca ? ` (${b.marca})` : "";
-                return `${cant}x ${desc}${marca}`;
+                                const estado = (b.estado || (b.fechaSalida ? "Retirado" : "Activo"));
+                                return `${cant}x ${desc}${marca} [${estado}]`;
               }).join(", ")
             : "N/A";
+
+                const activos = Array.isArray(bienes)
+                        ? bienes.filter(b => (b.estado || "Activo").toString().toLowerCase() === "activo" && !b.fechaSalida).length
+                        : 0;
+                const retirados = Array.isArray(bienes) ? bienes.length - activos : 0;
 
         const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE") : "N/A";
         const horaIngreso = s.horaIngreso ? new Date(s.horaIngreso).toLocaleTimeString("es-PE") : "N/A";
@@ -100,7 +106,7 @@ function mostrarPagina() {
         html += '<tr>';
         html += `<td>${s.dni || 'N/A'}</td>`;
         html += `<td>${nombreCompleto}</td>`;
-        html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bienesTexto}">${bienesTexto}</td>`;
+        html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bienesTexto}">${bienesTexto}<br><span class="muted">Retirados: ${retirados} | Activos: ${activos}</span></td>`;
         html += `<td>${fechaIngreso}</td>`;
         html += `<td>${horaIngreso}</td>`;
         html += `<td>${guardiaIngreso}</td>`;

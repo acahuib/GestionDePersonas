@@ -7,7 +7,7 @@ namespace WebApplication1.DTOs
     /// </summary>
     public class ActualizarSalidaControlBienesDto
     {
-        public DateTime? FechaSalida { get; set; }  // Opcional, el servidor usa su propia hora
+        public required List<string> BienIds { get; set; }
         public string? Observacion { get; set; }
     }
 }

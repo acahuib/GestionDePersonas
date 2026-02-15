@@ -2,6 +2,12 @@
 // INGRESO DE VEHÍCULO DE EMPRESA
 // =========================================
 
+function setElementValueIfExists(id, value) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.value = value ?? "";
+}
+
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
 
@@ -55,22 +61,22 @@ async function cargarDetalleOperacion(salidaId) {
         const detalle = await response.json();
         const datos = detalle.datos || {};
 
-        document.getElementById("dni").value = detalle.dni || "";
-        document.getElementById("conductor").value = detalle.nombreCompleto || datos.conductor || "";
-        document.getElementById("placa").value = datos.placa || "";
+        setElementValueIfExists("dni", detalle.dni || "");
+        setElementValueIfExists("conductor", detalle.nombreCompleto || datos.conductor || "");
+        setElementValueIfExists("placa", datos.placa || "");
 
-        document.getElementById("kmSalidaRegistrado").value = datos.kmSalida ?? "";
-        document.getElementById("origenSalidaRegistrado").value = datos.origenSalida || datos.origen || "";
-        document.getElementById("destinoSalidaRegistrado").value = datos.destinoSalida || datos.destino || "";
+        setElementValueIfExists("kmSalidaRegistrado", datos.kmSalida ?? "");
+        setElementValueIfExists("origenSalidaRegistrado", datos.origenSalida || datos.origen || "");
+        setElementValueIfExists("destinoSalidaRegistrado", datos.destinoSalida || datos.destino || "");
 
-        document.getElementById("kmIngresoRegistrado").value = datos.kmIngreso ?? "";
-        document.getElementById("origenIngresoRegistrado").value = datos.origenIngreso || "";
-        document.getElementById("destinoIngresoRegistrado").value = datos.destinoIngreso || "";
+        setElementValueIfExists("kmIngresoRegistrado", datos.kmIngreso ?? "");
+        setElementValueIfExists("origenIngresoRegistrado", datos.origenIngreso || datos.origen || "");
+        setElementValueIfExists("destinoIngresoRegistrado", datos.destinoIngreso || datos.destino || "");
 
-        document.getElementById("observacion").value = datos.observacion || "";
+        setElementValueIfExists("observacion", datos.observacion || "");
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `❌ Error al cargar el registro: ${error.message}`;
     }
 }
 

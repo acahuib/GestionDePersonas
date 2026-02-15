@@ -36,12 +36,6 @@
             <label>Placa</label>
             <input type="text" id="placa" readonly>
 
-            <label>Kilometraje de Salida</label>
-            <input type="number" id="kmSalida" readonly>
-
-            <label>Origen</label>
-            <input type="text" id="origen" readonly>
-
             <label>Kilometraje de Salida (registrado)</label>
             <input type="number" id="kmSalidaRegistrado" readonly>
 
@@ -59,6 +53,9 @@
 
             <label>Destino de Ingreso (registrado)</label>
             <input type="text" id="destinoIngresoRegistrado" readonly>
+
+            <label>Observación</label>
+            <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
 
             <div id="bloque-ingreso">
                 <label>Kilometraje de Ingreso *</label>
@@ -82,9 +79,6 @@
                 <input type="text" id="destinoSalida" placeholder="Destino de la salida">
             </div>
 
-            <div>
-                <button onclick="registrarIngreso()" class="btn-success btn-block"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
-            </div>
             <div>
                 <button onclick="registrarMovimientoComplementario()" id="btn-guardar" class="btn-success btn-block"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
             </div>

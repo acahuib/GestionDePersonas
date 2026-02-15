@@ -117,7 +117,14 @@ const templates = {
     DiasLibre: { numeroBoleta: "", del: "", al: "", trabaja: "" },
     HabitacionProveedor: { origen: "", cuarto: "", frazadas: 0 },
     Ocurrencias: { nombre: "", ocurrencia: "" },
-    ControlBienes: { bienes: [], guardiaIngreso: null, guardiaSalida: null },
+    ControlBienes: {
+        bienes: [
+            { descripcion: "Laptop", marca: "Lenovo", serie: null, cantidad: 1 }
+        ],
+        bienIds: [],
+        guardiaIngreso: null,
+        guardiaSalida: null
+    },
     OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" }
 };
 
