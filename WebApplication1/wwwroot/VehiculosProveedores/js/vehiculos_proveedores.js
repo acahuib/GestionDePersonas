@@ -206,47 +206,25 @@ async function cargarActivos() {
             return;
         }
 
-        // Tomar el ultimo registro por DNI y mostrar solo los que no tengan salida
-        const ultimosPorDni = new Map();
+        const tieneValor = (v) => v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
 
-        salidas.forEach(s => {
-            // DNI ahora está en columna, no en JSON
-            const dni = (s.dni || "").trim();
-            if (!dni) return;
+        // Mostrar cada operación activa real (no colapsar por DNI)
+        const activos = salidas
+            .filter(s => {
+                const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
+                const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
+                return tieneValor(horaIngresoValue) && !tieneValor(horaSalidaValue);
+            })
+            .sort((a, b) => {
+                const timeA = new Date(a.horaIngreso || a.datos?.horaIngreso || a.fechaCreacion || 0).getTime();
+                const timeB = new Date(b.horaIngreso || b.datos?.horaIngreso || b.fechaCreacion || 0).getTime();
+                return timeB - timeA;
+            });
 
-            // Leer desde columnas primero, luego fallback al JSON
-            const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
-            const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
-
-            const tieneIngreso = horaIngresoValue !== null && horaIngresoValue !== undefined && String(horaIngresoValue).trim() !== "";
-            const tieneSalida = horaSalidaValue !== null && horaSalidaValue !== undefined && String(horaSalidaValue).trim() !== "";
-
-            if (!tieneIngreso || tieneSalida) {
-                return;
-            }
-
-            const fechaCreacion = s.fechaCreacion ? new Date(s.fechaCreacion).getTime() : 0;
-            const existente = ultimosPorDni.get(dni);
-
-            if (!existente || fechaCreacion > existente.fechaCreacion) {
-                ultimosPorDni.set(dni, {
-                    ...s,
-                    fechaCreacion
-                });
-            }
-        });
-
-        if (ultimosPorDni.size === 0) {
+        if (activos.length === 0) {
             container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
             return;
         }
-
-        // Convertir a array y ordenar por hora de ingreso (más recientes primero)
-        const activos = Array.from(ultimosPorDni.values()).sort((a, b) => {
-            const timeA = new Date(a.horaIngreso || a.datos?.horaIngreso || 0).getTime();
-            const timeB = new Date(b.horaIngreso || b.datos?.horaIngreso || 0).getTime();
-            return timeB - timeA;
-        });
 
         // Renderizar tabla
         let html = '<div class="table-wrapper">';

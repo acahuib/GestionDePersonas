@@ -25,38 +25,18 @@ async function cargarHistorial() {
 
         const tieneValor = (v) => v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
 
-        const sesiones = [];
-        const abiertasPorDni = new Map();
+        const sesiones = salidas
+            .map(s => {
+                const datos = s.datos || {};
+                const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
+                const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
+                const horaSalidaValue = s.horaSalida || datos.horaSalida;
+                const fechaSalidaValue = s.fechaSalida || datos.fechaSalida;
+                const timestampBase = horaSalidaValue || horaIngresoValue || s.fechaCreacion;
 
-        const ordenadas = [...salidas].sort((a, b) => {
-            const fa = a.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
-            const fb = b.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
-            return fa - fb;  // ASCENDENTE: más antigua primero (para emparejamiento correcto)
-        });
-
-        ordenadas.forEach(s => {
-            const datos = s.datos || {};
-            
-            // DNI ahora está en columna, no en JSON
-            const dni = (s.dni || "").trim();
-            if (!dni) return;
-
-            // nombreCompleto viene del JOIN con tabla Personas (API ya lo trae)
-            const nombres = s.nombreCompleto || "N/A";
-            
-            // Leer desde columnas primero, luego fallback al JSON
-            const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
-            const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
-            const horaSalidaValue = s.horaSalida || datos.horaSalida;
-            const fechaSalidaValue = s.fechaSalida || datos.fechaSalida;
-            
-            const tieneIngreso = tieneValor(horaIngresoValue);
-            const tieneSalida = tieneValor(horaSalidaValue);
-
-            if (tieneIngreso) {
-                const sesion = {
-                    dni,
-                    nombres: nombres,
+                return {
+                    dni: (s.dni || "").trim() || "N/A",
+                    nombres: s.nombreCompleto || "N/A",
                     proveedor: tieneValor(datos.proveedor) ? datos.proveedor : "N/A",
                     placa: tieneValor(datos.placa) ? datos.placa : "N/A",
                     tipo: tieneValor(datos.tipo) ? datos.tipo : "N/A",
@@ -65,57 +45,15 @@ async function cargarHistorial() {
                     procedencia: tieneValor(datos.procedencia) ? datos.procedencia : "N/A",
                     observacion: tieneValor(datos.observacion) ? datos.observacion : "",
                     guardiaIngreso: tieneValor(datos.guardiaIngreso) ? datos.guardiaIngreso : "N/A",
-                    guardiaSalida: "N/A",
+                    guardiaSalida: tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A",
                     fechaIngreso: tieneValor(fechaIngresoValue) ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A",
                     horaIngreso: tieneValor(horaIngresoValue) ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A",
-                    fechaSalida: "N/A",
-                    horaSalida: "N/A",
-                    timestamp: new Date(s.fechaCreacion).getTime()
+                    fechaSalida: tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A",
+                    horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A",
+                    timestamp: timestampBase ? new Date(timestampBase).getTime() : 0
                 };
-
-                sesiones.push(sesion);
-                abiertasPorDni.set(dni, sesion);
-            }
-
-            if (tieneSalida) {
-                const abierta = abiertasPorDni.get(dni);
-                if (abierta && abierta.horaSalida === "N/A") {
-                    abierta.fechaSalida = tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A";
-                    abierta.horaSalida = tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A";
-                    abierta.guardiaSalida = tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A";
-                    abierta.timestamp = new Date(s.fechaCreacion).getTime();  // Actualizar timestamp
-                    if (tieneValor(datos.observacion)) {
-                        abierta.observacion = datos.observacion;
-                    }
-                    abiertasPorDni.delete(dni);
-                } else {
-                    const sesion = {
-                        dni,
-                        nombres: nombres,
-                        proveedor: tieneValor(datos.proveedor) ? datos.proveedor : "N/A",
-                        placa: tieneValor(datos.placa) ? datos.placa : "N/A",
-                        tipo: tieneValor(datos.tipo) ? datos.tipo : "N/A",
-                        lote: tieneValor(datos.lote) ? datos.lote : "N/A",
-                        cantidad: tieneValor(datos.cantidad) ? datos.cantidad : "N/A",
-                        procedencia: tieneValor(datos.procedencia) ? datos.procedencia : "N/A",
-                        observacion: tieneValor(datos.observacion) ? datos.observacion : "",
-                        guardiaIngreso: "N/A",
-                        guardiaSalida: tieneValor(datos.guardiaSalida) ? datos.guardiaSalida : "N/A",
-                        fechaIngreso: "N/A",
-                        horaIngreso: "N/A",
-                        fechaSalida: tieneValor(fechaSalidaValue) ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A",
-                        horaSalida: tieneValor(horaSalidaValue) ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A",
-                        timestamp: new Date(s.fechaCreacion).getTime()
-                    };
-                    sesiones.push(sesion);
-                }
-            }
-        });
-
-        // Ordenar sesiones de forma descendente (más recientes primero) para mostrar en tabla
-        sesiones.sort((a, b) => {
-            return b.timestamp - a.timestamp;  // Descendente: más reciente primero
-        });
+            })
+            .sort((a, b) => b.timestamp - a.timestamp);
 
         todasLasSesiones = sesiones;
         paginaActual = 1;

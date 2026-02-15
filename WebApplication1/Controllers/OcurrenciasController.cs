@@ -278,6 +278,46 @@ namespace WebApplication1.Controllers
                         dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual    // fechaSalida
                     );
 
+                    var registroIngresoNuevo = dto.HoraIngreso.HasValue && !horaIngresoActual.HasValue;
+                    var registroSalidaNuevo = dto.HoraSalida.HasValue && !horaSalidaActual.HasValue;
+
+                    if (registroIngresoNuevo || registroSalidaNuevo)
+                    {
+                        var dniMovimiento = salidaExistente.Dni;
+                        if (string.IsNullOrWhiteSpace(dniMovimiento))
+                        {
+                            dniMovimiento = await _context.Movimientos
+                                .Where(m => m.Id == salidaExistente.MovimientoId)
+                                .Select(m => m.Dni)
+                                .FirstOrDefaultAsync();
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(dniMovimiento))
+                        {
+                            if (registroIngresoNuevo)
+                            {
+                                var movimientoEntrada = await _movimientosService.RegistrarMovimientoEnBD(
+                                    dniMovimiento,
+                                    1,
+                                    "Entrada",
+                                    usuarioId);
+                                salidaExistente.MovimientoId = movimientoEntrada.Id;
+                            }
+
+                            if (registroSalidaNuevo)
+                            {
+                                var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
+                                    dniMovimiento,
+                                    1,
+                                    "Salida",
+                                    usuarioId);
+                                salidaExistente.MovimientoId = movimientoSalida.Id;
+                            }
+
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+
                     return Ok(new { mensaje = "Horario actualizado" });
                 }
             }

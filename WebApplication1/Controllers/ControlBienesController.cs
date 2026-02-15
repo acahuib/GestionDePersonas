@@ -7,6 +7,8 @@ using WebApplication1.Services;
 using System.Text.Json;
 using System.Security.Claims;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace WebApplication1.Controllers
 {
@@ -453,33 +455,46 @@ namespace WebApplication1.Controllers
                 if (!doc.RootElement.TryGetProperty("bienes", out var bienes) || bienes.ValueKind != JsonValueKind.Array)
                     return resultado;
 
+                var indiceBien = 0;
                 foreach (var bien in bienes.EnumerateArray())
                 {
                     if (bien.ValueKind != JsonValueKind.Object)
+                    {
+                        indiceBien++;
                         continue;
+                    }
 
                     var descripcion = LeerString(bien, "descripcion");
                     if (string.IsNullOrWhiteSpace(descripcion))
+                    {
+                        indiceBien++;
                         continue;
+                    }
 
                     var id = LeerString(bien, "id");
                     var fechaIngreso = LeerFecha(bien, "fechaIngreso");
                     var fechaSalida = LeerFecha(bien, "fechaSalida");
                     var estado = LeerString(bien, "estado");
+                    var cantidad = LeerInt(bien, "cantidad") ?? 1;
 
                     var estaRetirado = string.Equals(estado, EstadoRetirado, StringComparison.OrdinalIgnoreCase) || fechaSalida.HasValue;
+                    var idNormalizado = string.IsNullOrWhiteSpace(id)
+                        ? GenerarIdBienLegacy(indiceBien, descripcion, LeerString(bien, "marca"), LeerString(bien, "serie"), cantidad, fechaIngreso)
+                        : id;
 
                     resultado.Add(new BienControlEstado
                     {
-                        Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id,
+                        Id = idNormalizado,
                         Descripcion = descripcion.Trim(),
                         Marca = LeerString(bien, "marca"),
                         Serie = LeerString(bien, "serie"),
-                        Cantidad = LeerInt(bien, "cantidad") ?? 1,
+                        Cantidad = cantidad,
                         FechaIngreso = fechaIngreso,
                         FechaSalida = fechaSalida,
                         Estado = estaRetirado ? EstadoRetirado : EstadoActivo
                     });
+
+                    indiceBien++;
                 }
             }
             catch
@@ -488,6 +503,23 @@ namespace WebApplication1.Controllers
             }
 
             return resultado;
+        }
+
+        private static string GenerarIdBienLegacy(int indiceBien, string descripcion, string? marca, string? serie, int cantidad, DateTime? fechaIngreso)
+        {
+            var baseId = string.Join("|", new[]
+            {
+                indiceBien.ToString(CultureInfo.InvariantCulture),
+                descripcion.Trim().ToLowerInvariant(),
+                (marca ?? string.Empty).Trim().ToLowerInvariant(),
+                (serie ?? string.Empty).Trim().ToLowerInvariant(),
+                cantidad.ToString(CultureInfo.InvariantCulture),
+                fechaIngreso?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+            });
+
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(baseId));
+            var hash = Convert.ToHexString(bytes).ToLowerInvariant();
+            return $"legacy-{hash[..24]}";
         }
 
         private static DateTime? LeerFecha(JsonElement element, string propiedad)

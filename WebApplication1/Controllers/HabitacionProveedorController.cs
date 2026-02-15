@@ -88,12 +88,17 @@ namespace WebApplication1.Controllers
                     : null;
                 string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
-                // Crear movimiento de Entrada
-                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
-                    dto.Dni, 1, "Entrada", usuarioId);
+                // MODO INFORMATIVO: NO crear movimiento en tabla Movimientos.
+                // Solo enlazar al último movimiento existente del DNI como referencia técnica.
+                var movimientoReferenciaId = await _context.Movimientos
+                    .Where(m => m.Dni == dto.Dni)
+                    .OrderByDescending(m => m.FechaHora)
+                    .ThenByDescending(m => m.Id)
+                    .Select(m => m.Id)
+                    .FirstOrDefaultAsync();
 
-                if (movimiento == null)
-                    return StatusCode(500, "Error al registrar movimiento");
+                if (movimientoReferenciaId <= 0)
+                    return BadRequest("No existe movimiento previo para este DNI. HabitacionProveedor es informativo y no crea movimientos.");
 
                 // Usar hora local del servidor (Perú UTC-5)
                 var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
@@ -103,7 +108,7 @@ namespace WebApplication1.Controllers
                 // Crear OperacionDetalle con datos de HabitacionProveedor
                 // JSON solo contiene datos específicos (sin nombre/dni/fechas/horas)
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
-                    movimiento.Id,
+                    movimientoReferenciaId,
                     "HabitacionProveedor",
                     new
                     {
@@ -205,6 +210,8 @@ namespace WebApplication1.Controllers
                         ahoraLocal,         // horaSalida (momento de salida de habitación)
                         fechaActual         // fechaSalida
                     );
+
+                    // MODO INFORMATIVO: NO crear movimiento de salida.
 
                     return Ok(new
                     {

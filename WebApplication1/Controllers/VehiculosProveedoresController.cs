@@ -176,42 +176,78 @@ namespace WebApplication1.Controllers
             var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
             var fechaActual = ahoraLocal.Date;
-            
-            // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
-            // DNI ya NO está en JSON, está en columna
-            var datosActualizados = new
-            {
-                nombreApellidos = datosActuales.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
-                proveedor = datosActuales.TryGetProperty("proveedor", out var prov) && prov.ValueKind == JsonValueKind.String ? prov.GetString() : null,
-                placa = datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
-                tipo = datosActuales.TryGetProperty("tipo", out var tip) && tip.ValueKind == JsonValueKind.String ? tip.GetString() : null,
-                lote = datosActuales.TryGetProperty("lote", out var lot) && lot.ValueKind == JsonValueKind.String ? lot.GetString() : null,
-                cantidad = datosActuales.TryGetProperty("cantidad", out var cant) && cant.ValueKind == JsonValueKind.String ? cant.GetString() : null,
-                procedencia = datosActuales.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
-                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
-                    ? gi.GetString()
-                    : null,
-                guardiaSalida = guardiaNombre,
-                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
-            };
 
-            // NUEVO: Pasar horaSalida y fechaSalida como columnas
+            object ConstruirDatosActualizados(JsonElement datos, string? observacionNueva)
+            {
+                return new
+                {
+                    nombreApellidos = datos.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
+                    proveedor = datos.TryGetProperty("proveedor", out var prov) && prov.ValueKind == JsonValueKind.String ? prov.GetString() : null,
+                    placa = datos.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
+                    tipo = datos.TryGetProperty("tipo", out var tip) && tip.ValueKind == JsonValueKind.String ? tip.GetString() : null,
+                    lote = datos.TryGetProperty("lote", out var lot) && lot.ValueKind == JsonValueKind.String ? lot.GetString() : null,
+                    cantidad = datos.TryGetProperty("cantidad", out var cant) && cant.ValueKind == JsonValueKind.String ? cant.GetString() : null,
+                    procedencia = datos.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
+                    guardiaIngreso = datos.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
+                        ? gi.GetString()
+                        : null,
+                    guardiaSalida = guardiaNombre,
+                    observacion = observacionNueva ?? (datos.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
+                };
+            }
+
+            var registrosCerrados = 0;
+
+            // Cerrar el registro seleccionado
             await _salidasService.ActualizarSalidaDetalle(
-                id, 
-                datosActualizados, 
+                id,
+                ConstruirDatosActualizados(datosActuales, dto.Observacion),
                 usuarioId,
-                null,               // horaIngreso (no se actualiza en PUT de salida)
-                null,               // fechaIngreso (no se actualiza en PUT de salida)
-                ahoraLocal,         // NUEVO: horaSalida va a columna
-                fechaActual         // NUEVO: fechaSalida va a columna
+                null,
+                null,
+                ahoraLocal,
+                fechaActual
             );
+            registrosCerrados++;
+
+            // Si existen registros abiertos legacy del mismo DNI, cerrarlos también
+            if (!string.IsNullOrWhiteSpace(salida.Dni))
+            {
+                var dniNormalizado = salida.Dni.Trim();
+                var abiertosMismoDni = await _context.OperacionDetalle
+                    .Where(o => o.TipoOperacion == "VehiculosProveedores" &&
+                                o.Dni == dniNormalizado &&
+                                o.HoraIngreso != null &&
+                                o.HoraSalida == null &&
+                                o.Id != id)
+                    .ToListAsync();
+
+                foreach (var abierto in abiertosMismoDni)
+                {
+                    var datosAbiertos = JsonDocument.Parse(abierto.DatosJSON).RootElement;
+                    await _salidasService.ActualizarSalidaDetalle(
+                        abierto.Id,
+                        ConstruirDatosActualizados(datosAbiertos, null),
+                        usuarioId,
+                        null,
+                        null,
+                        ahoraLocal,
+                        fechaActual
+                    );
+                    registrosCerrados++;
+                }
+
+                // Registrar movimiento de salida para que panel Admin deje de mostrar a la persona "dentro"
+                await _movimientosService.RegistrarMovimientoEnBD(dniNormalizado, 1, "Salida", usuarioId);
+            }
 
             return Ok(new
             {
                 mensaje = "Salida de vehiculo de proveedor registrada",
                 salidaId = id,
                 tipoOperacion = "VehiculosProveedores",
-                estado = "Salida completada"
+                estado = "Salida completada",
+                registrosCerrados
             });
         }
     }
