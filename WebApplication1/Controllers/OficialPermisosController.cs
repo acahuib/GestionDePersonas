@@ -49,6 +49,28 @@ namespace WebApplication1.Controllers
                 // Determinar tipo de movimiento basado en cuál campo se proporciona
                 string tipoMovimiento = dto.HoraSalida.HasValue ? "Salida" : "Entrada";
 
+                // Regla funcional: solo permitir SALIDA si la persona está actualmente dentro
+                // (último movimiento debe ser Entrada/Ingreso)
+                if (dto.HoraSalida.HasValue)
+                {
+                    var ultimoMovimientoGlobal = await _context.Movimientos
+                        .Where(m => m.Dni == dto.Dni.Trim())
+                        .OrderByDescending(m => m.FechaHora)
+                        .ThenByDescending(m => m.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (ultimoMovimientoGlobal == null)
+                        return BadRequest("No se puede registrar salida: la persona no tiene movimiento previo de entrada.");
+
+                    var ultimoTipo = (ultimoMovimientoGlobal.TipoMovimiento ?? string.Empty).Trim();
+                    var estaDentro =
+                        string.Equals(ultimoTipo, "Entrada", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
+
+                    if (!estaDentro)
+                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (último movimiento no es Entrada).");
+                }
+
                 // ===== Buscar o crear en tabla Personas =====
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
