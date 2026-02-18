@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5170/api";
+const API_BASE = "/api";
 
 // ===============================
 // FETCH CON TOKEN JWT
