@@ -2,6 +2,10 @@
 let paginaActual = 1;
 const registrosPorPagina = 20;
 let intervalId = null;
+const TIPO_ENSERES_TURNO = 'RegistroInformativoEnseresTurno';
+let paginaEnseresActual = 1;
+let totalPaginasEnseres = 1;
+let registrosEnseres = [];
 
 // Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -37,7 +41,8 @@ async function actualizarDashboard() {
     await Promise.all([
         cargarEstadisticas(),
         cargarPersonasDentro(),
-        cargarUltimosMovimientos()
+        cargarUltimosMovimientos(),
+        cargarRegistrosEnseresTurno(false)
     ]);
     
     actualizarHoraActualizacion();
@@ -287,7 +292,8 @@ function calcularResumenPorTipo(movimientos) {
         'ControlBienes': 0,
         'DiasLibre': 0,
         'HabitacionProveedor': 0,
-        'Ocurrencias': 0
+        'Ocurrencias': 0,
+        'RegistroInformativoEnseresTurno': 0
     };
     
     movimientos.forEach(m => {
@@ -308,6 +314,125 @@ function calcularResumenPorTipo(movimientos) {
     document.getElementById('totalDiasLibre').textContent = contadores['DiasLibre'];
     document.getElementById('totalHabitacionProveedor').textContent = contadores['HabitacionProveedor'];
     document.getElementById('totalOcurrencias').textContent = contadores['Ocurrencias'];
+    document.getElementById('totalEnseresTurno').textContent = contadores['RegistroInformativoEnseresTurno'];
+}
+
+// Cargar registros del cuaderno de enseres por turno (solo lectura)
+async function cargarRegistrosEnseresTurno(resetPagina = true) {
+    const tbody = document.getElementById('tablaEnseresTurnoAdmin');
+
+    try {
+        if (!registrosEnseres.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="loading">Cargando registros...</td></tr>';
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/salidas/tipo/${TIPO_ENSERES_TURNO}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok)
+            throw new Error('No se pudo cargar registros informativos de enseres por turno');
+
+        const data = await response.json();
+        registrosEnseres = Array.isArray(data)
+            ? data.sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0))
+            : [];
+
+        totalPaginasEnseres = Math.max(1, Math.ceil(registrosEnseres.length / registrosPorPagina));
+
+        if (resetPagina) {
+            paginaEnseresActual = 1;
+        } else if (paginaEnseresActual > totalPaginasEnseres) {
+            paginaEnseresActual = totalPaginasEnseres;
+        }
+
+        renderizarTablaEnseresTurnoAdmin();
+    } catch (error) {
+        console.error('Error al cargar enseres por turno:', error);
+        tbody.innerHTML = '<tr><td colspan="7" class="error">Error al cargar registros</td></tr>';
+        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
+        actualizarEstadoPaginacionEnseres();
+    }
+}
+
+function renderizarTablaEnseresTurnoAdmin() {
+    const tbody = document.getElementById('tablaEnseresTurnoAdmin');
+
+    const inicio = (paginaEnseresActual - 1) * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    const registrosPagina = registrosEnseres.slice(inicio, fin);
+
+    if (!registrosEnseres || registrosEnseres.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay registros informativos</td></tr>';
+        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
+        actualizarEstadoPaginacionEnseres();
+        return;
+    }
+
+    tbody.innerHTML = registrosPagina.map(r => {
+        const datos = r.datos || {};
+        const fechaTurno = datos.fecha
+            ? new Date(datos.fecha).toLocaleDateString('es-PE')
+            : '-';
+
+        const horaRegistro = r.fechaCreacion
+            ? new Date(r.fechaCreacion).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+            : '-';
+
+        const objetos = Array.isArray(datos.objetos)
+            ? datos.objetos.map(o => `${o.nombre || '-'}: ${o.cantidad || 0}`).join('<br>')
+            : '-';
+
+        return `
+            <tr>
+                <td>${fechaTurno}</td>
+                <td>${datos.turno || '-'}</td>
+                <td>${datos.puesto || '-'}</td>
+                <td>${datos.agenteNombre || r.nombreCompleto || '-'}</td>
+                <td>${datos.agenteDni || r.dni || '-'}</td>
+                <td>${objetos}</td>
+                <td>${horaRegistro}</td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('paginaEnseresActual').textContent = `Página ${paginaEnseresActual} de ${totalPaginasEnseres} (${registrosEnseres.length} registros)`;
+    actualizarEstadoPaginacionEnseres();
+}
+
+function cambiarPaginaEnseres(direccion) {
+    const nuevaPagina = paginaEnseresActual + direccion;
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginasEnseres) return;
+    paginaEnseresActual = nuevaPagina;
+    renderizarTablaEnseresTurnoAdmin();
+}
+
+function irAPaginaEnseres(pagina) {
+    if (pagina < 1 || pagina > totalPaginasEnseres) return;
+    paginaEnseresActual = pagina;
+    renderizarTablaEnseresTurnoAdmin();
+}
+
+function irAUltimaPaginaEnseres() {
+    irAPaginaEnseres(totalPaginasEnseres);
+}
+
+function actualizarEstadoPaginacionEnseres() {
+    const btnPrimera = document.getElementById('btnEnseresPrimera');
+    const btnAnterior = document.getElementById('btnEnseresAnterior');
+    const btnSiguiente = document.getElementById('btnEnseresSiguiente');
+    const btnUltima = document.getElementById('btnEnseresUltima');
+
+    if (!btnPrimera || !btnAnterior || !btnSiguiente || !btnUltima) return;
+
+    const sinDatos = registrosEnseres.length === 0;
+    btnPrimera.disabled = sinDatos || paginaEnseresActual <= 1;
+    btnAnterior.disabled = sinDatos || paginaEnseresActual <= 1;
+    btnSiguiente.disabled = sinDatos || paginaEnseresActual >= totalPaginasEnseres;
+    btnUltima.disabled = sinDatos || paginaEnseresActual >= totalPaginasEnseres;
 }
 
 // Calcular tiempo dentro

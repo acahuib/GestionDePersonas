@@ -4,6 +4,7 @@ namespace WebApplication1.Models
     {
         public int Id { get; set; }
         public required string UsuarioLogin { get; set; }
+        public string? Dni { get; set; }
         public required string PasswordHash { get; set; }
         public required string NombreCompleto { get; set; }
         public required string Rol { get; set; } 

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Informativo de Enseres por Turno</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📒 Registro Informativo de Enseres por Turno</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="toolbar">
+            <a href="registro_enseres_turno_historial.html" class="card-link">
+                <button class="btn-inline"><img src="/images/book.svg" class="icon-white"> Ver Historial</button>
+            </a>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Registrar Enseres del Turno</h3>
+            <p class="muted">Solo registro informativo. No modifica inventario ni controla ingresos/salidas.</p>
+
+            <label>Turno *</label>
+            <select id="turno" required>
+                <option value="">Seleccione...</option>
+                <option value="6am-6pm">6am-6pm</option>
+                <option value="6pm-6am">6pm-6am</option>
+            </select>
+
+            <label>Puesto *</label>
+            <input type="text" id="puesto" placeholder="Ejemplo: Garita" required>
+
+            <label>Fecha *</label>
+            <input type="date" id="fecha" required>
+
+            <hr>
+            <div class="toolbar">
+                <h3>Detalle de Objetos</h3>
+                <button type="button" class="btn-inline btn-small" onclick="agregarItem()">
+                    <img src="/images/plus-lg.svg" class="icon-white"> Agregar ítem
+                </button>
+            </div>
+
+            <div id="items-container"></div>
+
+            <label>Observaciones</label>
+            <textarea id="observaciones" rows="3" placeholder="Opcional"></textarea>
+
+            <button type="button" class="btn-success btn-block" onclick="registrarEnseres()">
+                <img src="/images/check-lg.svg" class="icon-white"> Guardar Registro Informativo
+            </button>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <hr>
+
+        <div>
+            <div class="toolbar">
+                <h3>Registros del día</h3>
+                <button onclick="cargarRegistrosDelDia()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            </div>
+            <div id="tabla-registros">
+                <p class="text-center muted">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/registro_enseres_turno.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial Enseres por Turno - Control de Accesos</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div id="sidebar"></div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>📚 Historial Registro Informativo de Enseres por Turno</h2>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Filtros</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="filtroFechaInicio">Fecha Desde</label>
+                    <input type="date" id="filtroFechaInicio">
+                </div>
+                <div class="form-group">
+                    <label for="filtroFechaFin">Fecha Hasta</label>
+                    <input type="date" id="filtroFechaFin">
+                </div>
+                <div class="form-group">
+                    <label for="filtroTurno">Turno</label>
+                    <select id="filtroTurno">
+                        <option value="">Todos</option>
+                        <option value="6am-6pm">6am-6pm</option>
+                        <option value="6pm-6am">6pm-6am</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filtroPuesto">Puesto</label>
+                    <input type="text" id="filtroPuesto" placeholder="Ejemplo: Garita">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button id="btnBuscar" class="btn-inline"><img src="/images/search.svg" class="icon-white"> Buscar</button>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="table-card">
+            <div class="table-header">
+                <h3>Registros Informativos</h3>
+                <div class="toolbar-actions">
+                    <button onclick="cargarHistorial()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+                    <a href="registro_enseres_turno.html" class="card-link">
+                        <button class="btn-inline"><img src="/images/arrow-left.svg" class="icon-white"> Volver</button>
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="table" id="tablaHistorialEnseres">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Turno</th>
+                            <th>Puesto</th>
+                            <th>Agente</th>
+                            <th>DNI</th>
+                            <th>Hora Registro</th>
+                            <th>Objetos</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="btnPrimera" class="btn-inline btn-small">Primera</button>
+                <button id="btnAnterior" class="btn-inline btn-small">Anterior</button>
+                <span id="infoPagina" style="margin: 0 15px;">Página 1 de 1</span>
+                <button id="btnSiguiente" class="btn-inline btn-small">Siguiente</button>
+                <button id="btnUltima" class="btn-inline btn-small">Última</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/registro_enseres_turno_historial.js"></script>
+</body>
+</html>

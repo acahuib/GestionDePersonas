@@ -183,6 +183,46 @@
                         <h4>Ocurrencias</h4>
                         <p class="summary-number" id="totalOcurrencias">--</p>
                     </div>
+                    <div class="summary-card-cuaderno">
+                        <div class="cuaderno-icon">📒</div>
+                        <h4>Enseres por Turno</h4>
+                        <p class="summary-number" id="totalEnseresTurno">--</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Registro Informativo Enseres por Turno (Solo lectura) -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📒 Registro Informativo de Guardias (Enseres por Turno)</h2>
+                    <button onclick="cargarRegistrosEnseresTurno(true)" class="btn-refresh">🔄 Actualizar</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Turno</th>
+                                <th>Puesto</th>
+                                <th>Guardia</th>
+                                <th>DNI</th>
+                                <th>Objetos</th>
+                                <th>Hora Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaEnseresTurnoAdmin">
+                            <tr>
+                                <td colspan="7" class="loading">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button onclick="irAPaginaEnseres(1)" id="btnEnseresPrimera" class="btn-page">Primera</button>
+                    <button onclick="cambiarPaginaEnseres(-1)" id="btnEnseresAnterior" class="btn-page">← Anterior</button>
+                    <span id="paginaEnseresActual">Página 1 de 1</span>
+                    <button onclick="cambiarPaginaEnseres(1)" id="btnEnseresSiguiente" class="btn-page">Siguiente →</button>
+                    <button onclick="irAUltimaPaginaEnseres()" id="btnEnseresUltima" class="btn-page">Última</button>
                 </div>
             </section>
         </div>

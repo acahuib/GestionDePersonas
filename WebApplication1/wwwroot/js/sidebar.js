@@ -36,6 +36,7 @@ function crearSidebar() {
                         <li><a href="${basePath}OficialPermisos/html/oficial_permisos.html">Permisos Personal</a></li>
                         <li><a href="${basePath}Ocurrencias/html/ocurrencias.html">Ocurrencias</a></li>
                         <li><a href="${basePath}ControlBienes/html/control_bienes.html">Control de Bienes</a></li>
+                        <li><a href="${basePath}RegistroEnseresTurno/html/registro_enseres_turno.html">Enseres por Turno</a></li>
                     </ul>
                 </li>
             </ul>
