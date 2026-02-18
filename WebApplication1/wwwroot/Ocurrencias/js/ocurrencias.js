@@ -22,14 +22,14 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`Persona encontrada:`, personaEncontrada);
             
             // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
@@ -44,18 +44,18 @@ async function buscarPersonaPorDni() {
             document.getElementById("ocurrencia").focus();
         } else if (response.status === 404) {
             // DNI no existe, habilitar campo para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreInput.disabled = false;
             nombreInput.placeholder = "Nombre o descripción de la persona";
             nombreInput.focus();
         } else {
-            console.error(`❌ Error del servidor: ${response.status}`);
+            console.error(`Error del servidor: ${response.status}`);
             throw new Error(`Error del servidor: ${response.status}`);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
+        console.error("Error al buscar persona:", error);
         // En caso de error, permitir registro manual
         personaEncontrada = null;
         personaInfo.style.display = "none";
@@ -77,14 +77,14 @@ async function registrarIngreso() {
     // Validación: Ocurrencia es obligatoria
     if (!ocurrencia) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ La descripción de ocurrencia es obligatoria";
+        mensaje.innerText = "La descripción de ocurrencia es obligatoria";
         return;
     }
 
     // Validar DNI si se proporcionó
     if (dni && (dni.length !== 8 || isNaN(dni))) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ DNI debe tener 8 dígitos numéricos";
+        mensaje.innerText = "DNI debe tener 8 dígitos numéricos";
         return;
     }
 
@@ -115,7 +115,7 @@ async function registrarIngreso() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = `✅ Ingreso registrado correctamente`;
+        mensaje.innerText = `Ingreso registrado correctamente`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -134,7 +134,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 

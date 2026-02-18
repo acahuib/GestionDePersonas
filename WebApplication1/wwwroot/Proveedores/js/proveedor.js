@@ -133,7 +133,7 @@ async function registrarEntrada() {
 
         const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : `${nombres} ${apellidos}`;
         mensaje.className = "success";
-        mensaje.innerText = `✅ ENTRADA registrada para ${nombreCompleto}`;
+        mensaje.innerText = `ENTRADA registrada para ${nombreCompleto}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -153,7 +153,7 @@ async function registrarEntrada() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 

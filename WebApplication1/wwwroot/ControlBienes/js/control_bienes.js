@@ -277,7 +277,7 @@ async function registrarIngreso() {
         const totalActivos = result?.cantidadBienesActivos ?? (bienesPendientes.length + bienes.length);
         const nuevos = result?.cantidadBienesNuevos ?? bienes.length;
         mensaje.className = "success";
-        mensaje.innerText = `✅ INGRESO registrado para ${nombreCompleto}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}`;
+        mensaje.innerText = `INGRESO registrado para ${nombreCompleto}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -301,7 +301,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 
@@ -414,6 +414,8 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">❌ Error al cargar datos: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">
+            <img src="/images/x-circle.svg">Error al cargar datos: ${error.message}</p>`;
+
     }
 }

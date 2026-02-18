@@ -114,7 +114,7 @@ async function registrarIngreso() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = `✅ Ingreso registrado: ${data.nombreCompleto} - ${data.dni}`;
+        mensaje.innerText = `Ingreso registrado: ${data.nombreCompleto} - ${data.dni}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -133,7 +133,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 

@@ -158,7 +158,7 @@ async function registrarMovimientoInicial() {
         const nombreConductor = personaEncontrada ? personaEncontrada.nombre : conductor;
         mensaje.className = "success";
         const tipoTexto = esSalidaInicial ? "SALIDA" : "INGRESO";
-        mensaje.innerText = `✅ ${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}`;
+        mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -178,7 +178,7 @@ async function registrarMovimientoInicial() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 

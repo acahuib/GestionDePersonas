@@ -126,7 +126,7 @@ async function registrarIngreso() {
 
         const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : nombreApellidos;
         mensaje.className = "success";
-        mensaje.innerText = `✅ INGRESO registrado para ${nombreCompleto}`;
+        mensaje.innerText = `INGRESO registrado para ${nombreCompleto}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -145,7 +145,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 

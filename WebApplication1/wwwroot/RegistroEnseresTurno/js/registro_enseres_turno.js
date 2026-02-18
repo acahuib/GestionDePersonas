@@ -75,13 +75,13 @@ async function registrarEnseres() {
 
     if (!turno || !puesto || !fecha) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ Complete turno, puesto y fecha";
+        mensaje.innerText = "Complete turno, puesto y fecha";
         return;
     }
 
     if (objetos.length === 0) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ Debe registrar al menos un ítem";
+        mensaje.innerText = "Debe registrar al menos un ítem";
         return;
     }
 
@@ -91,7 +91,7 @@ async function registrarEnseres() {
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ Revise los ítems: nombre y cantidad > 0 son obligatorios";
+        mensaje.innerText = "Revise los ítems: nombre y cantidad > 0 son obligatorios";
         return;
     }
 
@@ -113,7 +113,7 @@ async function registrarEnseres() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ Registro informativo guardado correctamente";
+        mensaje.innerText = "Registro informativo guardado correctamente";
 
         document.getElementById("puesto").value = "";
         document.getElementById("observaciones").value = "";
@@ -123,7 +123,7 @@ async function registrarEnseres() {
         await cargarRegistrosDelDia();
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = `Error: ${error.message}`;
     }
 }
 
