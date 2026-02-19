@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Configurar eventos
 function configurarEventos() {
-    document.getElementById('btnBuscar').addEventListener('click', cargarHistorial);
-
     // Paginación
     document.getElementById('btnPrimera').addEventListener('click', () => irAPagina(1));
     document.getElementById('btnAnterior').addEventListener('click', () => irAPagina(paginaActual - 1));
@@ -27,10 +25,6 @@ function configurarEventos() {
 
 // Cargar historial completo
 async function cargarHistorial() {
-    const dni = document.getElementById('filtroDni').value.trim();
-    const fechaInicio = document.getElementById('filtroFechaInicio').value;
-    const fechaFin = document.getElementById('filtroFechaFin').value;
-
     try {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/DiasLibre`);
 
@@ -47,31 +41,8 @@ async function cargarHistorial() {
             return;
         }
 
-        // Aplicar filtros
-        let registrosFiltrados = data;
-        
-        if (dni) {
-            registrosFiltrados = registrosFiltrados.filter(item => 
-                item.dni && item.dni.includes(dni)
-            );
-        }
-        
-        if (fechaInicio) {
-            registrosFiltrados = registrosFiltrados.filter(item => {
-                const fechaSalida = item.fechaSalida || (item.datos && item.datos.fechaSalida);
-                return fechaSalida && fechaSalida.split('T')[0] >= fechaInicio;
-            });
-        }
-        
-        if (fechaFin) {
-            registrosFiltrados = registrosFiltrados.filter(item => {
-                const fechaSalida = item.fechaSalida || (item.datos && item.datos.fechaSalida);
-                return fechaSalida && fechaSalida.split('T')[0] <= fechaFin;
-            });
-        }
-
         // Ordenar por fecha descendente
-        todosLosRegistros = registrosFiltrados.sort((a, b) => {
+        todosLosRegistros = data.sort((a, b) => {
             const fechaA = new Date(a.fechaSalida + ' ' + (a.horaSalida || '00:00'));
             const fechaB = new Date(b.fechaSalida + ' ' + (b.horaSalida || '00:00'));
             return fechaB - fechaA;

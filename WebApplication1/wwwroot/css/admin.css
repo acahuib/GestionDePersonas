@@ -447,3 +447,6 @@ body {
         font-size: 1.5rem;
     }
 }
+.icon-white {
+    filter: brightness(0) invert(1);
+}
