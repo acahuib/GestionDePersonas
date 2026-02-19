@@ -5,7 +5,7 @@ function verificarAutenticacion() {
 
     // Sin sesión → login
     if (!token || !rol) {
-        window.location.href = "login.html";
+        window.location.href = "/login.html";
         return;
     }
 

@@ -26,7 +26,7 @@ async function fetchAuth(url, options = {}) {
     if (response.status === 401 || response.status === 403) {
         alert("Sesión expirada o no autorizada");
         localStorage.clear();
-        window.location.href = "login.html";
+        window.location.href = "/login.html";
         return;
     }
 
