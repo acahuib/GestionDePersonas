@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using WebApplication1.Services.Security;
 
 namespace WebApplication1.Controllers
 {
@@ -28,12 +29,16 @@ namespace WebApplication1.Controllers
         public IActionResult Login(LoginDto dto)
         {
             var usuario = _context.Usuarios
-                .FirstOrDefault(u =>
-                    u.UsuarioLogin == dto.Usuario &&
-                    u.PasswordHash == dto.Password);
+                .FirstOrDefault(u => u.UsuarioLogin == dto.Usuario);
 
-            if (usuario == null)
+            if (usuario == null || !PasswordSecurity.VerifyPassword(dto.Password, usuario.PasswordHash))
                 return Unauthorized("Credenciales incorrectas");
+
+            if (PasswordSecurity.IsLegacyPlainText(usuario.PasswordHash))
+            {
+                usuario.PasswordHash = PasswordSecurity.HashPassword(dto.Password);
+                _context.SaveChanges();
+            }
 
             var claims = new[]
             {
@@ -56,7 +61,7 @@ namespace WebApplication1.Controllers
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(4),
+                expires: DateTime.UtcNow.AddHours(4),
                 signingCredentials: creds
             );
 
