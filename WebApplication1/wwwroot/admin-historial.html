@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial Admin - Control de Accesos</title>
+    <link rel="stylesheet" href="css/admin-historial.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page">
+        <header class="hero">
+            <div class="hero-left">
+                <p class="hero-kicker">Dashboard Admin</p>
+                <h1 id="tituloHistorial">Historial de Cuaderno</h1>
+                <p id="descripcionHistorial" class="hero-subtitle">Consulta avanzada con filtros rapidos.</p>
+            </div>
+            <div class="hero-right">
+                <div class="user-card">
+                    <span class="user-badge">Admin</span>
+                    <span id="nombreUsuario" class="user-name">Administrador</span>
+                    <button class="btn-secondary" onclick="cerrarSesion()">Cerrar Sesion</button>
+                </div>
+            </div>
+        </header>
+
+        <section class="filters">
+            <div class="filter-group">
+                <label for="selectorCuaderno">Cuaderno</label>
+                <select id="selectorCuaderno"></select>
+            </div>
+            <div class="filter-group">
+                <label for="busquedaTexto">Busqueda</label>
+                <input id="busquedaTexto" type="text" placeholder="DNI, nombre, placa, proveedor..." />
+            </div>
+            <div class="filter-group">
+                <label for="filtroMovimiento">Movimiento</label>
+                <select id="filtroMovimiento">
+                    <option value="">Todos</option>
+                    <option value="Entrada">Entrada</option>
+                    <option value="Salida">Salida</option>
+                    <option value="Info">Info</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="fechaInicio">Desde</label>
+                <input id="fechaInicio" type="date" />
+            </div>
+            <div class="filter-group">
+                <label for="fechaFin">Hasta</label>
+                <input id="fechaFin" type="date" />
+            </div>
+            <div class="filter-actions">
+                <button id="btnBuscar" class="btn-primary">Buscar</button>
+                <button id="btnLimpiar" class="btn-secondary">Limpiar</button>
+            </div>
+        </section>
+
+        <section class="table-section">
+            <div class="table-header">
+                <div>
+                    <h2>Resultados</h2>
+                    <p id="resumenResultados" class="muted">0 registros</p>
+                </div>
+                <div class="table-actions">
+                    <button id="btnExportar" class="btn-tertiary">Exportar Excel</button>
+                    <button id="btnRecargar" class="btn-tertiary">Recargar</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead id="tablaHead"></thead>
+                    <tbody id="tablaBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <button id="btnPrev">Anterior</button>
+                <span id="infoPagina">Pagina 0 de 0</span>
+                <button id="btnNext">Siguiente</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin-historial.js"></script>
+</body>
+</html>

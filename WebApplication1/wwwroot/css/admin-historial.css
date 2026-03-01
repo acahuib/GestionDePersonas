@@ -1,0 +1,233 @@
+:root {
+    --bg: #f3f5f7;
+    --card: #ffffff;
+    --ink: #102a43;
+    --muted: #6b7280;
+    --primary: #0ea5a6;
+    --primary-strong: #0f766e;
+    --accent: #f59e0b;
+    --line: #e2e8f0;
+    --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Manrope", sans-serif;
+    background: radial-gradient(circle at top, #dff2f1 0%, #f7f2e8 45%, #f3f5f7 100%);
+    color: var(--ink);
+    min-height: 100vh;
+}
+
+.page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    border-radius: 24px;
+    background: linear-gradient(120deg, #0f172a, #0ea5a6);
+    color: #f8fafc;
+    box-shadow: var(--shadow);
+}
+
+.hero-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    opacity: 0.8;
+}
+
+.hero h1 {
+    font-size: 2.2rem;
+    margin: 8px 0 6px;
+}
+
+.hero-subtitle {
+    opacity: 0.9;
+    max-width: 520px;
+}
+
+.user-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+    background: rgba(255, 255, 255, 0.12);
+    padding: 16px 18px;
+    border-radius: 16px;
+    min-width: 200px;
+}
+
+.user-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #facc15;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+}
+
+.user-name {
+    font-weight: 700;
+}
+
+.filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    background: var(--card);
+    padding: 20px;
+    border-radius: 18px;
+    margin: 24px 0;
+    box-shadow: var(--shadow);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.filter-group input,
+.filter-group select {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-tertiary,
+.pagination button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-strong);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #1f2937;
+}
+
+.btn-tertiary {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.table-section {
+    background: var(--card);
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.table-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+}
+
+.table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table-wrapper thead {
+    background: #0f172a;
+    color: #f8fafc;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.table-wrapper tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.table-wrapper tbody tr:hover {
+    background: #ecfeff;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    align-items: center;
+    margin-top: 18px;
+}
+
+.pagination button {
+    background: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+    .hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .user-card {
+        align-items: flex-start;
+    }
+
+    .filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

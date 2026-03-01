@@ -96,9 +96,6 @@ async function cargarEstadisticas() {
         document.getElementById('ingresosHoy').textContent = ingresos;
         document.getElementById('salidasHoy').textContent = salidas;
         
-        // Calcular resumen por tipo
-        calcularResumenPorTipo(movimientos);
-        
     } catch (error) {
         console.error('❌ Error al cargar estadísticas:', error);
         document.getElementById('movimientosHoy').textContent = 'Error';
@@ -278,43 +275,6 @@ function renderizarTablaUltimosMovimientos(movimientos) {
             <td>${m.tipoOperacion || 'N/A'}</td>
         </tr>
     `).join('');
-}
-
-// Calcular resumen por tipo de cuaderno (TipoOperacion)
-function calcularResumenPorTipo(movimientos) {
-    const contadores = {
-        'PersonalLocal': 0,
-        'Proveedor': 0,
-        'VehiculoEmpresa': 0,
-        'VehiculosProveedores': 0,
-        'SalidasPermisosPersonal': 0,
-        'OficialPermisos': 0,
-        'ControlBienes': 0,
-        'DiasLibre': 0,
-        'HabitacionProveedor': 0,
-        'Ocurrencias': 0,
-        'RegistroInformativoEnseresTurno': 0
-    };
-    
-    movimientos.forEach(m => {
-        const tipoOperacion = m.tipoOperacion;
-        if (tipoOperacion && contadores.hasOwnProperty(tipoOperacion)) {
-            contadores[tipoOperacion]++;
-        }
-    });
-    
-    // Actualizar el DOM
-    document.getElementById('totalPersonalLocal').textContent = contadores['PersonalLocal'];
-    document.getElementById('totalProveedores').textContent = contadores['Proveedor'];
-    document.getElementById('totalVehiculoEmpresa').textContent = contadores['VehiculoEmpresa'];
-    document.getElementById('totalVehiculosProveedores').textContent = contadores['VehiculosProveedores'];
-    document.getElementById('totalPermisosPersonal').textContent = contadores['SalidasPermisosPersonal'];
-    document.getElementById('totalOficialPermisos').textContent = contadores['OficialPermisos'];
-    document.getElementById('totalControlBienes').textContent = contadores['ControlBienes'];
-    document.getElementById('totalDiasLibre').textContent = contadores['DiasLibre'];
-    document.getElementById('totalHabitacionProveedor').textContent = contadores['HabitacionProveedor'];
-    document.getElementById('totalOcurrencias').textContent = contadores['Ocurrencias'];
-    document.getElementById('totalEnseresTurno').textContent = contadores['RegistroInformativoEnseresTurno'];
 }
 
 // Cargar registros del cuaderno de enseres por turno (solo lectura)
