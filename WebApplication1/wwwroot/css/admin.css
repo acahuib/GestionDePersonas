@@ -388,6 +388,43 @@ body {
 }
 
 /* ===============================
+   HISTORIALES GRID
+   =============================== */
+.historial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.historial-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: #f8f9fb;
+    border: 1px solid #e6e8ef;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.historial-card:hover {
+    transform: translateY(-2px);
+    border-color: #667eea;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.historial-icon {
+    font-size: 1.6rem;
+}
+
+.historial-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* ===============================
    FOOTER
    =============================== */
 .dashboard-footer {

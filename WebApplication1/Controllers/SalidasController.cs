@@ -61,7 +61,9 @@ namespace WebApplication1.Controllers
                 "HabitacionProveedor",
                 "Ocurrencias",
                 "ControlBienes",
-                "OficialPermisos"
+                "OficialPermisos",
+                "SalidasPermisosPersonal",
+                "RegistroInformativoEnseresTurno"
             };
 
             if (!tiposPermitidos.Contains(dto.TipoOperacion))
@@ -70,9 +72,18 @@ namespace WebApplication1.Controllers
             if (string.IsNullOrWhiteSpace(dto.Dni) || dto.Dni.Trim().Length != 8 || !dto.Dni.Trim().All(char.IsDigit))
                 return BadRequest("DNI debe tener 8 dígitos numéricos.");
 
-            if (!string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("TipoMovimiento debe ser 'Entrada' o 'Salida'.");
+            var esRegistroEnseres = string.Equals(dto.TipoOperacion, "RegistroInformativoEnseresTurno", StringComparison.OrdinalIgnoreCase);
+            if (esRegistroEnseres)
+            {
+                if (!string.Equals(dto.TipoMovimiento, "Info", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("RegistroInformativoEnseresTurno requiere TipoMovimiento='Info'.");
+            }
+            else
+            {
+                if (!string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("TipoMovimiento debe ser 'Entrada' o 'Salida'.");
+            }
 
             if (dto.FechaHoraManual > DateTime.Now)
                 return BadRequest("FechaHoraManual no puede ser futura.");
@@ -114,25 +125,15 @@ namespace WebApplication1.Controllers
 
             var tipoMovimiento = string.Equals(dto.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase)
                 ? "Entrada"
-                : "Salida";
+                : string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase)
+                    ? "Salida"
+                    : "Info";
             var esControlBienes = string.Equals(dto.TipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase);
 
             if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
             {
                 if (!string.Equals(tipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
                     return BadRequest("DiasLibre en modo técnico solo permite TipoMovimiento='Salida'.");
-
-                var ultimoMovimiento = await _context.Movimientos
-                    .Where(m => m.Dni == dniNormalizado)
-                    .OrderByDescending(m => m.FechaHora)
-                    .ThenByDescending(m => m.Id)
-                    .FirstOrDefaultAsync();
-
-                if (ultimoMovimiento == null)
-                    return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
-
-                if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
             }
 
             Models.Movimiento? movimiento = null;
@@ -165,10 +166,15 @@ namespace WebApplication1.Controllers
                 datos["guardiaIngreso"] = guardiaNombre;
                 if (!datos.ContainsKey("guardiaSalida")) datos["guardiaSalida"] = null;
             }
-            else
+            else if (tipoMovimiento == "Salida")
             {
                 datos["guardiaSalida"] = guardiaNombre;
                 if (!datos.ContainsKey("guardiaIngreso")) datos["guardiaIngreso"] = null;
+            }
+            else
+            {
+                datos["guardiaIngreso"] = guardiaNombre;
+                if (!datos.ContainsKey("guardiaSalida")) datos["guardiaSalida"] = null;
             }
 
             if (!string.IsNullOrWhiteSpace(dto.Observacion))
@@ -236,7 +242,18 @@ namespace WebApplication1.Controllers
                         .FirstOrDefaultAsync();
 
                     if (movimiento == null)
-                        return BadRequest("No existe movimiento previo para este DNI. Registre primero a la persona en su cuaderno correspondiente.");
+                    {
+                        movimiento = new Models.Movimiento
+                        {
+                            Dni = dniNormalizado,
+                            PuntoControlId = 1,
+                            TipoMovimiento = "Entrada",
+                            FechaHora = dto.FechaHoraManual,
+                            UsuarioId = usuarioId
+                        };
+                        _context.Movimientos.Add(movimiento);
+                        await _context.SaveChangesAsync();
+                    }
 
                     datos["bienes"] = bienesNuevos;
                     datos["guardiaIngreso"] = guardiaNombre;
@@ -257,7 +274,57 @@ namespace WebApplication1.Controllers
                         .FirstOrDefaultAsync();
 
                     if (operacionAbierta == null)
-                        return BadRequest("No existe operación abierta de ControlBienes para salida técnica.");
+                    {
+                        var bienesSalida = ExtraerBienesNuevosDesdeDatos(datos, dto.FechaHoraManual);
+                        if (bienesSalida.Count == 0)
+                            return BadRequest("ControlBienes salida requiere 'bienIds' o 'bienes' con datos completos.");
+
+                        foreach (var bien in bienesSalida)
+                        {
+                            bien.Estado = EstadoRetirado;
+                            bien.FechaSalida = dto.FechaHoraManual;
+                        }
+
+                        var movimientoSalida = new Models.Movimiento
+                        {
+                            Dni = dniNormalizado,
+                            PuntoControlId = 1,
+                            TipoMovimiento = "Salida",
+                            FechaHora = dto.FechaHoraManual,
+                            UsuarioId = usuarioId
+                        };
+                        _context.Movimientos.Add(movimientoSalida);
+                        await _context.SaveChangesAsync();
+
+                        datos["bienes"] = bienesSalida;
+                        datos["guardiaSalida"] = guardiaNombre;
+                        if (!datos.ContainsKey("guardiaIngreso")) datos["guardiaIngreso"] = null;
+
+                        var operacionSalida = new Models.OperacionDetalle
+                        {
+                            MovimientoId = movimientoSalida.Id,
+                            TipoOperacion = "ControlBienes",
+                            DatosJSON = JsonSerializer.Serialize(datos),
+                            FechaCreacion = DateTime.Now,
+                            UsuarioId = usuarioId,
+                            HoraSalida = dto.FechaHoraManual,
+                            FechaSalida = dto.FechaHoraManual.Date,
+                            Dni = dniNormalizado
+                        };
+
+                        _context.OperacionDetalle.Add(operacionSalida);
+                        await _context.SaveChangesAsync();
+
+                        return Ok(new
+                        {
+                            mensaje = "Salida técnica creada sin ingreso previo en ControlBienes",
+                            operacionId = operacionSalida.Id,
+                            tipoOperacion = "ControlBienes",
+                            tipoMovimiento = "Salida",
+                            fechaHora = dto.FechaHoraManual,
+                            dni = dniNormalizado
+                        });
+                    }
 
                     using var docActual = JsonDocument.Parse(operacionAbierta.DatosJSON);
                     var rootActual = docActual.RootElement;
@@ -316,27 +383,6 @@ namespace WebApplication1.Controllers
             {
                 var tipoPersonaLocal = ObtenerTipoPersonaLocalDesdeDatos(datos);
                 datos["tipoPersonaLocal"] = tipoPersonaLocal;
-
-                if (tipoMovimiento == "Salida")
-                {
-                    var ultimaOperacionAbierta = await _context.OperacionDetalle
-                        .Where(o => o.TipoOperacion == "PersonalLocal" &&
-                                    o.Dni == dniNormalizado &&
-                                    o.HoraIngreso != null &&
-                                    o.HoraSalida == null)
-                        .OrderByDescending(o => o.FechaCreacion)
-                        .FirstOrDefaultAsync();
-
-                    if (ultimaOperacionAbierta != null)
-                    {
-                        var tipoAnterior = ObtenerTipoPersonaLocalDesdeJson(ultimaOperacionAbierta.DatosJSON);
-                        if (string.Equals(tipoAnterior, "Retornando", StringComparison.OrdinalIgnoreCase))
-                            return BadRequest("PersonalLocal retornando no permite salida en este cuaderno (modo técnico)");
-                    }
-
-                    if (string.Equals(tipoPersonaLocal, "Retornando", StringComparison.OrdinalIgnoreCase))
-                        return BadRequest("No se puede registrar salida con tipoPersonaLocal=Retornando en PersonalLocal");
-                }
             }
 
             if (string.Equals(dto.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))

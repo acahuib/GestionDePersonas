@@ -30,11 +30,13 @@
                     <option value="VehiculosProveedores">VehiculosProveedores</option>
                     <option value="VehiculoEmpresa">VehiculoEmpresa</option>
                     <option value="PersonalLocal">PersonalLocal</option>
+                    <option value="SalidasPermisosPersonal">PermisosPersonal</option>
                     <option value="DiasLibre">DiasLibre</option>
                     <option value="HabitacionProveedor">HabitacionProveedor</option>
                     <option value="Ocurrencias">Ocurrencias</option>
                     <option value="ControlBienes">ControlBienes</option>
                     <option value="OficialPermisos">OficialPermisos</option>
+                    <option value="RegistroInformativoEnseresTurno">RegistroInformativoEnseresTurno</option>
                 </select>
             </div>
             <div>
@@ -42,6 +44,7 @@
                 <select id="tipoMovimiento" required>
                     <option value="Entrada">Entrada</option>
                     <option value="Salida">Salida</option>
+                    <option value="Info">Info</option>
                 </select>
             </div>
         </div>
@@ -114,6 +117,7 @@ const templates = {
     VehiculosProveedores: { nombreApellidos: "", proveedor: "", placa: "", tipo: "", lote: "", cantidad: "", procedencia: "" },
     VehiculoEmpresa: { conductor: "", placa: "", kmSalida: null, kmIngreso: null, origenIngreso: "", destinoIngreso: "", origenSalida: "", destinoSalida: "" },
     PersonalLocal: { tipoPersonaLocal: "Normal", horaSalidaAlmuerzo: null, fechaSalidaAlmuerzo: null, horaEntradaAlmuerzo: null, fechaEntradaAlmuerzo: null },
+    SalidasPermisosPersonal: { nombre: "", deDonde: "", personal: "", quienAutoriza: "", observaciones: "" },
     DiasLibre: { numeroBoleta: "", del: "", al: "", trabaja: "" },
     HabitacionProveedor: { origen: "", cuarto: "", frazadas: 0 },
     Ocurrencias: { nombre: "", ocurrencia: "" },
@@ -125,7 +129,8 @@ const templates = {
         guardiaIngreso: null,
         guardiaSalida: null
     },
-    OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" }
+    OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" },
+    RegistroInformativoEnseresTurno: { turno: "", puesto: "", fecha: "", objetos: [{ nombre: "", cantidad: 1 }], observaciones: "" }
 };
 
 const tipoOperacionInput = document.getElementById("tipoOperacion");
@@ -213,11 +218,21 @@ function syncJsonToPersonalLocalInputs() {
 
 function refreshTemplate() {
     const tipo = tipoOperacionInput.value;
-    datosJsonInput.value = JSON.stringify(templates[tipo] ?? {}, null, 2);
+    let template = templates[tipo] ?? {};
+
+    if (tipo === "RegistroInformativoEnseresTurno") {
+        const today = new Date().toISOString().slice(0, 10);
+        template = { ...template, fecha: `${today}T00:00:00` };
+    }
+
+    datosJsonInput.value = JSON.stringify(template, null, 2);
     personalLocalPanel.style.display = tipo === "PersonalLocal" ? "block" : "none";
 
     if (tipo === "DiasLibre") {
         tipoMovimientoInput.value = "Salida";
+        tipoMovimientoInput.disabled = true;
+    } else if (tipo === "RegistroInformativoEnseresTurno") {
+        tipoMovimientoInput.value = "Info";
         tipoMovimientoInput.disabled = true;
     } else {
         tipoMovimientoInput.disabled = false;
