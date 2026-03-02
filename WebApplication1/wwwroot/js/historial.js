@@ -28,27 +28,6 @@ const registrosPorPagina = 20;
 let paginaActual = 1;
 let registros = [];
 let registrosFiltrados = [];
-let debounceBusqueda = null;
-
-function verificarAdmin() {
-    const token = localStorage.getItem("token");
-    const rol = localStorage.getItem("rol");
-
-    if (!token || rol !== "Admin") {
-        alert("Acceso no autorizado. Debes ser Administrador.");
-        window.location.href = "/login.html";
-        return false;
-    }
-    return true;
-}
-
-function cargarNombreUsuario() {
-    const nombreCompleto = localStorage.getItem("nombreCompleto") || "Administrador";
-    const nombreUsuario = document.getElementById("nombreUsuario");
-    if (nombreUsuario) {
-        nombreUsuario.textContent = nombreCompleto;
-    }
-}
 
 function cargarFiltroTipo() {
     const selector = document.getElementById("filtroTipo");
@@ -61,7 +40,6 @@ function cargarFiltroTipo() {
         )
     ].join("");
 }
-
 function obtenerLabelTipo(tipo) {
     return TIPOS_OPERACION[tipo] || tipo || "Sin tipo";
 }
@@ -314,82 +292,8 @@ function renderizarTabla() {
     document.getElementById("btnNext").disabled = paginaActual === totalPaginas || total === 0;
 }
 
-function obtenerPaginaActual() {
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
-    return registrosFiltrados.slice(inicio, fin);
-}
-
-async function exportarExcelPaginaActual() {
-    const pagina = obtenerPaginaActual();
-    if (pagina.length === 0) {
-        alert("No hay registros para exportar.");
-        return;
-    }
-
-    const texto = document.getElementById("busquedaTexto").value.trim();
-    const fechaInicio = document.getElementById("fechaInicio").value;
-    const fechaFin = document.getElementById("fechaFin").value;
-    const filtroMovimiento = document.getElementById("filtroMovimiento").value;
-    const filtroTipo = document.getElementById("filtroTipo")?.value || "";
-
-    const params = new URLSearchParams();
-    params.set("page", String(paginaActual));
-    params.set("pageSize", String(registrosPorPagina));
-    if (filtroTipo) params.set("tipoOperacion", filtroTipo);
-    if (filtroMovimiento) params.set("tipoMovimiento", filtroMovimiento);
-    if (texto) params.set("texto", texto);
-    if (fechaInicio) params.set("fechaInicio", fechaInicio);
-    if (fechaFin) params.set("fechaFin", fechaFin);
-
-    const response = await fetchAuth(`${API_BASE}/salidas/export/excel?${params.toString()}`);
-    if (!response || !response.ok) {
-        alert("No se pudo descargar el Excel.");
-        return;
-    }
-
-    const blob = await response.blob();
-    const hoy = new Date();
-    const fecha = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}${String(hoy.getDate()).padStart(2, "0")}`;
-    const fileName = `historial_admin_${fecha}_p${paginaActual}.xlsx`;
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
 function configurarEventos() {
     document.getElementById("btnBuscar").addEventListener("click", aplicarFiltros);
-    const inputBusqueda = document.getElementById("busquedaTexto");
-    if (inputBusqueda) {
-        inputBusqueda.addEventListener("input", () => {
-            if (debounceBusqueda) clearTimeout(debounceBusqueda);
-            debounceBusqueda = setTimeout(() => {
-                aplicarFiltros();
-            }, 300);
-        });
-    }
-    const filtroTipo = document.getElementById("filtroTipo");
-    if (filtroTipo) {
-        filtroTipo.addEventListener("change", aplicarFiltros);
-    }
-    const filtroMovimiento = document.getElementById("filtroMovimiento");
-    if (filtroMovimiento) {
-        filtroMovimiento.addEventListener("change", aplicarFiltros);
-    }
-    const fechaInicio = document.getElementById("fechaInicio");
-    if (fechaInicio) {
-        fechaInicio.addEventListener("change", aplicarFiltros);
-    }
-    const fechaFin = document.getElementById("fechaFin");
-    if (fechaFin) {
-        fechaFin.addEventListener("change", aplicarFiltros);
-    }
     document.getElementById("btnLimpiar").addEventListener("click", () => {
         document.getElementById("busquedaTexto").value = "";
         document.getElementById("filtroMovimiento").value = "";
@@ -400,10 +304,6 @@ function configurarEventos() {
         aplicarFiltros();
     });
     document.getElementById("btnRecargar").addEventListener("click", cargarHistorial);
-    const btnDescargar = document.getElementById("btnDescargar");
-    if (btnDescargar) {
-        btnDescargar.addEventListener("click", exportarExcelPaginaActual);
-    }
     document.getElementById("btnPrev").addEventListener("click", () => {
         if (paginaActual > 1) {
             paginaActual--;
@@ -420,8 +320,6 @@ function configurarEventos() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-    if (!verificarAdmin()) return;
-    cargarNombreUsuario();
     cargarFiltroTipo();
     configurarEventos();
     cargarHistorial();

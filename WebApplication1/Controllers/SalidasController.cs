@@ -5,6 +5,7 @@ using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Text.Json;
+using ClosedXML.Excel;
 using System.Security.Claims;
 using System.Globalization;
 
@@ -46,6 +47,21 @@ namespace WebApplication1.Controllers
             _context = context;
             _salidasService = salidasService;
         }
+
+        private static readonly Dictionary<string, string> TipoOperacionLabels = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Proveedor", "Proveedores" },
+            { "VehiculosProveedores", "Vehiculos Proveedores" },
+            { "VehiculoEmpresa", "Vehiculo Empresa" },
+            { "HabitacionProveedor", "Habitacion Proveedor" },
+            { "Ocurrencias", "Ocurrencias" },
+            { "PersonalLocal", "Personal Local" },
+            { "ControlBienes", "Control Bienes" },
+            { "DiasLibre", "Dias Libre" },
+            { "OficialPermisos", "Oficial Permisos" },
+            { "SalidasPermisosPersonal", "Permisos Personal" },
+            { "RegistroInformativoEnseresTurno", "Enseres por Turno" }
+        };
 
         [HttpPost("modo-tecnico")]
         [Authorize(Roles = "Tecnico")]
@@ -768,6 +784,303 @@ namespace WebApplication1.Controllers
                     stackTrace = ex.StackTrace
                 });
             }
+        }
+
+        // ======================================================
+        // GET: /api/salidas/export/excel
+        // Exportacion de historial general con filtros (admin)
+        // ======================================================
+        [HttpGet("export/excel")]
+        public async Task<IActionResult> ExportarHistorialExcel(
+            [FromQuery] DateTime? fechaInicio,
+            [FromQuery] DateTime? fechaFin,
+            [FromQuery] string? tipoOperacion,
+            [FromQuery] string? tipoMovimiento,
+            [FromQuery] string? texto,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0 || pageSize > 5000) pageSize = 20;
+
+            var query = _context.OperacionDetalle
+                .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(tipoOperacion))
+            {
+                query = query.Where(s => s.TipoOperacion == tipoOperacion);
+            }
+
+            var salidas = await query
+                .Select(s => new
+                {
+                    s.Id,
+                    s.TipoOperacion,
+                    s.DatosJSON,
+                    s.FechaCreacion,
+                    s.Dni,
+                    s.HoraIngreso,
+                    s.FechaIngreso,
+                    s.HoraSalida,
+                    s.FechaSalida,
+                    NombreCompleto = _context.Personas
+                        .Where(p => p.Dni == s.Dni)
+                        .Select(p => p.Nombre)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            DateTime? LeerFecha(JsonElement datosJson, string prop)
+            {
+                if (!datosJson.TryGetProperty(prop, out var value)) return null;
+                try
+                {
+                    if (value.ValueKind == JsonValueKind.String && DateTime.TryParse(value.GetString(), out var parsed))
+                        return parsed;
+                    if (value.ValueKind == JsonValueKind.Number && value.TryGetDateTime(out var parsedNumber))
+                        return parsedNumber;
+                    if (value.ValueKind == JsonValueKind.Object)
+                        return null;
+                    if (value.ValueKind == JsonValueKind.Null)
+                        return null;
+
+                    return value.GetDateTime();
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            string? LeerString(JsonElement datosJson, string prop)
+            {
+                return datosJson.TryGetProperty(prop, out var value) && value.ValueKind == JsonValueKind.String
+                    ? value.GetString()
+                    : null;
+            }
+
+            string ConstruirDetalle(JsonElement datosJson)
+            {
+                var partes = new List<string>();
+
+                void AgregarSiTiene(string label, string? valor)
+                {
+                    if (!string.IsNullOrWhiteSpace(valor))
+                        partes.Add($"{label}: {valor}");
+                }
+
+                var proveedor = LeerString(datosJson, "proveedor");
+                var placa = LeerString(datosJson, "placa");
+                var procedencia = LeerString(datosJson, "procedencia");
+                var destino = LeerString(datosJson, "destino");
+                var origen = LeerString(datosJson, "origen");
+                var destinoSalida = LeerString(datosJson, "destinoSalida");
+                var cuarto = LeerString(datosJson, "cuarto");
+                var ocurrencia = LeerString(datosJson, "ocurrencia");
+                var observacion = LeerString(datosJson, "observacion");
+                var observaciones = LeerString(datosJson, "observaciones");
+
+                AgregarSiTiene("Proveedor", proveedor);
+                AgregarSiTiene("Placa", placa);
+                AgregarSiTiene("Procedencia", procedencia);
+                AgregarSiTiene("Destino", destino);
+                AgregarSiTiene("Origen", origen);
+                AgregarSiTiene("Destino salida", destinoSalida);
+                AgregarSiTiene("Cuarto", cuarto);
+                AgregarSiTiene("Ocurrencia", ocurrencia);
+
+                if (datosJson.TryGetProperty("bienes", out var bienes) && bienes.ValueKind == JsonValueKind.Array)
+                {
+                    var lista = bienes.EnumerateArray()
+                        .Select(b =>
+                        {
+                            var cantidad = b.TryGetProperty("cantidad", out var c) && c.ValueKind == JsonValueKind.Number
+                                ? c.GetInt32().ToString()
+                                : "1";
+                            var descripcion = b.TryGetProperty("descripcion", out var d) && d.ValueKind == JsonValueKind.String
+                                ? d.GetString()
+                                : "-";
+                            return $"{cantidad}x {descripcion}";
+                        })
+                        .ToList();
+                    if (lista.Count > 0)
+                        partes.Add($"Bienes: {string.Join("; ", lista)}");
+                }
+
+                if (datosJson.TryGetProperty("objetos", out var objetos) && objetos.ValueKind == JsonValueKind.Array)
+                {
+                    var lista = objetos.EnumerateArray()
+                        .Select(o =>
+                        {
+                            var nombre = o.TryGetProperty("nombre", out var n) && n.ValueKind == JsonValueKind.String
+                                ? n.GetString()
+                                : "-";
+                            var cantidad = o.TryGetProperty("cantidad", out var c) && c.ValueKind == JsonValueKind.Number
+                                ? c.GetInt32().ToString()
+                                : "0";
+                            return $"{nombre}: {cantidad}";
+                        })
+                        .ToList();
+                    if (lista.Count > 0)
+                        partes.Add($"Objetos: {string.Join("; ", lista)}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(observacion))
+                    partes.Add($"Obs: {observacion}");
+                if (!string.IsNullOrWhiteSpace(observaciones) && observaciones != observacion)
+                    partes.Add($"Obs: {observaciones}");
+
+                return partes.Count > 0 ? string.Join(" | ", partes) : "-";
+            }
+
+            string ObtenerTipoLabel(string? tipo)
+            {
+                if (string.IsNullOrWhiteSpace(tipo)) return "Sin tipo";
+                return TipoOperacionLabels.TryGetValue(tipo, out var label) ? label : tipo;
+            }
+
+            string ObtenerMovimiento(string? tipo, DateTime? horaIngreso, DateTime? horaSalida)
+            {
+                if (string.Equals(tipo, "RegistroInformativoEnseresTurno", StringComparison.OrdinalIgnoreCase))
+                    return "Info";
+
+                var tieneIngreso = horaIngreso.HasValue;
+                var tieneSalida = horaSalida.HasValue;
+                if (tieneIngreso && !tieneSalida) return "Entrada";
+                if (!tieneIngreso && tieneSalida) return "Salida";
+                if (tieneIngreso && tieneSalida) return "Entrada";
+                return "";
+            }
+
+            var registros = salidas.Select(s =>
+            {
+                JsonElement datosJson;
+                try
+                {
+                    datosJson = JsonDocument.Parse(s.DatosJSON).RootElement;
+                }
+                catch
+                {
+                    datosJson = JsonDocument.Parse("{}").RootElement;
+                }
+
+                var horaIngreso = s.HoraIngreso ?? _salidasService.ObtenerHoraIngresoFromJson(s.DatosJSON);
+                var fechaIngresoDato = s.FechaIngreso ?? _salidasService.ObtenerFechaIngresoFromJson(s.DatosJSON);
+                var horaSalida = s.HoraSalida ?? _salidasService.ObtenerHoraSalidaFromJson(s.DatosJSON);
+                var fechaSalidaDato = s.FechaSalida ?? _salidasService.ObtenerFechaSalidaFromJson(s.DatosJSON);
+                var fechaDato = LeerFecha(datosJson, "fecha");
+                DateTime? fechaBase = fechaIngresoDato ?? fechaSalidaDato ?? fechaDato ?? s.FechaCreacion;
+
+                var movimiento = ObtenerMovimiento(s.TipoOperacion, horaIngreso, horaSalida);
+                var tipoLabel = ObtenerTipoLabel(s.TipoOperacion);
+                var detalle = ConstruirDetalle(datosJson);
+                var horaReferencia = horaIngreso ?? horaSalida ?? s.FechaCreacion;
+
+                return new
+                {
+                    s.Dni,
+                    Nombre = s.NombreCompleto ?? "-",
+                    TipoOperacion = s.TipoOperacion,
+                    TipoLabel = tipoLabel,
+                    Movimiento = movimiento,
+                    FechaReferencia = fechaBase,
+                    HoraReferencia = horaReferencia,
+                    OrdenFecha = fechaBase?.ToUniversalTime().Ticks ?? 0,
+                    Detalle = detalle,
+                    DatosJson = datosJson
+                };
+            }).ToList();
+
+            if (fechaInicio.HasValue || fechaFin.HasValue)
+            {
+                var inicio = fechaInicio?.Date;
+                var fin = fechaFin?.Date.AddDays(1);
+
+                registros = registros.Where(r =>
+                {
+                    if (!r.FechaReferencia.HasValue) return false;
+                    var fecha = r.FechaReferencia.Value;
+                    if (inicio.HasValue && fecha < inicio.Value) return false;
+                    if (fin.HasValue && fecha >= fin.Value) return false;
+                    return true;
+                }).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(tipoMovimiento))
+            {
+                registros = registros
+                    .Where(r => string.Equals(r.Movimiento, tipoMovimiento, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(texto))
+            {
+                var textoLower = texto.Trim().ToLowerInvariant();
+                registros = registros.Where(r =>
+                {
+                    var blob = $"{r.Dni} {r.Nombre} {r.DatosJson.GetRawText()}".ToLowerInvariant();
+                    return blob.Contains(textoLower);
+                }).ToList();
+            }
+
+            registros = registros
+                .OrderByDescending(r => r.OrdenFecha)
+                .ToList();
+
+            var pagina = registros
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            string FormatearFecha(DateTime? valor)
+            {
+                if (!valor.HasValue) return "-";
+                return valor.Value.ToString("dd/MM/yyyy");
+            }
+
+            string FormatearHora(DateTime? valor)
+            {
+                if (!valor.HasValue) return "-";
+                return valor.Value.ToString("HH:mm");
+            }
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Historial");
+
+            ws.Cell(1, 1).Value = "Fecha";
+            ws.Cell(1, 2).Value = "Hora";
+            ws.Cell(1, 3).Value = "Tipo";
+            ws.Cell(1, 4).Value = "Movimiento";
+            ws.Cell(1, 5).Value = "DNI";
+            ws.Cell(1, 6).Value = "Nombre";
+            ws.Cell(1, 7).Value = "Detalle";
+
+            for (int i = 0; i < pagina.Count; i++)
+            {
+                var row = i + 2;
+                ws.Cell(row, 1).Value = FormatearFecha(pagina[i].FechaReferencia);
+                ws.Cell(row, 2).Value = FormatearHora(pagina[i].HoraReferencia);
+                ws.Cell(row, 3).Value = pagina[i].TipoLabel;
+                ws.Cell(row, 4).Value = pagina[i].Movimiento;
+                ws.Cell(row, 5).Value = pagina[i].Dni;
+                ws.Cell(row, 6).Value = pagina[i].Nombre;
+                ws.Cell(row, 7).Value = pagina[i].Detalle;
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fechaNombre = DateTime.Now.ToString("yyyyMMdd");
+            var nombreArchivo = $"historial_admin_{fechaNombre}_p{page}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                nombreArchivo
+            );
         }
 
         // ======================================================

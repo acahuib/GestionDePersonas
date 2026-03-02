@@ -20,6 +20,11 @@ function crearSidebar() {
                         🏠 Home
                     </a>
                 </li>
+                <li>
+                    <a href="${basePath}historial.html?tipo=Proveedor">
+                        🗂️ Historiales
+                    </a>
+                </li>
                 
                 <li class="sidebar-submenu">
                     <a href="#">
