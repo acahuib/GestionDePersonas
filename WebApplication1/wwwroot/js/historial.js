@@ -135,7 +135,6 @@ function normalizarDatos(item) {
         fechaFiltro: fechaBase ? new Date(fechaBase) : null,
         ordenFecha,
         turno: datos.turno || "-",
-        puesto: datos.puesto || "-",
         agenteNombre: datos.agenteNombre || item.nombreCompleto || "-",
         agenteDni: datos.agenteDni || item.dni || "-",
         objetos: Array.isArray(datos.objetos)

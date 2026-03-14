@@ -64,7 +64,6 @@ function obtenerItems() {
 
 async function registrarEnseres() {
     const turno = document.getElementById("turno").value;
-    const puesto = document.getElementById("puesto").value.trim();
     const fecha = document.getElementById("fecha").value;
     const observaciones = document.getElementById("observaciones").value.trim();
     const mensaje = document.getElementById("mensaje");
@@ -73,9 +72,9 @@ async function registrarEnseres() {
     mensaje.className = "";
     mensaje.innerText = "";
 
-    if (!turno || !puesto || !fecha) {
+    if (!turno || !fecha) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete turno, puesto y fecha";
+        mensaje.innerText = "Complete turno y fecha";
         return;
     }
 
@@ -100,7 +99,6 @@ async function registrarEnseres() {
             method: "POST",
             body: JSON.stringify({
                 turno,
-                puesto,
                 fecha: new Date(`${fecha}T00:00:00`).toISOString(),
                 objetos,
                 observaciones: observaciones || null
@@ -115,7 +113,6 @@ async function registrarEnseres() {
         mensaje.className = "success";
         mensaje.innerText = "Registro informativo guardado correctamente";
 
-        document.getElementById("puesto").value = "";
         document.getElementById("observaciones").value = "";
         document.getElementById("items-container").innerHTML = "";
         agregarItem();
@@ -150,7 +147,7 @@ async function cargarRegistrosDelDia() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>Fecha</th><th>Turno</th><th>Puesto</th><th>Agente</th><th>Objetos</th><th>Hora Registro</th>';
+        html += '<th>Fecha</th><th>Turno</th><th>Agente</th><th>Objetos</th><th>Hora Registro</th>';
         html += '</tr></thead><tbody>';
 
         registrosHoy.forEach((r) => {
@@ -168,7 +165,6 @@ async function cargarRegistrosDelDia() {
             html += "<tr>";
             html += `<td>${fecha}</td>`;
             html += `<td>${datos.turno || "-"}</td>`;
-            html += `<td>${datos.puesto || "-"}</td>`;
             html += `<td>${datos.agenteNombre || r.nombreCompleto || "-"}</td>`;
             html += `<td class="cell-wrap" style="max-width: 260px;">${resumenObjetos}</td>`;
             html += `<td>${horaRegistro}</td>`;

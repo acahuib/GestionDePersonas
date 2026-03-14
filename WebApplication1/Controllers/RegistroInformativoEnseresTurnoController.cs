@@ -36,9 +36,6 @@ namespace WebApplication1.Controllers
             if (string.IsNullOrWhiteSpace(dto.Turno))
                 return BadRequest("Turno es requerido");
 
-            if (string.IsNullOrWhiteSpace(dto.Puesto))
-                return BadRequest("Puesto es requerido");
-
             if (dto.Objetos == null || dto.Objetos.Count == 0)
                 return BadRequest("Debe registrar al menos un objeto");
 
@@ -99,7 +96,6 @@ namespace WebApplication1.Controllers
                 new
                 {
                     turno = dto.Turno.Trim(),
-                    puesto = dto.Puesto.Trim(),
                     fecha = fechaRegistro,
                     agenteNombre = usuario.NombreCompleto,
                     agenteDni = dniGuardia,

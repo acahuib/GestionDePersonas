@@ -287,7 +287,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
 
     try {
         if (!registrosEnseres.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="loading">Cargando registros...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">Cargando registros...</td></tr>';
         }
 
         const token = localStorage.getItem('token');
@@ -316,7 +316,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
         renderizarTablaEnseresTurnoAdmin();
     } catch (error) {
         console.error('Error al cargar enseres por turno:', error);
-        tbody.innerHTML = '<tr><td colspan="7" class="error">Error al cargar registros</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="error">Error al cargar registros</td></tr>';
         document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
     }
@@ -330,7 +330,7 @@ function renderizarTablaEnseresTurnoAdmin() {
     const registrosPagina = registrosEnseres.slice(inicio, fin);
 
     if (!registrosEnseres || registrosEnseres.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay registros informativos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay registros informativos</td></tr>';
         document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
         return;
@@ -354,7 +354,6 @@ function renderizarTablaEnseresTurnoAdmin() {
             <tr>
                 <td>${fechaTurno}</td>
                 <td>${datos.turno || '-'}</td>
-                <td>${datos.puesto || '-'}</td>
                 <td>${datos.agenteNombre || r.nombreCompleto || '-'}</td>
                 <td>${datos.agenteDni || r.dni || '-'}</td>
                 <td>${objetos}</td>

@@ -5,6 +5,21 @@
 let personaEncontrada = null;
 let contadorBienes = 0;
 let bienesPendientes = [];
+let prefillNombreCompleto = null;
+
+function dividirNombreCompleto(nombreCompleto) {
+    const partes = (nombreCompleto || "").trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) {
+        return { nombres: "", apellidos: "" };
+    }
+    if (partes.length === 1) {
+        return { nombres: partes[0], apellidos: "" };
+    }
+    return {
+        nombres: partes.slice(0, -1).join(" "),
+        apellidos: partes[partes.length - 1]
+    };
+}
 
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
@@ -66,7 +81,15 @@ async function buscarPersonaPorDni() {
             nombresInput.placeholder = "Nombres";
             apellidosInput.placeholder = "Apellidos";
             await cargarBienesPendientesPorDni(dni);
-            nombresInput.focus();
+            if (prefillNombreCompleto) {
+                const partes = dividirNombreCompleto(prefillNombreCompleto);
+                nombresInput.value = partes.nombres;
+                apellidosInput.value = partes.apellidos;
+                prefillNombreCompleto = null;
+                apellidosInput.focus();
+            } else {
+                nombresInput.focus();
+            }
         } else {
             console.error(`❌ Error del servidor: ${response.status}`);
             throw new Error(`Error del servidor: ${response.status}`);
@@ -79,10 +102,31 @@ async function buscarPersonaPorDni() {
         apellidosInput.disabled = false;
         nombresInput.placeholder = "Nombres";
         apellidosInput.placeholder = "Apellidos";
+        if (prefillNombreCompleto) {
+            const partes = dividirNombreCompleto(prefillNombreCompleto);
+            nombresInput.value = partes.nombres;
+            apellidosInput.value = partes.apellidos;
+            prefillNombreCompleto = null;
+        }
         bienesPendientes = [];
         renderBienesPendientes();
         if (pendingInfo) pendingInfo.style.display = "none";
     }
+}
+
+async function prefillDesdePersonalLocal() {
+    const params = new URLSearchParams(window.location.search);
+    const dniParam = params.get("dni");
+    const nombreParam = params.get("nombreApellidos") || params.get("nombre");
+
+    if (!dniParam) return;
+
+    const dniInput = document.getElementById("dni");
+    if (!dniInput) return;
+
+    dniInput.value = dniParam.trim();
+    prefillNombreCompleto = nombreParam ? nombreParam.trim() : null;
+    await buscarPersonaPorDni();
 }
 
 async function cargarBienesPendientesPorDni(dni) {

@@ -204,6 +204,15 @@ function irASalidaFinal(salidaId, dni, nombre, horaIngreso, fechaIngreso, horaSa
     window.location.href = `personal_local_salida.html?${params.toString()}`;
 }
 
+// Navegar a control de bienes con DNI precargado
+function irAControlBienes(dni, nombre) {
+    const params = new URLSearchParams({
+        dni,
+        nombreApellidos: nombre
+    });
+    window.location.href = `/ControlBienes/html/control_bienes.html?${params.toString()}`;
+}
+
 // Cargar personal activo (con ingreso, sin salida final)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
@@ -306,6 +315,8 @@ async function cargarActivos() {
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
+
+            html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
 
             if (tipoPersonaLocal === "Retornando") {
                 html += '<span class="muted">Sin salida en este cuaderno</span>';
