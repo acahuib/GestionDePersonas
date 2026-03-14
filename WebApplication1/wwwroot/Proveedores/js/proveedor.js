@@ -107,13 +107,20 @@ async function registrarEntrada() {
     }
 
     try {
+        const horaIngresoInput = document.getElementById("horaIngreso").value;
         const body = {
             dni,
             procedencia,
             destino,
-            horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
             observacion: observacion || null
         };
+
+        // Enviar horaIngreso solo si se especifica
+        if (horaIngresoInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+        }
 
         // Solo enviar nombres/apellidos si DNI no existe en tabla Personas
         if (!personaEncontrada) {
@@ -142,6 +149,7 @@ async function registrarEntrada() {
         document.getElementById("procedencia").value = "";
         document.getElementById("destino").value = "";
         document.getElementById("observacion").value = "";
+        document.getElementById("horaIngreso").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombres").disabled = false;
         document.getElementById("apellidos").disabled = false;

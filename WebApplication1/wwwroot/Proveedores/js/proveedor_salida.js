@@ -24,6 +24,7 @@ async function registrarSalida() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
     const observacion = document.getElementById("observacion").value.trim();
+    const horaSalidaInput = document.getElementById("horaSalida").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -36,13 +37,21 @@ async function registrarSalida() {
     }
 
     try {
+        const body = {
+            observacion: observacion || null
+        };
+
+        // Enviar horaSalida solo si se especifica
+        if (horaSalidaInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+        }
+
         // Usar PUT para actualizar el registro existente
         const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/salida`, {
             method: "PUT",
-            body: JSON.stringify({
-                horaSalida: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
-                observacion: observacion || null
-            })
+            body: JSON.stringify(body)
         });
 
         if (!responseSalida.ok) {

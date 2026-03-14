@@ -106,6 +106,9 @@ async function registrarMovimientoComplementario() {
     const destino = esIngreso
         ? document.getElementById("destinoIngreso").value.trim()
         : document.getElementById("destinoSalida").value.trim();
+    const horaInput = esIngreso
+        ? document.getElementById("horaIngreso").value
+        : document.getElementById("horaSalida").value;
 
     if (!km || !origen || !destino) {
         mensaje.className = "error";
@@ -127,19 +130,28 @@ async function registrarMovimientoComplementario() {
 
         const body = esIngreso
             ? {
-                horaIngreso: new Date().toISOString(),
                 kmIngreso: parseInt(km),
                 origenIngreso: origen,
                 destinoIngreso: destino,
                 observacion: observacion || null
             }
             : {
-                horaSalida: new Date().toISOString(),
                 kmSalida: parseInt(km),
                 origenSalida: origen,
                 destinoSalida: destino,
                 observacion: observacion || null
             };
+
+        // Enviar hora solo si se especifica
+        if (horaInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const horaKey = esIngreso ? 'horaIngreso' : 'horaSalida';
+            body[horaKey] = new Date(`${today}T${horaInput}`).toISOString();
+        } else {
+            const horaKey = esIngreso ? 'horaIngreso' : 'horaSalida';
+            body[horaKey] = new Date().toISOString();
+        }
 
         const response = await fetchAuth(endpoint, {
             method: "PUT",

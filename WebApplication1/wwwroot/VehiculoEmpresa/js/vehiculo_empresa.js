@@ -11,6 +11,7 @@ function actualizarFormularioPorTipoInicial() {
     document.getElementById("label-km").textContent = esSalida ? "Kilometraje de Salida *" : "Kilometraje de Ingreso *";
     document.getElementById("label-origen").textContent = esSalida ? "Origen de Salida *" : "Origen de Ingreso *";
     document.getElementById("label-destino").textContent = esSalida ? "Destino de Salida *" : "Destino de Ingreso *";
+    document.getElementById("label-hora").textContent = esSalida ? "Hora de Salida (opcional)" : "Hora de Ingreso (opcional)";
 
     const boton = document.getElementById("btn-registrar");
     boton.className = esSalida ? "btn-danger btn-block" : "btn-success btn-block";
@@ -88,6 +89,7 @@ async function registrarMovimientoInicial() {
     const kmMovimiento = document.getElementById("kmMovimiento").value.trim();
     const origenMovimiento = document.getElementById("origenMovimiento").value.trim();
     const destinoMovimiento = document.getElementById("destinoMovimiento").value.trim();
+    const horaMovimientoInput = document.getElementById("horaMovimiento").value;
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -132,12 +134,26 @@ async function registrarMovimientoInicial() {
             body.kmSalida = parseInt(kmMovimiento);
             body.origenSalida = origenMovimiento;
             body.destinoSalida = destinoMovimiento;
-            body.horaSalida = new Date().toISOString();
+            // Enviar horaSalida solo si se especifica
+            if (horaMovimientoInput) {
+                // Combinar con la fecha actual para crear un datetime completo
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                body.horaSalida = new Date(`${today}T${horaMovimientoInput}`).toISOString();
+            } else {
+                body.horaSalida = new Date().toISOString();
+            }
         } else {
             body.kmIngreso = parseInt(kmMovimiento);
             body.origenIngreso = origenMovimiento;
             body.destinoIngreso = destinoMovimiento;
-            body.horaIngreso = new Date().toISOString();
+            // Enviar horaIngreso solo si se especifica
+            if (horaMovimientoInput) {
+                // Combinar con la fecha actual para crear un datetime completo
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                body.horaIngreso = new Date(`${today}T${horaMovimientoInput}`).toISOString();
+            } else {
+                body.horaIngreso = new Date().toISOString();
+            }
         }
 
         // Solo enviar conductor si DNI no existe en tabla Personas

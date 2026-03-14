@@ -6,7 +6,7 @@ namespace WebApplication1.DTOs
     /// </summary>
     public class ActualizarSalidaProveedorDto
     {
-        public required DateTime HoraSalida { get; set; }
+        public DateTime? HoraSalida { get; set; }
         public string? Observacion { get; set; }
     }
 }

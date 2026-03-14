@@ -169,12 +169,16 @@ async function cargarPersonasDentro() {
             // Una persona está DENTRO si su último movimiento es "Entrada" o "Ingreso"
             // Está FUERA si su último movimiento es "Salida"
             if (tipoMov === 'entrada' || tipoMov === 'ingreso') {
+                const fechaObj = new Date(ultimoMov.fechaHora);
+                const fechaStr = fechaObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const horaStr = fechaObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+
                 personasDentro.push({
                     dni: ultimoMov.dni,
                     nombre: ultimoMov.nombrePersona,
-                    tipoPersona: ultimoMov.tipoPersona || 'Desconocido',
-                    tipoOperacion: ultimoMov.tipoOperacion || 'N/A',
-                    horaIngreso: ultimoMov.fechaHora,
+                    tipoRegistro: ultimoMov.tipoOperacion || 'N/A',
+                    fechaIngreso: fechaStr,
+                    horaIngreso: horaStr,
                     tiempoDentro: calcularTiempoDentro(ultimoMov.fechaHora)
                 });
             }
@@ -248,9 +252,9 @@ function renderizarTablaPersonasDentro(personas) {
         <tr>
             <td><strong>${p.dni}</strong></td>
             <td>${p.nombre}</td>
-            <td><span class="badge badge-${getTipoBadge(p.tipoPersona)}">${p.tipoPersona}</span></td>
-            <td>${p.tipoOperacion}</td>
-            <td>${formatearFechaHora(p.horaIngreso)}</td>
+            <td>${p.tipoRegistro}</td>
+            <td>${p.fechaIngreso}</td>
+            <td>${p.horaIngreso}</td>
             <td>${p.tiempoDentro}</td>
         </tr>
     `).join('');
@@ -400,14 +404,16 @@ function calcularTiempoDentro(horaIngreso) {
     const inicio = new Date(horaIngreso);
     const ahora = new Date();
     const diffMs = ahora - inicio;
-    
-    const horas = Math.floor(diffMs / (1000 * 60 * 60));
+
+    const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (horas > 0) {
-        return `${horas}h ${minutos}m`;
-    }
-    return `${minutos}m`;
+
+    let resultado = '';
+    if (dias > 0) resultado += `${dias}d `;
+    if (horas > 0) resultado += `${horas}h `;
+    resultado += `${minutos}m`;
+    return resultado.trim();
 }
 
 // Formatear fecha y hora

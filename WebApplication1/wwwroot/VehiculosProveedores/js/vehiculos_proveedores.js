@@ -84,6 +84,7 @@ async function registrarEntrada() {
     const lote = document.getElementById("lote").value.trim();
     const cantidad = document.getElementById("cantidad").value.trim();
     const procedencia = document.getElementById("procedencia").value.trim();
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -119,9 +120,15 @@ async function registrarEntrada() {
             lote,
             cantidad,
             procedencia,
-            horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
             observacion: observacion || null
         };
+
+        // Enviar horaIngreso solo si se especifica
+        if (horaIngresoInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+        }
 
         // Solo enviar nombres/apellidos si DNI no existe en tabla Personas
         if (!personaEncontrada) {
@@ -152,6 +159,7 @@ async function registrarEntrada() {
         document.getElementById("lote").value = "";
         document.getElementById("cantidad").value = "";
         document.getElementById("procedencia").value = "";
+        document.getElementById("horaIngreso").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombres").disabled = false;

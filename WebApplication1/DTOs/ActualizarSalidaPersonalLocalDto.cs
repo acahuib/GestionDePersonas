@@ -5,7 +5,7 @@ namespace WebApplication1.DTOs
     /// </summary>
     public class ActualizarSalidaPersonalLocalDto
     {
-        public required DateTime HoraSalida { get; set; }
+        public DateTime? HoraSalida { get; set; }
         public string? Observaciones { get; set; }
     }
 }

@@ -19,6 +19,7 @@ async function registrarIngresoAlmuerzo() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
     const observaciones = document.getElementById("observaciones").value.trim();
+    const horaEntradaAlmuerzoInput = document.getElementById("horaEntradaAlmuerzo").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -31,13 +32,21 @@ async function registrarIngresoAlmuerzo() {
     }
 
     try {
+        const body = {
+            observaciones: observaciones || null
+        };
+
+        // Enviar horaEntradaAlmuerzo solo si se especifica
+        if (horaEntradaAlmuerzoInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            body.horaEntradaAlmuerzo = new Date(`${today}T${horaEntradaAlmuerzoInput}`).toISOString();
+        }
+
         // Usar PUT para actualizar el registro existente
         const response = await fetchAuth(`${API_BASE}/personal-local/${salidaId}/almuerzo/ingreso`, {
             method: "PUT",
-            body: JSON.stringify({
-                horaEntradaAlmuerzo: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
-                observaciones: observaciones || null
-            })
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {

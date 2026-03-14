@@ -76,6 +76,7 @@ async function registrarIngreso() {
     const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
     const observaciones = document.getElementById("observaciones").value.trim();
     const tipoPersonaLocal = document.getElementById("tipoPersonaLocal")?.value || "Normal";
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -104,10 +105,16 @@ async function registrarIngreso() {
     try {
         const body = {
             dni,
-            horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
             tipoPersonaLocal,
             observaciones: observaciones || null
         };
+
+        // Enviar horaIngreso solo si se especifica
+        if (horaIngresoInput) {
+            // Combinar con la fecha actual para crear un datetime completo
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+        }
 
         // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
@@ -132,6 +139,7 @@ async function registrarIngreso() {
         document.getElementById("dni").value = "";
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("observaciones").value = "";
+        document.getElementById("horaIngreso").value = "";
         const tipoSelect = document.getElementById("tipoPersonaLocal");
         if (tipoSelect) tipoSelect.value = "Normal";
         actualizarHintRetornando();

@@ -42,9 +42,6 @@ namespace WebApplication1.Controllers
                 if (dto.HoraSalida.HasValue)
                     return BadRequest("Proveedor: este endpoint solo registra ingreso. Use PUT /api/proveedor/{id}/salida para la salida.");
 
-                if (!dto.HoraIngreso.HasValue)
-                    return BadRequest("Proveedor: debe enviar horaIngreso en el registro inicial.");
-
                 string tipoMovimiento = "Entrada";
 
                 // ===== NUEVO: Buscar o crear en tabla Personas =====
@@ -93,7 +90,9 @@ namespace WebApplication1.Controllers
 
                 // NUEVO: Usar hora local del servidor (Perú UTC-5)
                 var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                var ahoraLocal = dto.HoraIngreso.HasValue 
+                    ? dto.HoraIngreso.Value 
+                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
                 var fechaActual = ahoraLocal.Date;
                 
                 // NUEVO: Extraer horaIngreso/fechaIngreso para guardar en columnas
@@ -172,7 +171,9 @@ namespace WebApplication1.Controllers
 
             // NUEVO: Usar hora local del servidor (Perú UTC-5)
             var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            var ahoraLocal = dto.HoraSalida.HasValue 
+                ? dto.HoraSalida.Value 
+                : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
             var fechaActual = ahoraLocal.Date;
             
             // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
