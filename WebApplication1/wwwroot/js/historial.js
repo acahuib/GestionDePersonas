@@ -9,7 +9,8 @@ const TIPOS_OPERACION = {
     DiasLibre: "Dias Libre",
     OficialPermisos: "Oficial Permisos",
     SalidasPermisosPersonal: "Permisos Personal",
-    RegistroInformativoEnseresTurno: "Enseres por Turno"
+    RegistroInformativoEnseresTurno: "Enseres por Turno",
+    Cancha: "Cancha"
 };
 
 const TIPOS_DISPONIBLES = Object.keys(TIPOS_OPERACION);
@@ -61,6 +62,13 @@ function construirDetalle(item) {
     if (item.bienes && item.bienes !== "-") partes.push(`Bienes: ${limpiarTextoDetalle(item.bienes)}`);
     if (item.objetos && item.objetos !== "-") partes.push(`Objetos: ${limpiarTextoDetalle(item.objetos)}`);
     if (item.ocurrencia && item.ocurrencia !== "-") partes.push(`Ocurrencia: ${limpiarTextoDetalle(item.ocurrencia)}`);
+    if (item.categoria && item.categoria !== "-") partes.push(`Categoria: ${limpiarTextoDetalle(item.categoria)}`);
+    if (item.equipoA && item.equipoA !== "-") partes.push(`Equipo A: ${limpiarTextoDetalle(item.equipoA)}`);
+    if (item.equipoB && item.equipoB !== "-") partes.push(`Equipo B: ${limpiarTextoDetalle(item.equipoB)}`);
+    if (item.estado && item.estado !== "-") partes.push(`Estado: ${limpiarTextoDetalle(item.estado)}`);
+    if (item.observacionCierre && item.observacionCierre !== "-") {
+        partes.push(`Observacion cierre: ${limpiarTextoDetalle(item.observacionCierre)}`);
+    }
     if (item.observacion && item.observacion.trim()) partes.push(`Obs: ${limpiarTextoDetalle(item.observacion)}`);
     if (item.observaciones && item.observaciones.trim() && item.observaciones !== item.observacion) {
         partes.push(`Obs: ${limpiarTextoDetalle(item.observaciones)}`);
@@ -140,6 +148,15 @@ function normalizarDatos(item) {
         objetos: Array.isArray(datos.objetos)
             ? datos.objetos.map(o => `${o.nombre || "-"}: ${o.cantidad || 0}`).join("\n")
             : "-",
+        categoria: datos.categoria || "-",
+        equipoA: Array.isArray(datos.equipoA)
+            ? datos.equipoA.join("\n")
+            : "-",
+        equipoB: Array.isArray(datos.equipoB)
+            ? datos.equipoB.join("\n")
+            : "-",
+        estado: datos.estado || "-",
+        observacionCierre: datos.observacionCierre || "-",
         bienes: Array.isArray(datos.bienes)
             ? datos.bienes.map(b => `${b.cantidad || 1}x ${b.descripcion || "-"}`).join("\n")
             : "-",
@@ -164,7 +181,7 @@ function normalizarDatos(item) {
 }
 
 function obtenerMovimiento(item) {
-    if (item.tipoOperacion === "RegistroInformativoEnseresTurno") {
+    if (item.tipoOperacion === "RegistroInformativoEnseresTurno" || item.tipoOperacion === "Cancha") {
         return "Info";
     }
 

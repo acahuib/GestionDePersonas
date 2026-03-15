@@ -60,7 +60,8 @@ namespace WebApplication1.Controllers
             { "DiasLibre", "Dias Libre" },
             { "OficialPermisos", "Oficial Permisos" },
             { "SalidasPermisosPersonal", "Permisos Personal" },
-            { "RegistroInformativoEnseresTurno", "Enseres por Turno" }
+            { "RegistroInformativoEnseresTurno", "Enseres por Turno" },
+            { "Cancha", "Cancha" }
         };
 
         [HttpPost("modo-tecnico")]

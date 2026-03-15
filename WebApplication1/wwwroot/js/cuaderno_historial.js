@@ -45,6 +45,19 @@ async function initCuadernoHistorial() {
         pushIf("Cuarto", datos.cuarto);
         pushIf("Ocurrencia", datos.ocurrencia);
         pushIf("Observacion", datos.observacion || datos.observaciones);
+        pushIf("Categoria", datos.categoria);
+        pushIf("Estado", datos.estado);
+        pushIf("Observacion cierre", datos.observacionCierre);
+
+        if (Array.isArray(datos.equipoA) && datos.equipoA.length) {
+            const listado = datos.equipoA.join("; ");
+            partes.push(`Equipo A: ${listado}`);
+        }
+
+        if (Array.isArray(datos.equipoB) && datos.equipoB.length) {
+            const listado = datos.equipoB.join("; ");
+            partes.push(`Equipo B: ${listado}`);
+        }
 
         if (Array.isArray(datos.bienes) && datos.bienes.length) {
             const listado = datos.bienes
@@ -65,6 +78,7 @@ async function initCuadernoHistorial() {
 
     const obtenerMovimiento = (item, datos) => {
         if (tipoOperacion === "RegistroInformativoEnseresTurno") return "Info";
+        if (tipoOperacion === "Cancha") return "Cancha";
         const horaIngreso = item.horaIngreso || datos.horaIngreso;
         const horaSalida = item.horaSalida || datos.horaSalida;
         const tieneIngreso = horaIngreso !== null && horaIngreso !== undefined && String(horaIngreso).trim() !== "";
@@ -91,7 +105,7 @@ async function initCuadernoHistorial() {
         const horaSalida = item.horaSalida || datos.horaSalida;
         const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
 
-        const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.agenteNombre || "-";
+        const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.agenteNombre || "-";
         const fechaReferenciaRaw = horaIngreso || horaSalida || item.fechaCreacion || fechaBase;
         const timestamp = fechaReferenciaRaw ? new Date(fechaReferenciaRaw).getTime() : 0;
 

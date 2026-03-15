@@ -70,5 +70,32 @@ namespace WebApplication1.Controllers
 
             return Ok(personas);
         }
+
+        /// <summary>
+        /// Busca personas por nombre parcial (para autocompletado)
+        /// Retorna multiples coincidencias que contienen el texto buscado
+        /// </summary>
+        /// <param name="texto">Texto parcial del nombre a buscar</param>
+        /// <returns>Lista de personas que coinciden</returns>
+        [HttpGet("buscar-nombre")]
+        public async Task<ActionResult<IEnumerable<Persona>>> BuscarPorNombre([FromQuery] string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return BadRequest(new { mensaje = "Texto es requerido para busqueda" });
+
+            var textoNormalizado = texto.Trim();
+            if (textoNormalizado.Length < 2)
+                return Ok(Array.Empty<Persona>());
+
+            var patron = $"%{textoNormalizado}%";
+
+            var personas = await _context.Personas
+                .Where(p => EF.Functions.Like(p.Nombre, patron))
+                .OrderBy(p => p.Nombre)
+                .Take(10)
+                .ToListAsync();
+
+            return Ok(personas);
+        }
     }
 }
