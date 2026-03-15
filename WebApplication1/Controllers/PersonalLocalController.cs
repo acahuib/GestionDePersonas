@@ -372,8 +372,23 @@ namespace WebApplication1.Controllers
         /// GET /api/personal-local/{id}
         /// </summary>
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> ObtenerSalidaPorId(int id)
+        {
+            return await ObtenerSalidaPorIdCore(id);
+        }
+
+        /// <summary>
+        /// Modo tecnico: obtiene un registro por ID (sin autenticacion)
+        /// GET /api/tecnico/personal-local/{id}
+        /// </summary>
+        [HttpGet("/api/tecnico/personal-local/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ObtenerSalidaPorIdTecnico(int id)
+        {
+            return await ObtenerSalidaPorIdCore(id);
+        }
+
+        private async Task<IActionResult> ObtenerSalidaPorIdCore(int id)
         {
             try
             {

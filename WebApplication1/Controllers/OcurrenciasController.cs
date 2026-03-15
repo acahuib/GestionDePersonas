@@ -332,8 +332,23 @@ namespace WebApplication1.Controllers
         /// GET /api/ocurrencias/{id}
         /// </summary>
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> ObtenerOcurrenciaPorId(int id)
+        {
+            return await ObtenerOcurrenciaPorIdCore(id);
+        }
+
+        /// <summary>
+        /// Modo tecnico: obtiene una ocurrencia por ID (sin autenticacion)
+        /// GET /api/tecnico/ocurrencias/{id}
+        /// </summary>
+        [HttpGet("/api/tecnico/ocurrencias/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ObtenerOcurrenciaPorIdTecnico(int id)
+        {
+            return await ObtenerOcurrenciaPorIdCore(id);
+        }
+
+        private async Task<IActionResult> ObtenerOcurrenciaPorIdCore(int id)
         {
             try
             {

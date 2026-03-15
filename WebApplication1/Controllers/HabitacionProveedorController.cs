@@ -233,8 +233,23 @@ namespace WebApplication1.Controllers
         /// GET /api/habitacion-proveedor/{id}
         /// </summary>
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> ObtenerSalidaPorId(int id)
+        {
+            return await ObtenerSalidaPorIdCore(id);
+        }
+
+        /// <summary>
+        /// Modo tecnico: obtiene una salida por ID (sin autenticacion)
+        /// GET /api/tecnico/habitacion-proveedor/{id}
+        /// </summary>
+        [HttpGet("/api/tecnico/habitacion-proveedor/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ObtenerSalidaPorIdTecnico(int id)
+        {
+            return await ObtenerSalidaPorIdCore(id);
+        }
+
+        private async Task<IActionResult> ObtenerSalidaPorIdCore(int id)
         {
             var salida = await _salidasService.ObtenerSalidaPorId(id);
             if (salida == null)

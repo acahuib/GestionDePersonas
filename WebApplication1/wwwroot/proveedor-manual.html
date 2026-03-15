@@ -2,24 +2,95 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Modo Técnico - Registro Manual</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Tecnico - Registro Manual</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 24px; }
-        .container { max-width: 860px; margin: auto; background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-        h2 { margin-top: 0; }
-        label { display:block; margin-top: 10px; font-weight: 600; }
-        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; }
-        textarea { min-height: 170px; font-family: Consolas, monospace; }
-        button { background:#2c3e50; color:#fff; border:none; cursor:pointer; }
-        button:hover { background:#1f2f3e; }
-        .hint { color:#666; font-size:12px; margin-top:6px; }
-        .response { margin-top: 14px; white-space: pre-wrap; background:#f1f1f1; border-radius: 6px; padding: 10px; }
-        .row { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --accent: #0ea5e9;
+            --accent-dark: #0284c7;
+            --border: #e2e8f0;
+            --warn: #f97316;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top right, #e0f2fe 0%, #f3f4f6 55%);
+            color: var(--ink);
+            margin: 0;
+            padding: 28px 18px 40px;
+        }
+        .container {
+            max-width: 980px;
+            margin: auto;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(15, 23, 42, 0.05);
+        }
+        h2 {
+            margin: 0 0 8px;
+            font-size: 26px;
+            letter-spacing: -0.02em;
+        }
+        .subtitle { color: var(--muted); margin: 0 0 16px; }
+        label { display:block; margin-top: 12px; font-weight: 600; }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+        }
+        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(14, 165, 233, 0.2); border-color: var(--accent); }
+        textarea { min-height: 170px; font-family: "Consolas", "Courier New", monospace; }
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: var(--accent-dark); }
+        .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+        .response {
+            margin-top: 14px;
+            white-space: pre-wrap;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px dashed var(--border);
+        }
+        .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .panel {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+        }
+        .panel h3 { margin: 0 0 8px; font-size: 16px; }
+        .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+        .actions button { background: #0f172a; }
+        .actions button.secondary { background: #e2e8f0; color: #0f172a; }
+        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 12px; }
+        .guide-list { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--muted); }
+        .warn { color: var(--warn); font-weight: 600; }
+        @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>Modo Técnico - Registro Manual</h2>
+    <h2>Modo Tecnico - Registro Manual</h2>
+    <p class="subtitle">Formulario rapido para cargar datos del cuaderno fisico sin pelear con el formato.</p>
 
     <form id="formManual">
         <div class="row">
@@ -75,6 +146,17 @@
         <label>Datos JSON (editable según operación)</label>
         <textarea id="datosJson" required></textarea>
 
+        <div class="panel" id="jsonActionsPanel">
+            <h3>Acciones rapidas</h3>
+            <div class="actions">
+                <button type="button" id="btnResetTemplate">Restablecer plantilla</button>
+                <button type="button" id="btnFormatJson" class="secondary">Formatear JSON</button>
+                <button type="button" id="btnValidateJson" class="secondary">Validar JSON</button>
+                <button type="button" id="btnCopyJson" class="secondary">Copiar JSON</button>
+            </div>
+            <div class="hint" id="jsonStatus"></div>
+        </div>
+
         <div id="personalLocalPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fafafa;">
             <label style="margin-top:0;">Personal Local - Fechas/Horas (opcional)</label>
             <div class="row">
@@ -98,6 +180,13 @@
                 </div>
             </div>
             <div class="hint">Si dejas campos vacíos, se enviarán como null.</div>
+        </div>
+
+        <div class="panel" id="guidePanel">
+            <h3>Guia rapida</h3>
+            <div class="badge" id="tipoBadge">Tipo: -</div>
+            <p class="hint" id="tipoDescripcion"></p>
+            <ul class="guide-list" id="tipoCampos"></ul>
         </div>
 
         <label>Observación</label>
@@ -133,6 +222,109 @@ const templates = {
     RegistroInformativoEnseresTurno: { turno: "", fecha: "", objetos: [{ nombre: "", cantidad: 1 }], observaciones: "" }
 };
 
+const guides = {
+    Proveedor: {
+        descripcion: "Entrada/salida de proveedores. Usa procedencia y destino.",
+        campos: [
+            { key: "procedencia", label: "procedencia" },
+            { key: "destino", label: "destino" },
+            { key: "guardiaIngreso", label: "guardiaIngreso (opcional)", optional: true },
+            { key: "guardiaSalida", label: "guardiaSalida (opcional)", optional: true }
+        ]
+    },
+    VehiculosProveedores: {
+        descripcion: "Vehiculos de proveedores. Se recomienda placa y proveedor.",
+        campos: [
+            { key: "placa", label: "placa" },
+            { key: "proveedor", label: "proveedor" },
+            { key: "nombreApellidos", label: "nombreApellidos" },
+            { key: "procedencia", label: "procedencia" },
+            { key: "lote", label: "lote" },
+            { key: "cantidad", label: "cantidad" }
+        ]
+    },
+    VehiculoEmpresa: {
+        descripcion: "Vehiculo de empresa. Controla km y origen/destino.",
+        campos: [
+            { key: "conductor", label: "conductor" },
+            { key: "placa", label: "placa" },
+            { key: "kmSalida", label: "kmSalida" },
+            { key: "kmIngreso", label: "kmIngreso" },
+            { key: "origenSalida", label: "origenSalida" },
+            { key: "destinoSalida", label: "destinoSalida" }
+        ]
+    },
+    PersonalLocal: {
+        descripcion: "Personal local. Horarios de almuerzo van en el panel auxiliar.",
+        campos: [
+            { key: "tipoPersonaLocal", label: "tipoPersonaLocal" },
+            { key: "horaSalidaAlmuerzo", label: "horaSalidaAlmuerzo (opcional)", optional: true },
+            { key: "horaEntradaAlmuerzo", label: "horaEntradaAlmuerzo (opcional)", optional: true }
+        ]
+    },
+    SalidasPermisosPersonal: {
+        descripcion: "Permisos personales. Debe incluir autorizacion.",
+        campos: [
+            { key: "nombre", label: "nombre" },
+            { key: "deDonde", label: "deDonde" },
+            { key: "personal", label: "personal" },
+            { key: "quienAutoriza", label: "quienAutoriza" },
+            { key: "observaciones", label: "observaciones (opcional)", optional: true }
+        ]
+    },
+    DiasLibre: {
+        descripcion: "Dias libres. Completa boleta y fechas.",
+        campos: [
+            { key: "numeroBoleta", label: "numeroBoleta" },
+            { key: "del", label: "del" },
+            { key: "al", label: "al" },
+            { key: "trabaja", label: "trabaja" }
+        ]
+    },
+    HabitacionProveedor: {
+        descripcion: "Uso de habitacion. Origen, cuarto y frazadas.",
+        campos: [
+            { key: "origen", label: "origen" },
+            { key: "cuarto", label: "cuarto" },
+            { key: "frazadas", label: "frazadas" }
+        ]
+    },
+    Ocurrencias: {
+        descripcion: "Ocurrencias generales. Texto de ocurrencia.",
+        campos: [
+            { key: "nombre", label: "nombre" },
+            { key: "ocurrencia", label: "ocurrencia" }
+        ]
+    },
+    ControlBienes: {
+        descripcion: "Control de bienes. Lista de bienes y cantidades.",
+        campos: [
+            { key: "bienes", label: "bienes[]" },
+            { key: "descripcion", label: "descripcion" },
+            { key: "marca", label: "marca" },
+            { key: "serie", label: "serie" },
+            { key: "cantidad", label: "cantidad" }
+        ]
+    },
+    OficialPermisos: {
+        descripcion: "Permisos oficiales. Origen y autorizacion.",
+        campos: [
+            { key: "deDonde", label: "deDonde" },
+            { key: "tipo", label: "tipo" },
+            { key: "quienAutoriza", label: "quienAutoriza" }
+        ]
+    },
+    RegistroInformativoEnseresTurno: {
+        descripcion: "Enseres por turno. Turno, fecha y objetos.",
+        campos: [
+            { key: "turno", label: "turno" },
+            { key: "fecha", label: "fecha" },
+            { key: "objetos", label: "objetos[]" },
+            { key: "observaciones", label: "observaciones (opcional)", optional: true }
+        ]
+    }
+};
+
 const tipoOperacionInput = document.getElementById("tipoOperacion");
 const tipoMovimientoInput = document.getElementById("tipoMovimiento");
 const datosJsonInput = document.getElementById("datosJson");
@@ -141,6 +333,15 @@ const nombresInput = document.getElementById("nombres");
 const apellidosInput = document.getElementById("apellidos");
 const dniHint = document.getElementById("dniHint");
 const personalLocalPanel = document.getElementById("personalLocalPanel");
+const jsonStatus = document.getElementById("jsonStatus");
+const tipoBadge = document.getElementById("tipoBadge");
+const tipoDescripcion = document.getElementById("tipoDescripcion");
+const tipoCampos = document.getElementById("tipoCampos");
+const btnResetTemplate = document.getElementById("btnResetTemplate");
+const btnFormatJson = document.getElementById("btnFormatJson");
+const btnValidateJson = document.getElementById("btnValidateJson");
+const btnCopyJson = document.getElementById("btnCopyJson");
+const fechaHoraManualInput = document.getElementById("fechaHoraManual");
 
 const plFields = {
     horaSalidaAlmuerzo: document.getElementById("pl_horaSalidaAlmuerzo"),
@@ -182,6 +383,95 @@ function isoToTime(value) {
     if (Number.isNaN(date.getTime())) return "";
     const pad = (n) => n.toString().padStart(2, "0");
     return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function setJsonStatus(message, isWarn) {
+    jsonStatus.textContent = message || "";
+    jsonStatus.className = isWarn ? "hint warn" : "hint";
+}
+
+function tryParseJson() {
+    try {
+        const data = JSON.parse(datosJsonInput.value || "{}");
+        return { ok: true, data };
+    } catch (error) {
+        return { ok: false, error };
+    }
+}
+
+function updateGuide() {
+    const tipo = tipoOperacionInput.value;
+    const guide = guides[tipo];
+    tipoBadge.textContent = `Tipo: ${tipo}`;
+    tipoDescripcion.textContent = guide?.descripcion || "";
+    tipoCampos.innerHTML = "";
+
+    if (!guide) return;
+
+    guide.campos.forEach((campo) => {
+        const li = document.createElement("li");
+        li.textContent = campo.label;
+        if (campo.optional) li.classList.add("hint");
+        tipoCampos.appendChild(li);
+    });
+}
+
+function formatJson() {
+    const parsed = tryParseJson();
+    if (!parsed.ok) {
+        setJsonStatus("JSON invalido. Revisa comas y llaves.", true);
+        return false;
+    }
+    datosJsonInput.value = JSON.stringify(parsed.data, null, 2);
+    setJsonStatus("JSON formateado.");
+    return true;
+}
+
+function validateJson() {
+    const parsed = tryParseJson();
+    if (!parsed.ok) {
+        setJsonStatus("JSON invalido. Revisa comas y llaves.", true);
+        return false;
+    }
+
+    const tipo = tipoOperacionInput.value;
+    const guide = guides[tipo];
+    if (!guide) {
+        setJsonStatus("JSON valido.");
+        return true;
+    }
+
+    const missing = [];
+    guide.campos.forEach((campo) => {
+        if (campo.optional) return;
+        const key = campo.key;
+        const value = parsed.data?.[key];
+        if (value === undefined || value === null || value === "") {
+            missing.push(campo.label);
+        }
+    });
+
+    if (missing.length) {
+        setJsonStatus(`Faltan campos en JSON: ${missing.join(", ")}`, true);
+        return false;
+    }
+
+    setJsonStatus("JSON valido y con campos clave.");
+    return true;
+}
+
+async function copyJson() {
+    const parsed = tryParseJson();
+    if (!parsed.ok) {
+        setJsonStatus("JSON invalido. No se puede copiar.", true);
+        return;
+    }
+    try {
+        await navigator.clipboard.writeText(JSON.stringify(parsed.data, null, 2));
+        setJsonStatus("JSON copiado al portapapeles.");
+    } catch {
+        setJsonStatus("No se pudo copiar el JSON.", true);
+    }
 }
 
 function syncPersonalLocalInputsToJson() {
@@ -241,6 +531,9 @@ function refreshTemplate() {
     if (tipo === "PersonalLocal") {
         syncJsonToPersonalLocalInputs();
     }
+
+    updateGuide();
+    setJsonStatus("Plantilla cargada.");
 }
 
 function setNamesLocked(locked) {
@@ -248,6 +541,15 @@ function setNamesLocked(locked) {
     apellidosInput.disabled = locked;
     nombresInput.required = !locked;
     apellidosInput.required = !locked;
+}
+
+function setDefaultFechaHora() {
+    if (!fechaHoraManualInput.value) {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, "0");
+        const value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        fechaHoraManualInput.value = value;
+    }
 }
 
 function splitNombre(nombreCompleto) {
@@ -289,6 +591,10 @@ async function validarDni() {
 tipoOperacionInput.addEventListener("change", refreshTemplate);
 dniInput.addEventListener("blur", validarDni);
 datosJsonInput.addEventListener("input", syncJsonToPersonalLocalInputs);
+btnResetTemplate.addEventListener("click", refreshTemplate);
+btnFormatJson.addEventListener("click", formatJson);
+btnValidateJson.addEventListener("click", validateJson);
+btnCopyJson.addEventListener("click", copyJson);
 
 Object.values(plFields).forEach(field => {
     field.addEventListener("change", syncPersonalLocalInputsToJson);
@@ -298,11 +604,10 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const fechaHoraManual = document.getElementById("fechaHoraManual").value;
-    let datos;
-    try {
-        datos = JSON.parse(datosJsonInput.value || "{}");
-    } catch {
-        document.getElementById("response").innerText = "JSON inválido en Datos JSON.";
+    const parsed = tryParseJson();
+    if (!parsed.ok) {
+        document.getElementById("response").innerText = "JSON invalido en Datos JSON.";
+        setJsonStatus("JSON invalido. Corrige antes de enviar.", true);
         return;
     }
 
@@ -313,7 +618,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
         nombres: nombresInput.value.trim() || null,
         apellidos: apellidosInput.value.trim() || null,
         fechaHoraManual: `${fechaHoraManual}:00`,
-        datos,
+        datos: parsed.data,
         observacion: document.getElementById("observacion").value.trim() || null
     };
 
@@ -334,6 +639,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
 });
 
 refreshTemplate();
+setDefaultFechaHora();
 </script>
 </body>
 </html>
