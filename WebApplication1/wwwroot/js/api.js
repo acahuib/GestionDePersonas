@@ -40,6 +40,25 @@ async function fetchAuth(url, options = {}) {
 }
 
 // ===============================
+// LEER MENSAJE DE ERROR
+// ===============================
+async function readApiError(response) {
+    if (!response) return "Error desconocido";
+
+    try {
+        const data = await response.clone().json();
+        return data?.mensaje || data?.error || "No se pudo procesar la solicitud";
+    } catch {
+        try {
+            const text = await response.clone().text();
+            return text || "No se pudo procesar la solicitud";
+        } catch {
+            return "No se pudo procesar la solicitud";
+        }
+    }
+}
+
+// ===============================
 // DETECTAR ENTER EN INPUTS
 // ===============================
 function addEnterListener(elementId, callback) {

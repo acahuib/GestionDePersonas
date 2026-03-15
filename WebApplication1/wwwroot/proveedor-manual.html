@@ -84,6 +84,11 @@
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 12px; }
         .guide-list { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--muted); }
         .warn { color: var(--warn); font-weight: 600; }
+        #simpleForm { display: grid; gap: 10px; margin-top: 10px; }
+        .simple-field { display: grid; gap: 4px; }
+        .simple-field label { margin: 0; font-weight: 600; }
+        .simple-field input { margin-top: 0; }
+        .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12px; }
         @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -123,7 +128,8 @@
         <div class="row">
             <div>
                 <label>DNI</label>
-                <input id="dni" maxlength="8" required />
+                <input id="dni" maxlength="8" list="dniSuggestions" required />
+                <datalist id="dniSuggestions"></datalist>
                 <div class="hint" id="dniHint"></div>
             </div>
             <div>
@@ -143,18 +149,30 @@
             </div>
         </div>
 
-        <label>Datos JSON (editable según operación)</label>
-        <textarea id="datosJson" required></textarea>
-
-        <div class="panel" id="jsonActionsPanel">
-            <h3>Acciones rapidas</h3>
-            <div class="actions">
-                <button type="button" id="btnResetTemplate">Restablecer plantilla</button>
-                <button type="button" id="btnFormatJson" class="secondary">Formatear JSON</button>
-                <button type="button" id="btnValidateJson" class="secondary">Validar JSON</button>
-                <button type="button" id="btnCopyJson" class="secondary">Copiar JSON</button>
+        <div class="panel" id="modoEdicionPanel">
+            <h3>Modo de edicion</h3>
+            <div class="row">
+                <label><input type="radio" name="modoEdicion" value="simple" checked /> Simple</label>
+                <label><input type="radio" name="modoEdicion" value="avanzado" /> Avanzado (JSON)</label>
             </div>
-            <div class="hint" id="jsonStatus"></div>
+            <div id="simpleForm"></div>
+            <div class="hint" id="simpleNotes"></div>
+        </div>
+
+        <div id="jsonSection">
+            <label>Datos JSON (editable según operacion)</label>
+            <textarea id="datosJson" required></textarea>
+
+            <div class="panel" id="jsonActionsPanel">
+                <h3>Acciones rapidas</h3>
+                <div class="actions">
+                    <button type="button" id="btnResetTemplate">Restablecer plantilla</button>
+                    <button type="button" id="btnFormatJson" class="secondary">Formatear JSON</button>
+                    <button type="button" id="btnValidateJson" class="secondary">Validar JSON</button>
+                    <button type="button" id="btnCopyJson" class="secondary">Copiar JSON</button>
+                </div>
+                <div class="hint" id="jsonStatus"></div>
+            </div>
         </div>
 
         <div id="personalLocalPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fafafa;">
@@ -333,6 +351,11 @@ const nombresInput = document.getElementById("nombres");
 const apellidosInput = document.getElementById("apellidos");
 const dniHint = document.getElementById("dniHint");
 const personalLocalPanel = document.getElementById("personalLocalPanel");
+const dniSuggestions = document.getElementById("dniSuggestions");
+const simpleForm = document.getElementById("simpleForm");
+const simpleNotes = document.getElementById("simpleNotes");
+const jsonSection = document.getElementById("jsonSection");
+const modoEdicionRadios = document.querySelectorAll("input[name='modoEdicion']");
 const jsonStatus = document.getElementById("jsonStatus");
 const tipoBadge = document.getElementById("tipoBadge");
 const tipoDescripcion = document.getElementById("tipoDescripcion");
@@ -342,6 +365,11 @@ const btnFormatJson = document.getElementById("btnFormatJson");
 const btnValidateJson = document.getElementById("btnValidateJson");
 const btnCopyJson = document.getElementById("btnCopyJson");
 const fechaHoraManualInput = document.getElementById("fechaHoraManual");
+
+let dniExiste = null;
+let ultimoMovimiento = null;
+let modoEdicion = "simple";
+let debounceDni = null;
 
 const plFields = {
     horaSalidaAlmuerzo: document.getElementById("pl_horaSalidaAlmuerzo"),
@@ -397,6 +425,123 @@ function tryParseJson() {
     } catch (error) {
         return { ok: false, error };
     }
+}
+
+function normalizarDni(valor) {
+    return (valor || "").replace(/\D/g, "").trim();
+}
+
+function setDniHint(texto, isWarn) {
+    dniHint.textContent = texto || "";
+    dniHint.className = isWarn ? "hint warn" : "hint";
+}
+
+function formatearFechaHora(valor) {
+    if (!valor) return "-";
+    const date = new Date(valor);
+    if (Number.isNaN(date.getTime())) return "-";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+async function cargarUltimoMovimiento(dni) {
+    ultimoMovimiento = null;
+    const resp = await fetchAuth(`${API_BASE}/consultas/ultimo-movimiento/${dni}`);
+    if (!resp) return;
+    if (resp.ok) {
+        ultimoMovimiento = await resp.json();
+        const fechaTexto = formatearFechaHora(ultimoMovimiento.fechaHora);
+        setDniHint(`Ultimo movimiento: ${ultimoMovimiento.tipoMovimiento} (${fechaTexto})`);
+        return;
+    }
+
+    const mensaje = await readApiError(resp);
+    setDniHint(mensaje, true);
+}
+
+function getSimpleFields(tipo) {
+    const template = templates[tipo] ?? {};
+    const fields = [];
+    const complex = [];
+
+    Object.entries(template).forEach(([key, value]) => {
+        if (Array.isArray(value) || (value && typeof value === "object")) {
+            complex.push(key);
+            return;
+        }
+
+        fields.push({
+            key,
+            type: typeof value === "number" ? "number" : "text"
+        });
+    });
+
+    return { fields, complex };
+}
+
+function renderSimpleForm() {
+    const tipo = tipoOperacionInput.value;
+    const { fields, complex } = getSimpleFields(tipo);
+    simpleForm.innerHTML = "";
+
+    if (fields.length === 0) {
+        simpleForm.innerHTML = "<div class='hint'>Este tipo usa JSON complejo. Usa modo avanzado.</div>";
+    }
+
+    fields.forEach((field) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "simple-field";
+
+        const label = document.createElement("label");
+        label.textContent = field.key;
+
+        const input = document.createElement("input");
+        input.type = field.type;
+        input.dataset.key = field.key;
+        input.addEventListener("input", () => syncSimpleToJson(field.key, input.value, field.type));
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        simpleForm.appendChild(wrapper);
+    });
+
+    simpleNotes.textContent = complex.length
+        ? `Campos complejos en JSON: ${complex.join(", ")}.`
+        : "";
+
+    syncJsonToSimple();
+}
+
+function syncSimpleToJson(key, value, type) {
+    const parsed = tryParseJson();
+    const data = parsed.ok ? parsed.data : (templates[tipoOperacionInput.value] ?? {});
+    const normalized = type === "number" && value !== "" ? Number(value) : (value || "");
+    data[key] = normalized === "" ? null : normalized;
+    datosJsonInput.value = JSON.stringify(data, null, 2);
+    if (tipoOperacionInput.value === "PersonalLocal") {
+        syncJsonToPersonalLocalInputs();
+    }
+}
+
+function syncJsonToSimple() {
+    if (modoEdicion !== "simple") return;
+    const parsed = tryParseJson();
+    if (!parsed.ok) return;
+    const data = parsed.data || {};
+
+    simpleForm.querySelectorAll("input[data-key]").forEach((input) => {
+        const key = input.dataset.key;
+        const value = data[key];
+        input.value = value === null || value === undefined ? "" : String(value);
+    });
+}
+
+function setModoEdicion(valor) {
+    modoEdicion = valor;
+    jsonSection.style.display = modoEdicion === "avanzado" ? "block" : "none";
+    simpleForm.style.display = modoEdicion === "avanzado" ? "none" : "grid";
+    simpleNotes.style.display = modoEdicion === "avanzado" ? "none" : "block";
+    renderSimpleForm();
 }
 
 function updateGuide() {
@@ -534,6 +679,7 @@ function refreshTemplate() {
 
     updateGuide();
     setJsonStatus("Plantilla cargada.");
+    renderSimpleForm();
 }
 
 function setNamesLocked(locked) {
@@ -552,6 +698,54 @@ function setDefaultFechaHora() {
     }
 }
 
+function validarFechaHoraManual() {
+    const valor = fechaHoraManualInput.value;
+    if (!valor) return { ok: false, mensaje: "Fecha y hora manual es requerida." };
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime()))
+        return { ok: false, mensaje: "Fecha y hora manual invalida." };
+
+    if (fecha > new Date())
+        return { ok: false, mensaje: "Fecha y hora manual no puede ser futura." };
+
+    if (ultimoMovimiento?.fechaHora) {
+        const ultima = new Date(ultimoMovimiento.fechaHora);
+        if (!Number.isNaN(ultima.getTime()) && fecha > ultima) {
+            return {
+                ok: true,
+                advertencia: "La fecha manual es posterior al ultimo movimiento. Verifica si es correcto."
+            };
+        }
+    }
+
+    return { ok: true };
+}
+
+function validarFormulario() {
+    const dni = normalizarDni(dniInput.value);
+    if (!/^\d{8}$/.test(dni))
+        return { ok: false, mensaje: "DNI debe tener 8 digitos." };
+
+    if (dniExiste === false) {
+        if (!nombresInput.value.trim() || !apellidosInput.value.trim())
+            return { ok: false, mensaje: "Debe completar nombres y apellidos para un DNI nuevo." };
+    }
+
+    const fechaRes = validarFechaHoraManual();
+    if (!fechaRes.ok) return { ok: false, mensaje: fechaRes.mensaje };
+
+    const jsonOk = validateJson();
+    if (!jsonOk) return { ok: false, mensaje: "JSON invalido o incompleto." };
+
+    if (fechaRes.advertencia) {
+        const seguir = confirm(`${fechaRes.advertencia}\n\n¿Deseas continuar?`);
+        if (!seguir) return { ok: false, mensaje: "Operacion cancelada." };
+    }
+
+    return { ok: true };
+}
+
 function splitNombre(nombreCompleto) {
     const limpio = (nombreCompleto || "").trim();
     if (!limpio) return { nombres: "", apellidos: "" };
@@ -561,10 +755,14 @@ function splitNombre(nombreCompleto) {
 }
 
 async function validarDni() {
-    const dni = dniInput.value.trim();
+    const dni = normalizarDni(dniInput.value);
+    dniInput.value = dni;
+    dniExiste = null;
+    ultimoMovimiento = null;
+
     if (!/^\d{8}$/.test(dni)) {
         setNamesLocked(false);
-        dniHint.textContent = "DNI debe tener 8 dígitos.";
+        setDniHint("DNI debe tener 8 digitos.", true);
         return;
     }
 
@@ -577,24 +775,57 @@ async function validarDni() {
         nombresInput.value = partes.nombres;
         apellidosInput.value = partes.apellidos;
         setNamesLocked(true);
-        dniHint.textContent = "DNI encontrado. Nombre bloqueado desde Personas.";
+        dniExiste = true;
+        setDniHint("DNI encontrado. Nombre bloqueado desde Personas.");
+        await cargarUltimoMovimiento(dni);
     } else if (resp.status === 404) {
         nombresInput.value = "";
         apellidosInput.value = "";
         setNamesLocked(false);
-        dniHint.textContent = "DNI no registrado. Debe completar nombres y apellidos.";
+        dniExiste = false;
+        setDniHint("DNI no registrado. Debe completar nombres y apellidos.", true);
+        await cargarUltimoMovimiento(dni);
     } else {
-        dniHint.textContent = "No se pudo validar DNI.";
+        dniExiste = null;
+        const mensaje = await readApiError(resp);
+        setDniHint(mensaje, true);
     }
+}
+
+async function buscarDniSugerencias() {
+    const dni = normalizarDni(dniInput.value);
+    dniInput.value = dni;
+
+    if (dni.length < 3) {
+        dniSuggestions.innerHTML = "";
+        return;
+    }
+
+    const resp = await fetchAuth(`${API_BASE}/personas/buscar?dni=${dni}`);
+    if (!resp || !resp.ok) return;
+    const personas = await resp.json();
+    dniSuggestions.innerHTML = personas
+        .map((p) => `<option value="${p.dni}">${p.nombre}</option>`)
+        .join("");
 }
 
 tipoOperacionInput.addEventListener("change", refreshTemplate);
 dniInput.addEventListener("blur", validarDni);
-datosJsonInput.addEventListener("input", syncJsonToPersonalLocalInputs);
+dniInput.addEventListener("input", () => {
+    clearTimeout(debounceDni);
+    debounceDni = setTimeout(buscarDniSugerencias, 250);
+});
+datosJsonInput.addEventListener("input", () => {
+    syncJsonToPersonalLocalInputs();
+    syncJsonToSimple();
+});
 btnResetTemplate.addEventListener("click", refreshTemplate);
 btnFormatJson.addEventListener("click", formatJson);
 btnValidateJson.addEventListener("click", validateJson);
 btnCopyJson.addEventListener("click", copyJson);
+modoEdicionRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => setModoEdicion(e.target.value));
+});
 
 Object.values(plFields).forEach(field => {
     field.addEventListener("change", syncPersonalLocalInputsToJson);
@@ -602,6 +833,12 @@ Object.values(plFields).forEach(field => {
 
 document.getElementById("formManual").addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    const validacion = validarFormulario();
+    if (!validacion.ok) {
+        document.getElementById("response").innerText = validacion.mensaje || "No se pudo validar.";
+        return;
+    }
 
     const fechaHoraManual = document.getElementById("fechaHoraManual").value;
     const parsed = tryParseJson();
@@ -614,7 +851,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
     const payload = {
         tipoOperacion: tipoOperacionInput.value,
         tipoMovimiento: tipoMovimientoInput.value,
-        dni: dniInput.value.trim(),
+        dni: normalizarDni(dniInput.value),
         nombres: nombresInput.value.trim() || null,
         apellidos: apellidosInput.value.trim() || null,
         fechaHoraManual: `${fechaHoraManual}:00`,
@@ -631,7 +868,8 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        document.getElementById("response").innerText = result?.mensaje || result?.error || "No se pudo registrar.";
+        const mensaje = await readApiError(response);
+        document.getElementById("response").innerText = mensaje;
         return;
     }
 
@@ -640,6 +878,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
 
 refreshTemplate();
 setDefaultFechaHora();
+setModoEdicion("simple");
 </script>
 </body>
 </html>

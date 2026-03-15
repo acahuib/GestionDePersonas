@@ -7,6 +7,13 @@ let paginaEnseresActual = 1;
 let totalPaginasEnseres = 1;
 let registrosEnseres = [];
 
+function setErrorCell(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.textContent = "Error";
+    if (message) el.title = message;
+}
+
 // Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     verificarAutenticacion();
@@ -69,9 +76,9 @@ async function cargarEstadisticas() {
         console.log('📡 Response status:', response.status);
         
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await readApiError(response);
             console.error('❌ Error response:', errorText);
-            throw new Error('Error al cargar estadísticas: ' + response.status);
+            throw new Error(errorText || 'Error al cargar estadísticas');
         }
         
         const data = await response.json();
@@ -98,9 +105,10 @@ async function cargarEstadisticas() {
         
     } catch (error) {
         console.error('❌ Error al cargar estadísticas:', error);
-        document.getElementById('movimientosHoy').textContent = 'Error';
-        document.getElementById('ingresosHoy').textContent = 'Error';
-        document.getElementById('salidasHoy').textContent = 'Error';
+        const mensaje = error?.message || "Error al cargar estadísticas";
+        setErrorCell('movimientosHoy', mensaje);
+        setErrorCell('ingresosHoy', mensaje);
+        setErrorCell('salidasHoy', mensaje);
     }
 }
 
@@ -128,9 +136,9 @@ async function cargarPersonasDentro() {
         console.log('📡 Response status personas dentro:', response.status);
         
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await readApiError(response);
             console.error('❌ Error response personas dentro:', errorText);
-            throw new Error('Error al cargar personas dentro: ' + response.status);
+            throw new Error(errorText || 'Error al cargar personas dentro');
         }
         
         const data = await response.json();
@@ -194,9 +202,9 @@ async function cargarPersonasDentro() {
         
     } catch (error) {
         console.error('❌ Error al cargar personas dentro:', error);
-        document.getElementById('totalDentro').textContent = 'Error';
+        setErrorCell('totalDentro', error?.message || "Error al cargar personas dentro");
         document.getElementById('tablaPersonasDentro').innerHTML = 
-            '<tr><td colspan="6" class="error">Error al cargar datos</td></tr>';
+            `<tr><td colspan="6" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
 }
 
@@ -220,7 +228,10 @@ async function cargarUltimosMovimientos() {
             }
         });
         
-        if (!response.ok) throw new Error('Error al cargar movimientos');
+        if (!response.ok) {
+            const errorText = await readApiError(response);
+            throw new Error(errorText || 'Error al cargar movimientos');
+        }
         
         const data = await response.json();
         const movimientos = data.movimientos || [];
@@ -235,7 +246,7 @@ async function cargarUltimosMovimientos() {
     } catch (error) {
         console.error('Error al cargar últimos movimientos:', error);
         document.getElementById('tablaUltimosMovimientos').innerHTML = 
-            '<tr><td colspan="6" class="error">Error al cargar datos</td></tr>';
+            `<tr><td colspan="6" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
 }
 
@@ -297,8 +308,10 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
             }
         });
 
-        if (!response.ok)
-            throw new Error('No se pudo cargar registros informativos de enseres por turno');
+        if (!response.ok) {
+            const errorText = await readApiError(response);
+            throw new Error(errorText || 'No se pudo cargar registros informativos de enseres por turno');
+        }
 
         const data = await response.json();
         registrosEnseres = Array.isArray(data)
@@ -316,7 +329,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
         renderizarTablaEnseresTurnoAdmin();
     } catch (error) {
         console.error('Error al cargar enseres por turno:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="error">Error al cargar registros</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" class="error">Error al cargar registros: ${error?.message || "-"}</td></tr>`;
         document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
     }

@@ -217,6 +217,11 @@ async function cargarHistorial() {
     const solicitudes = TIPOS_DISPONIBLES.map(async tipo => {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/${tipo}`);
         if (!response || !response.ok) {
+            const resumen = document.getElementById("resumenResultados");
+            if (resumen) {
+                const mensaje = response ? await readApiError(response) : "No se pudo cargar historial";
+                resumen.textContent = mensaje;
+            }
             return [];
         }
 
@@ -343,7 +348,8 @@ async function exportarExcelPaginaActual() {
 
     const response = await fetchAuth(`${API_BASE}/salidas/export/excel?${params.toString()}`);
     if (!response || !response.ok) {
-        alert("No se pudo descargar el Excel.");
+        const mensaje = response ? await readApiError(response) : "No se pudo descargar el Excel.";
+        alert(mensaje);
         return;
     }
 

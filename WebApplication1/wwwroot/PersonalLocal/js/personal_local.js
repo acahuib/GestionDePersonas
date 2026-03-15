@@ -57,8 +57,9 @@ async function buscarPersonaPorDni() {
             nombreApellidosInput.placeholder = "Nombre completo del personal";
             nombreApellidosInput.focus();
         } else {
-            console.error(`❌ Error del servidor: ${response.status}`);
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            console.error(`❌ Error del servidor: ${error}`);
+            throw new Error(error);
         }
     } catch (error) {
         console.error("❌ Error al buscar persona:", error);
@@ -127,7 +128,7 @@ async function registrarIngreso() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -221,7 +222,8 @@ async function cargarActivos() {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/PersonalLocal`);
 
         if (!response.ok) {
-            throw new Error("Error al cargar personal activo");
+            const error = await readApiError(response);
+            throw new Error(error || "Error al cargar personal activo");
         }
 
         const salidas = await response.json();

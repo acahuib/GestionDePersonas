@@ -51,8 +51,9 @@ async function buscarPersonaPorDni() {
             nombreInput.placeholder = "Nombre o descripción de la persona";
             nombreInput.focus();
         } else {
-            console.error(`Error del servidor: ${response.status}`);
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            console.error(`Error del servidor: ${error}`);
+            throw new Error(error);
         }
     } catch (error) {
         console.error("Error al buscar persona:", error);
@@ -109,7 +110,7 @@ async function registrarIngreso() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "Error al registrar ingreso");
         }
 
@@ -160,7 +161,8 @@ async function cargarActivos() {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/Ocurrencias`);
 
         if (!response.ok) {
-            throw new Error("Error al cargar ocurrencias");
+            const error = await readApiError(response);
+            throw new Error(error || "Error al cargar ocurrencias");
         }
 
         const ocurrencias = await response.json();

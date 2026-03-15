@@ -21,6 +21,10 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    })
+    .AddMvcOptions(options =>
+    {
+        options.Filters.Add<WebApplication1.Filters.ApiErrorFilter>();
     });
 
 // Validators de movimientos

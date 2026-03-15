@@ -66,8 +66,9 @@ async function buscarPersonaPorDni() {
             conductorInput.placeholder = "Nombre completo del conductor";
             conductorInput.focus();
         } else {
-            console.error(`❌ Error del servidor: ${response.status}`);
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            console.error(`❌ Error del servidor: ${error}`);
+            throw new Error(error);
         }
     } catch (error) {
         console.error("❌ Error al buscar persona:", error);
@@ -167,7 +168,7 @@ async function registrarMovimientoInicial() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -215,7 +216,8 @@ async function cargarActivos() {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/VehiculoEmpresa`);
 
         if (!response.ok) {
-            throw new Error("Error al cargar vehículos activos");
+            const error = await readApiError(response);
+            throw new Error(error || "Error al cargar vehículos activos");
         }
 
         const salidas = await response.json();

@@ -91,8 +91,9 @@ async function buscarPersonaPorDni() {
                 nombresInput.focus();
             }
         } else {
-            console.error(`❌ Error del servidor: ${response.status}`);
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            console.error(`❌ Error del servidor: ${error}`);
+            throw new Error(error);
         }
     } catch (error) {
         console.error("❌ Error al buscar persona:", error);
@@ -312,7 +313,7 @@ async function registrarIngreso() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -363,7 +364,8 @@ async function cargarActivos() {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/ControlBienes`);
 
         if (!response.ok) {
-            throw new Error("Error al cargar datos");
+            const error = await readApiError(response);
+            throw new Error(error || "Error al cargar datos");
         }
 
         const salidas = await response.json();

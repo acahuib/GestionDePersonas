@@ -72,7 +72,8 @@ async function buscarPersonaPorDni() {
             nombreApellidosInput.placeholder = 'Solo si DNI no registrado';
             nombreApellidosInput.focus();
         } else {
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            throw new Error(error || `Error del servidor: ${response.status}`);
         }
     } catch (error) {
         console.error('Error al buscar persona:', error);
@@ -159,19 +160,8 @@ async function registrarDiasLibre(e) {
             
             cargarDiasLibreHoy();
         } else {
-            let mensajeError = 'No se pudo registrar el permiso';
-            const errorText = await response.text();
-
-            if (errorText) {
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    mensajeError = errorJson.mensaje || errorJson.error || errorText;
-                } catch {
-                    mensajeError = errorText;
-                }
-            }
-
-            throw new Error(mensajeError);
+            const mensajeError = await readApiError(response);
+            throw new Error(mensajeError || "No se pudo registrar el permiso");
         }
     } catch (error) {
         console.error('Error al registrar permiso:', error);

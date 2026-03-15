@@ -45,7 +45,8 @@ async function buscarPersonaPorDni() {
             nombreApellidosInput.placeholder = "Nombres y apellidos del proveedor";
             nombreApellidosInput.focus();
         } else {
-            throw new Error(`Error del servidor: ${response.status}`);
+            const error = await readApiError(response);
+            throw new Error(error || `Error del servidor: ${response.status}`);
         }
     } catch (error) {
         console.error("Error al buscar persona:", error);
@@ -108,7 +109,7 @@ async function registrarIngreso() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "Error al registrar ingreso");
         }
 
@@ -161,7 +162,8 @@ async function cargarActivos() {
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/HabitacionProveedor`);
 
         if (!response.ok) {
-            throw new Error("Error al cargar proveedores en habitación");
+            const error = await readApiError(response);
+            throw new Error(error || "Error al cargar proveedores en habitación");
         }
 
         const salidas = await response.json();
