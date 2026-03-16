@@ -6,6 +6,7 @@ namespace WebApplication1.DTOs
     {
         public required string TipoOperacion { get; set; }
         public required string TipoMovimiento { get; set; }
+        public int? GuardiaUsuarioId { get; set; }
         public required string Dni { get; set; }
         public string? Nombres { get; set; }
         public string? Apellidos { get; set; }

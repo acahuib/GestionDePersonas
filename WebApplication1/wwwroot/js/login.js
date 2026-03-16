@@ -48,3 +48,8 @@ async function login() {
         mensaje.innerText = err.message || "Error de login";
     }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    addEnterListener("usuario", login);
+    addEnterListener("password", login);
+});

@@ -193,9 +193,23 @@ function obtenerMovimiento(item) {
     const tieneIngreso = item.horaIngreso && item.horaIngreso !== "-";
     const tieneSalida = item.horaSalida && item.horaSalida !== "-";
 
+    if (tieneIngreso && tieneSalida) {
+        const ingreso = item.fechaIngreso && item.fechaIngreso !== "-"
+            ? new Date(`${item.fechaIngreso} ${item.horaIngreso}`)
+            : null;
+        const salida = item.fechaSalida && item.fechaSalida !== "-"
+            ? new Date(`${item.fechaSalida} ${item.horaSalida}`)
+            : null;
+
+        if (salida && ingreso && !Number.isNaN(salida.getTime()) && !Number.isNaN(ingreso.getTime())) {
+            return salida >= ingreso ? "Salida" : "Entrada";
+        }
+
+        return "Salida";
+    }
+
     if (tieneIngreso && !tieneSalida) return "Entrada";
     if (!tieneIngreso && tieneSalida) return "Salida";
-    if (tieneIngreso && tieneSalida) return "Entrada";
     return "";
 }
 

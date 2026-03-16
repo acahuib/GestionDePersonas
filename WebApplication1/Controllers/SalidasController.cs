@@ -48,6 +48,26 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        [HttpGet("modo-tecnico/guardias")]
+        [Authorize(Roles = "Tecnico")]
+        public async Task<IActionResult> ObtenerGuardiasModoTecnico()
+        {
+            var guardias = await _context.Usuarios
+                .AsNoTracking()
+                .Where(u => u.Activo && u.Rol == "Guardia")
+                .OrderBy(u => u.NombreCompleto)
+                .Select(u => new
+                {
+                    id = u.Id,
+                    nombreCompleto = u.NombreCompleto,
+                    usuarioLogin = u.UsuarioLogin,
+                    dni = u.Dni
+                })
+                .ToListAsync();
+
+            return Ok(guardias);
+        }
+
         private static readonly Dictionary<string, string> TipoOperacionLabels = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Proveedor", "Proveedores" },
@@ -135,7 +155,23 @@ namespace WebApplication1.Controllers
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
-            var guardiaNombre = usuarioId.HasValue
+
+            string? guardiaNombre = null;
+            if (dto.GuardiaUsuarioId.HasValue)
+            {
+                var guardiaSeleccionado = await _context.Usuarios
+                    .AsNoTracking()
+                    .Where(u => u.Id == dto.GuardiaUsuarioId.Value && u.Activo && u.Rol == "Guardia")
+                    .Select(u => u.NombreCompleto)
+                    .FirstOrDefaultAsync();
+
+                if (string.IsNullOrWhiteSpace(guardiaSeleccionado))
+                    return BadRequest("Guardia seleccionado no válido.");
+
+                guardiaNombre = guardiaSeleccionado;
+            }
+
+            guardiaNombre ??= usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
                 : (!string.IsNullOrWhiteSpace(usuarioLogin)
                     ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()

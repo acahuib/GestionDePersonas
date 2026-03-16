@@ -6,6 +6,9 @@ const TIPO_ENSERES_TURNO = 'RegistroInformativoEnseresTurno';
 let paginaEnseresActual = 1;
 let totalPaginasEnseres = 1;
 let registrosEnseres = [];
+const registrosPorPaginaPersonas = 20;
+let paginaPersonasActual = 1;
+let personasDentroActuales = [];
 
 function setErrorCell(elementId, message) {
     const el = document.getElementById(elementId);
@@ -197,8 +200,9 @@ async function cargarPersonasDentro() {
         // Actualizar contador
         document.getElementById('totalDentro').textContent = personasDentro.length;
         
-        // Renderizar tabla
-        renderizarTablaPersonasDentro(personasDentro);
+        personasDentroActuales = personasDentro;
+        paginaPersonasActual = 1;
+        renderizarTablaPersonasDentro();
         
     } catch (error) {
         console.error('❌ Error al cargar personas dentro:', error);
@@ -251,15 +255,25 @@ async function cargarUltimosMovimientos() {
 }
 
 // Renderizar tabla de personas dentro
-function renderizarTablaPersonasDentro(personas) {
+function renderizarTablaPersonasDentro() {
     const tbody = document.getElementById('tablaPersonasDentro');
-    
-    if (personas.length === 0) {
+
+    if (!personasDentroActuales || personasDentroActuales.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay personas dentro actualmente</td></tr>';
+        const paginaTexto = document.getElementById('paginaPersonasActual');
+        if (paginaTexto) paginaTexto.textContent = 'Página 0 de 0';
+        actualizarEstadoPaginacionPersonasDentro();
         return;
     }
+
+    const totalPaginas = Math.max(1, Math.ceil(personasDentroActuales.length / registrosPorPaginaPersonas));
+    if (paginaPersonasActual > totalPaginas) paginaPersonasActual = totalPaginas;
+
+    const inicio = (paginaPersonasActual - 1) * registrosPorPaginaPersonas;
+    const fin = inicio + registrosPorPaginaPersonas;
+    const personasPagina = personasDentroActuales.slice(inicio, fin);
     
-    tbody.innerHTML = personas.map(p => `
+    tbody.innerHTML = personasPagina.map(p => `
         <tr>
             <td><strong>${p.dni}</strong></td>
             <td>${p.nombre}</td>
@@ -269,6 +283,31 @@ function renderizarTablaPersonasDentro(personas) {
             <td>${p.tiempoDentro}</td>
         </tr>
     `).join('');
+
+    const paginaTexto = document.getElementById('paginaPersonasActual');
+    if (paginaTexto) paginaTexto.textContent = `Página ${paginaPersonasActual} de ${totalPaginas}`;
+    actualizarEstadoPaginacionPersonasDentro();
+}
+
+function cambiarPaginaPersonasDentro(direccion) {
+    const totalPaginas = Math.max(1, Math.ceil(personasDentroActuales.length / registrosPorPaginaPersonas));
+    const nuevaPagina = paginaPersonasActual + direccion;
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+
+    paginaPersonasActual = nuevaPagina;
+    renderizarTablaPersonasDentro();
+}
+
+function actualizarEstadoPaginacionPersonasDentro() {
+    const btnAnterior = document.getElementById('btnPersonasAnterior');
+    const btnSiguiente = document.getElementById('btnPersonasSiguiente');
+    if (!btnAnterior || !btnSiguiente) return;
+
+    const totalPaginas = Math.max(1, Math.ceil(personasDentroActuales.length / registrosPorPaginaPersonas));
+    const sinDatos = !personasDentroActuales.length;
+
+    btnAnterior.disabled = sinDatos || paginaPersonasActual <= 1;
+    btnSiguiente.disabled = sinDatos || paginaPersonasActual >= totalPaginas;
 }
 
 function obtenerEstadoCuaderno(mov) {

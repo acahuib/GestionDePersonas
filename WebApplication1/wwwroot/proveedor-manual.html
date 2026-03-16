@@ -82,6 +82,18 @@
         .actions button { background: #0f172a; }
         .actions button.secondary { background: #e2e8f0; color: #0f172a; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 12px; }
+        .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .btn-logout {
+            width: auto;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-logout:hover { background: #dc2626; }
         .guide-list { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--muted); }
         .warn { color: var(--warn); font-weight: 600; }
         #simpleForm { display: grid; gap: 10px; margin-top: 10px; }
@@ -94,7 +106,10 @@
 </head>
 <body>
 <div class="container">
-    <h2>Modo Tecnico - Registro Manual</h2>
+    <div class="topbar">
+        <h2>Modo Tecnico - Registro Manual</h2>
+        <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
+    </div>
     <p class="subtitle">Formulario rapido para cargar datos del cuaderno fisico sin pelear con el formato.</p>
 
     <form id="formManual">
@@ -135,6 +150,16 @@
             <div>
                 <label>Fecha y Hora Manual</label>
                 <input type="datetime-local" id="fechaHoraManual" required />
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>Guardia (lista de usuarios)</label>
+                <select id="guardiaUsuarioId" required>
+                    <option value="">Cargando guardias...</option>
+                </select>
+                <div class="hint" id="guardiaHint">Selecciona el guardia al que se atribuirá guardiaIngreso/guardiaSalida.</div>
             </div>
         </div>
 
@@ -220,7 +245,7 @@
 <script src="js/auth.js"></script>
 <script>
 const templates = {
-    Proveedor: { procedencia: "", destino: "", guardiaIngreso: null, guardiaSalida: null },
+    Proveedor: { procedencia: "", destino: "" },
     VehiculosProveedores: { nombreApellidos: "", proveedor: "", placa: "", tipo: "", lote: "", cantidad: "", procedencia: "" },
     VehiculoEmpresa: { conductor: "", placa: "", kmSalida: null, kmIngreso: null, origenIngreso: "", destinoIngreso: "", origenSalida: "", destinoSalida: "" },
     PersonalLocal: { tipoPersonaLocal: "Normal", horaSalidaAlmuerzo: null, fechaSalidaAlmuerzo: null, horaEntradaAlmuerzo: null, fechaEntradaAlmuerzo: null },
@@ -232,9 +257,7 @@ const templates = {
         bienes: [
             { descripcion: "Laptop", marca: "Lenovo", serie: null, cantidad: 1 }
         ],
-        bienIds: [],
-        guardiaIngreso: null,
-        guardiaSalida: null
+        bienIds: []
     },
     OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" },
     RegistroInformativoEnseresTurno: { turno: "", fecha: "", objetos: [{ nombre: "", cantidad: 1 }], observaciones: "" }
@@ -245,9 +268,7 @@ const guides = {
         descripcion: "Entrada/salida de proveedores. Usa procedencia y destino.",
         campos: [
             { key: "procedencia", label: "procedencia" },
-            { key: "destino", label: "destino" },
-            { key: "guardiaIngreso", label: "guardiaIngreso (opcional)", optional: true },
-            { key: "guardiaSalida", label: "guardiaSalida (opcional)", optional: true }
+            { key: "destino", label: "destino" }
         ]
     },
     VehiculosProveedores: {
@@ -349,6 +370,8 @@ const datosJsonInput = document.getElementById("datosJson");
 const dniInput = document.getElementById("dni");
 const nombresInput = document.getElementById("nombres");
 const apellidosInput = document.getElementById("apellidos");
+const guardiaUsuarioIdInput = document.getElementById("guardiaUsuarioId");
+const guardiaHint = document.getElementById("guardiaHint");
 const dniHint = document.getElementById("dniHint");
 const personalLocalPanel = document.getElementById("personalLocalPanel");
 const dniSuggestions = document.getElementById("dniSuggestions");
@@ -436,6 +459,38 @@ function setDniHint(texto, isWarn) {
     dniHint.className = isWarn ? "hint warn" : "hint";
 }
 
+function setGuardiaHint(texto, isWarn) {
+    guardiaHint.textContent = texto || "";
+    guardiaHint.className = isWarn ? "hint warn" : "hint";
+}
+
+async function cargarGuardiasModoTecnico() {
+    const response = await fetchAuth(`${API_BASE}/salidas/modo-tecnico/guardias`);
+    if (!response || !response.ok) {
+        guardiaUsuarioIdInput.innerHTML = '<option value="">No se pudo cargar guardias</option>';
+        setGuardiaHint("No se pudo cargar la lista de guardias.", true);
+        return;
+    }
+
+    const guardias = await response.json();
+    if (!Array.isArray(guardias) || guardias.length === 0) {
+        guardiaUsuarioIdInput.innerHTML = '<option value="">No hay guardias activos</option>';
+        setGuardiaHint("No se encontraron usuarios con rol Guardia activos.", true);
+        return;
+    }
+
+    guardiaUsuarioIdInput.innerHTML = [
+        '<option value="">Seleccione un guardia...</option>',
+        ...guardias.map(g => {
+            const extra = [g.usuarioLogin, g.dni].filter(Boolean).join(" | ");
+            const label = extra ? `${g.nombreCompleto} (${extra})` : g.nombreCompleto;
+            return `<option value="${g.id}">${label}</option>`;
+        })
+    ].join("");
+
+    setGuardiaHint("Selecciona el guardia que quedará en guardiaIngreso/guardiaSalida.");
+}
+
 function formatearFechaHora(valor) {
     if (!valor) return "-";
     const date = new Date(valor);
@@ -463,8 +518,13 @@ function getSimpleFields(tipo) {
     const template = templates[tipo] ?? {};
     const fields = [];
     const complex = [];
+    const hiddenKeys = new Set(["guardiaIngreso", "guardiaSalida"]);
 
     Object.entries(template).forEach(([key, value]) => {
+        if (hiddenKeys.has(key)) {
+            return;
+        }
+
         if (Array.isArray(value) || (value && typeof value === "object")) {
             complex.push(key);
             return;
@@ -732,6 +792,10 @@ function validarFormulario() {
             return { ok: false, mensaje: "Debe completar nombres y apellidos para un DNI nuevo." };
     }
 
+    if (!guardiaUsuarioIdInput.value) {
+        return { ok: false, mensaje: "Debe seleccionar un guardia de la lista." };
+    }
+
     const fechaRes = validarFechaHoraManual();
     if (!fechaRes.ok) return { ok: false, mensaje: fechaRes.mensaje };
 
@@ -851,6 +915,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
     const payload = {
         tipoOperacion: tipoOperacionInput.value,
         tipoMovimiento: tipoMovimientoInput.value,
+        guardiaUsuarioId: guardiaUsuarioIdInput.value ? Number(guardiaUsuarioIdInput.value) : null,
         dni: normalizarDni(dniInput.value),
         nombres: nombresInput.value.trim() || null,
         apellidos: apellidosInput.value.trim() || null,
@@ -879,6 +944,7 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
 refreshTemplate();
 setDefaultFechaHora();
 setModoEdicion("simple");
+cargarGuardiasModoTecnico();
 </script>
 </body>
 </html>
