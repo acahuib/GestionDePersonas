@@ -39,6 +39,53 @@ namespace WebApplication1.Controllers
             return int.TryParse(usuarioIdString, out var uid) ? uid : null;
         }
 
+        private async Task<Models.OperacionDetalle?> ObtenerProveedorActivo(string dni, int? proveedorSalidaId = null)
+        {
+            var query = _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "Proveedor" &&
+                            o.Dni == dni &&
+                            o.HoraIngreso != null &&
+                            o.HoraSalida == null);
+
+            if (proveedorSalidaId.HasValue)
+            {
+                query = query.Where(o => o.Id == proveedorSalidaId.Value);
+            }
+
+            return await query
+                .OrderByDescending(o => o.FechaCreacion)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<bool> TieneHabitacionActiva(string dni)
+        {
+            return await _context.OperacionDetalle.AnyAsync(o =>
+                o.TipoOperacion == "HabitacionProveedor" &&
+                o.Dni == dni &&
+                o.HoraIngreso != null &&
+                o.HoraSalida == null);
+        }
+
+        private static object ConstruirDatosProveedorActualizados(JsonElement root, string guardiaSalida)
+        {
+            return new
+            {
+                procedencia = root.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String
+                    ? proc.GetString()
+                    : null,
+                destino = root.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String
+                    ? dest.GetString()
+                    : null,
+                guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
+                    ? gi.GetString()
+                    : null,
+                guardiaSalida = guardiaSalida,
+                observacion = root.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String
+                    ? obs.GetString()
+                    : null
+            };
+        }
+
         /// <summary>
         /// Registra INGRESO inicial a Habitación Proveedor
         /// POST /api/habitacion-proveedor
@@ -49,16 +96,25 @@ namespace WebApplication1.Controllers
         {
             try
             {
+                var dniNormalizado = dto.Dni.Trim();
+
                 // Validación básica
-                if (string.IsNullOrWhiteSpace(dto.Dni))
+                if (string.IsNullOrWhiteSpace(dniNormalizado))
                     return BadRequest("DNI es requerido");
 
                 if (string.IsNullOrWhiteSpace(dto.Origen))
                     return BadRequest("Origen es requerido");
 
+                var proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, dto.ProveedorSalidaId);
+                if (proveedorActivo == null)
+                    return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a Habitación.");
+
+                if (await TieneHabitacionActiva(dniNormalizado))
+                    return BadRequest("Este proveedor ya tiene una habitación activa.");
+
                 // Buscar persona en tabla Personas
                 var persona = await _context.Personas
-                    .FirstOrDefaultAsync(p => p.Dni == dto.Dni);
+                    .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
                 // Si no existe la persona, verificar que se haya proporcionado el nombre
                 if (persona == null && string.IsNullOrWhiteSpace(dto.NombresApellidos))
@@ -71,7 +127,7 @@ namespace WebApplication1.Controllers
                 {
                     persona = new Models.Persona
                     {
-                        Dni = dto.Dni,
+                        Dni = dniNormalizado,
                         Nombre = dto.NombresApellidos!,
                         Tipo = "HabitacionProveedor"
                     };
@@ -90,16 +146,6 @@ namespace WebApplication1.Controllers
 
                 // MODO INFORMATIVO: NO crear movimiento en tabla Movimientos.
                 // Solo enlazar al último movimiento existente del DNI como referencia técnica.
-                var movimientoReferenciaId = await _context.Movimientos
-                    .Where(m => m.Dni == dto.Dni)
-                    .OrderByDescending(m => m.FechaHora)
-                    .ThenByDescending(m => m.Id)
-                    .Select(m => m.Id)
-                    .FirstOrDefaultAsync();
-
-                if (movimientoReferenciaId <= 0)
-                    return BadRequest("No existe movimiento previo para este DNI. HabitacionProveedor es informativo y no crea movimientos.");
-
                 // Usar hora local del servidor (Perú UTC-5)
                 var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
                 var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
@@ -108,10 +154,11 @@ namespace WebApplication1.Controllers
                 // Crear OperacionDetalle con datos de HabitacionProveedor
                 // JSON solo contiene datos específicos (sin nombre/dni/fechas/horas)
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
-                    movimientoReferenciaId,
+                    proveedorActivo.MovimientoId,
                     "HabitacionProveedor",
                     new
                     {
+                        proveedorSalidaId = proveedorActivo.Id,
                         origen = dto.Origen,
                         cuarto = dto.Cuarto,
                         frazadas = dto.Frazadas,
@@ -123,7 +170,7 @@ namespace WebApplication1.Controllers
                     fechaActual,         // fechaIngreso
                     null,                // horaSalida (se llenará después con PUT)
                     null,                // fechaSalida (se llenará después con PUT)
-                    dto.Dni.Trim()       // DNI va a columna
+                    dniNormalizado       // DNI va a columna
                 );
 
                 if (salidaDetalle == null)
@@ -138,7 +185,7 @@ namespace WebApplication1.Controllers
                         salidaId = salidaDetalle.Id,
                         tipoOperacion = "HabitacionProveedor",
                         nombreCompleto = persona.Nombre,
-                        dni = dto.Dni,
+                        dni = dniNormalizado,
                         estado = "Aguardando salida"
                     });
             }
@@ -185,10 +232,15 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
+                    var dniNormalizado = salidaExistente.Dni?.Trim() ?? string.Empty;
+                    var proveedorSalidaId = root.TryGetProperty("proveedorSalidaId", out var proveedorIdElement) && proveedorIdElement.ValueKind == JsonValueKind.Number && proveedorIdElement.TryGetInt32(out var proveedorId)
+                        ? proveedorId
+                        : (int?)null;
 
                     // Actualizar JSON con guardiaSalida
                     var datosActualizados = new
                     {
+                        proveedorSalidaId,
                         origen = root.TryGetProperty("origen", out var org) && org.ValueKind == JsonValueKind.String ? org.GetString() : null,
                         cuarto = root.TryGetProperty("cuarto", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null,
                         frazadas = root.TryGetProperty("frazadas", out var f) && f.ValueKind != JsonValueKind.Null
@@ -211,13 +263,43 @@ namespace WebApplication1.Controllers
                         fechaActual         // fechaSalida
                     );
 
-                    // MODO INFORMATIVO: NO crear movimiento de salida.
+                    var salidaProveedorRegistrada = false;
+
+                    if (!string.IsNullOrWhiteSpace(dniNormalizado))
+                    {
+                        var proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, proveedorSalidaId);
+                        if (proveedorActivo != null)
+                        {
+                            using var proveedorDoc = JsonDocument.Parse(proveedorActivo.DatosJSON);
+
+                            await _salidasService.ActualizarSalidaDetalle(
+                                proveedorActivo.Id,
+                                ConstruirDatosProveedorActualizados(proveedorDoc.RootElement, nombreGuardia),
+                                usuarioId,
+                                null,
+                                null,
+                                ahoraLocal,
+                                fechaActual
+                            );
+
+                            var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
+                                dniNormalizado,
+                                1,
+                                "Salida",
+                                usuarioId);
+
+                            proveedorActivo.MovimientoId = movimientoSalida.Id;
+                            await _context.SaveChangesAsync();
+                            salidaProveedorRegistrada = true;
+                        }
+                    }
 
                     return Ok(new
                     {
                         mensaje = "Salida de Habitación Proveedor registrada",
                         salidaId = id,
                         guardiaSalida = nombreGuardia,
+                        salidaProveedorRegistrada,
                         estado = "Completado"
                     });
                 }

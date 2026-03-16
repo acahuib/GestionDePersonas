@@ -16,6 +16,9 @@
             .trim();
     }
 
+            const PAGE_SIZE = 10;
+            let paginaActual = 1;
+
     function obtenerScopeBusqueda() {
         for (const id of IDS_CONTENEDOR) {
             const el = document.getElementById(id);
@@ -52,19 +55,86 @@
         input.addEventListener("input", aplicarFiltro);
     }
 
-    function aplicarFiltro() {
+    function renderPaginacion(scope, totalCoincidencias) {
+        let pag = document.getElementById("paginacionActivosGlobal");
+
+        if (!pag) {
+            pag = document.createElement("div");
+            pag.id = "paginacionActivosGlobal";
+            pag.style.display = "flex";
+            pag.style.gap = "8px";
+            pag.style.alignItems = "center";
+            pag.style.justifyContent = "flex-end";
+            pag.style.margin = "8px 0";
+            scope.parentElement.appendChild(pag);
+        }
+
+        const totalPaginas = Math.max(1, Math.ceil(totalCoincidencias / PAGE_SIZE));
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+        if (!totalCoincidencias || totalPaginas <= 1) {
+            pag.innerHTML = "";
+            return totalPaginas;
+        }
+
+        const inicio = (paginaActual - 1) * PAGE_SIZE + 1;
+        const fin = Math.min(paginaActual * PAGE_SIZE, totalCoincidencias);
+
+        pag.innerHTML = `
+            <span style="color:#6b7280; font-size:0.9rem;">Mostrando ${inicio}-${fin} de ${totalCoincidencias}</span>
+            <button type="button" id="pagActivosPrev" ${paginaActual === 1 ? "disabled" : ""}>Anterior</button>
+            <span style="color:#6b7280; font-size:0.9rem;">Página ${paginaActual}/${totalPaginas}</span>
+            <button type="button" id="pagActivosNext" ${paginaActual === totalPaginas ? "disabled" : ""}>Siguiente</button>
+        `;
+
+        const btnPrev = document.getElementById("pagActivosPrev");
+        const btnNext = document.getElementById("pagActivosNext");
+
+        if (btnPrev) {
+            btnPrev.addEventListener("click", () => {
+                if (paginaActual <= 1) return;
+                paginaActual -= 1;
+                aplicarFiltro(false);
+            });
+        }
+
+        if (btnNext) {
+            btnNext.addEventListener("click", () => {
+                if (paginaActual >= totalPaginas) return;
+                paginaActual += 1;
+                aplicarFiltro(false);
+            });
+        }
+
+        return totalPaginas;
+    }
+
+    function aplicarFiltro(resetPagina = true) {
         const scope = obtenerScopeBusqueda();
         const input = document.getElementById("buscadorActivosGlobal");
         if (!scope || !input) return;
+
+        if (resetPagina) paginaActual = 1;
 
         const criterio = normalizar(input.value);
         const filas = Array.from(scope.querySelectorAll("tbody tr"));
 
         if (filas.length === 0) return;
 
-        filas.forEach(fila => {
+        const filasCoincidentes = filas.filter(fila => {
             const textoFila = normalizar(fila.textContent);
-            fila.style.display = !criterio || textoFila.includes(criterio) ? "" : "none";
+            return !criterio || textoFila.includes(criterio);
+        });
+
+        renderPaginacion(scope, filasCoincidentes.length);
+
+        const inicio = (paginaActual - 1) * PAGE_SIZE;
+        const fin = inicio + PAGE_SIZE;
+        const visiblesEnPagina = new Set(filasCoincidentes.slice(inicio, fin));
+
+        filas.forEach(fila => {
+            const coincide = filasCoincidentes.includes(fila);
+            fila.style.display = coincide && visiblesEnPagina.has(fila) ? "" : "none";
         });
     }
 

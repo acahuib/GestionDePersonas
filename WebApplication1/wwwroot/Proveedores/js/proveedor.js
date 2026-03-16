@@ -182,19 +182,48 @@ function irASalida(salidaId, dni, nombreCompleto, procedencia, destino, observac
     window.location.href = `proveedor_salida.html?${params.toString()}`;
 }
 
+function irAHabitacion(proveedorSalidaId, dni, nombreCompleto, origen) {
+    const params = new URLSearchParams({
+        proveedorSalidaId,
+        dni,
+        nombreCompleto,
+        origen
+    });
+
+    window.location.href = `../../HabitacionProveedor/html/habitacion_proveedor.html?${params.toString()}`;
+}
+
+function irAHotelDesdeProveedor(dni, nombreCompleto) {
+    const params = new URLSearchParams({
+        dni: dni || "",
+        nombreCompleto: nombreCompleto || ""
+    });
+
+    window.location.href = `../../HotelProveedor/html/hotel_proveedor.html?${params.toString()}`;
+}
+
 // Cargar proveedores activos (sin salida)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
     try {
-        const response = await fetchAuth(`${API_BASE}/salidas/tipo/Proveedor`);
+        const [response, responseHabitacion] = await Promise.all([
+            fetchAuth(`${API_BASE}/salidas/tipo/Proveedor`),
+            fetchAuth(`${API_BASE}/salidas/tipo/HabitacionProveedor`)
+        ]);
 
         if (!response.ok) {
             const error = await readApiError(response);
             throw new Error(error || "Error al cargar proveedores activos");
         }
 
+        if (!responseHabitacion.ok) {
+            const error = await readApiError(responseHabitacion);
+            throw new Error(error || "Error al cargar habitaciones activas");
+        }
+
         const salidas = await response.json();
+        const habitaciones = await responseHabitacion.json();
 
         if (!salidas || salidas.length === 0) {
             container.innerHTML = '<p class="text-center muted">No hay proveedores activos en este momento</p>';
@@ -230,6 +259,32 @@ async function cargarActivos() {
             return tieneIngreso && !tieneSalida;
         });
 
+        const habitacionesActivasPorDni = new Map();
+
+        (habitaciones || [])
+            .filter(h => {
+                const datos = h.datos || {};
+                const horaIngreso = h.horaIngreso || datos.horaIngreso;
+                const horaSalida = h.horaSalida || datos.horaSalida;
+                const tieneIngreso = horaIngreso !== null && horaIngreso !== undefined && String(horaIngreso).trim() !== "" && String(horaIngreso).toLowerCase() !== "null";
+                const tieneSalida = horaSalida !== null && horaSalida !== undefined && String(horaSalida).trim() !== "" && String(horaSalida).toLowerCase() !== "null";
+                return tieneIngreso && !tieneSalida;
+            })
+            .forEach(h => {
+                const dniHabitacion = (h.dni || "").trim();
+                if (!dniHabitacion) return;
+
+                const datos = h.datos || {};
+                const cuartoRaw = (datos.cuarto || "").toString().trim();
+                const cuarto = cuartoRaw ? `Habitación ${cuartoRaw}` : "En habitación";
+                const fecha = h.fechaCreacion ? new Date(h.fechaCreacion).getTime() : 0;
+                const actual = habitacionesActivasPorDni.get(dniHabitacion);
+
+                if (!actual || fecha >= actual._fecha) {
+                    habitacionesActivasPorDni.set(dniHabitacion, { cuarto, _fecha: fecha });
+                }
+            });
+
         if (proveedores.length === 0) {
             container.innerHTML = '<p class="text-center muted">No hay proveedores activos en este momento</p>';
             return;
@@ -243,6 +298,7 @@ async function cargarActivos() {
         html += '<th>Procedencia</th>';
         html += '<th>Destino</th>';
         html += '<th>Hora Ingreso</th>';
+        html += '<th>Habitación</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -260,6 +316,9 @@ async function cargarActivos() {
             const fechaIngresoParam = p.fechaIngreso || datos.fechaIngreso || '';
             const horaIngresoParam = p.horaIngreso || datos.horaIngreso || '';
             const guardiaIngresoParam = datos.guardiaIngreso || '';
+            const estadoHabitacion = habitacionesActivasPorDni.get((p.dni || '').trim());
+            const estaEnHabitacion = !!estadoHabitacion;
+            const origenHabitacion = datos.procedencia || datos.destino || '';
             
             html += '<tr>';
             html += `<td>${p.dni || 'N/A'}</td>`;
@@ -267,8 +326,13 @@ async function cargarActivos() {
             html += `<td>${datos.procedencia || 'N/A'}</td>`;
             html += `<td>${datos.destino || 'N/A'}</td>`;
             html += `<td>${horaIngreso}</td>`;
+            html += `<td>${estaEnHabitacion ? estadoHabitacion.cuarto : 'Disponible'}</td>`;
             html += '<td>';
             html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+            html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small btn-inline">Salida por Hotel</button>`;
+            html += estaEnHabitacion
+                ? `<button class="btn-secondary btn-small btn-inline" disabled>En Habitación</button>`
+                : `<button onclick="irAHabitacion(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${(origenHabitacion || '').replace(/'/g, "\\'")}')" class="btn-success btn-small btn-inline">Ir a Habitación</button>`;
             html += '</td></tr>';
         });
 

@@ -28,6 +28,40 @@ namespace WebApplication1.Controllers
             _movimientosService = movimientosService;
         }
 
+        private async Task<Models.OperacionDetalle?> ObtenerHabitacionProveedorActiva(string dni)
+        {
+            return await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "HabitacionProveedor" &&
+                            o.Dni == dni &&
+                            o.HoraIngreso != null &&
+                            o.HoraSalida == null)
+                .OrderByDescending(o => o.FechaCreacion)
+                .FirstOrDefaultAsync();
+        }
+
+        private static object ConstruirDatosHabitacionActualizados(JsonElement root, string guardiaSalida)
+        {
+            return new
+            {
+                proveedorSalidaId = root.TryGetProperty("proveedorSalidaId", out var proveedorId) && proveedorId.ValueKind == JsonValueKind.Number && proveedorId.TryGetInt32(out var id)
+                    ? id
+                    : (int?)null,
+                origen = root.TryGetProperty("origen", out var origen) && origen.ValueKind == JsonValueKind.String
+                    ? origen.GetString()
+                    : null,
+                cuarto = root.TryGetProperty("cuarto", out var cuarto) && cuarto.ValueKind == JsonValueKind.String
+                    ? cuarto.GetString()
+                    : null,
+                frazadas = root.TryGetProperty("frazadas", out var frazadas) && frazadas.ValueKind != JsonValueKind.Null
+                    ? frazadas.GetInt32()
+                    : (int?)null,
+                guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var guardiaIngreso) && guardiaIngreso.ValueKind == JsonValueKind.String
+                    ? guardiaIngreso.GetString()
+                    : null,
+                guardiaSalida = guardiaSalida
+            };
+        }
+
         // ======================================================
         // POST: /api/proveedor
         // Registra INGRESO de Proveedor
@@ -226,11 +260,35 @@ namespace WebApplication1.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            var salidaHabitacionRegistrada = false;
+
+            if (!string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                var habitacionActiva = await ObtenerHabitacionProveedorActiva(dniMovimiento);
+                if (habitacionActiva != null)
+                {
+                    using var habitacionDoc = JsonDocument.Parse(habitacionActiva.DatosJSON);
+
+                    await _salidasService.ActualizarSalidaDetalle(
+                        habitacionActiva.Id,
+                        ConstruirDatosHabitacionActualizados(habitacionDoc.RootElement, guardiaNombre),
+                        usuarioId,
+                        null,
+                        null,
+                        ahoraLocal,
+                        fechaActual
+                    );
+
+                    salidaHabitacionRegistrada = true;
+                }
+            }
+
             return Ok(new
             {
                 mensaje = "Salida de proveedor registrada",
                 salidaId = id,
                 tipoOperacion = "Proveedor",
+                salidaHabitacionRegistrada,
                 estado = "Salida completada"
             });
         }

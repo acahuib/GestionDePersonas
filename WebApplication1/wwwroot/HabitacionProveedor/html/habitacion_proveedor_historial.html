@@ -21,7 +21,7 @@
 
         <hr>
 
-        <div class="form-card" data-cuaderno-historial data-tipo="HabitacionProveedor">
+        <div class="form-card" data-cuaderno-historial data-tipo="HabitacionProveedor" data-historial-vista="entradas-salidas">
             <div class="toolbar">
                 <h3>Historial completo</h3>
                 <button type="button" class="btn-inline btn-small" data-historial-recargar>
@@ -48,17 +48,19 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Fecha</th>
-                            <th>Hora</th>
-                            <th>Movimiento</th>
                             <th>DNI</th>
                             <th>Nombre</th>
-                            <th>Guardia</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Hora Ingreso</th>
+                            <th>Guardia Ingreso</th>
+                            <th>Fecha Salida</th>
+                            <th>Hora Salida</th>
+                            <th>Guardia Salida</th>
                             <th>Detalle</th>
                         </tr>
                     </thead>
                     <tbody data-historial-body>
-                        <tr><td colspan="7">Cargando...</td></tr>
+                        <tr><td colspan="9">Cargando...</td></tr>
                     </tbody>
                 </table>
             </div>

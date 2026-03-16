@@ -32,6 +32,10 @@
     <div class="form-card">
         <h3>Registrar Ingreso a Habitación</h3>
 
+        <div id="registro-desde-proveedor" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e8f5e9; border-left: 4px solid #2e7d32;">
+            <strong>Proveedor activo detectado:</strong> este registro solo abre Habitación Proveedor y no vuelve a registrar ingreso a mina.
+        </div>
+
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
 
@@ -85,6 +89,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
     crearSidebar();
+    cargarPrefillDesdeProveedor();
     cargarActivos();
 
     // Auto-actualizar lista cada 15 segundos

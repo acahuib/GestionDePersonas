@@ -4,6 +4,43 @@
 
 let personaEncontrada = null;
 
+function cargarPrefillDesdeProveedor() {
+    const params = new URLSearchParams(window.location.search);
+    const proveedorSalidaId = params.get("proveedorSalidaId");
+    if (!proveedorSalidaId) return;
+
+    const dniInput = document.getElementById("dni");
+    const nombreApellidosInput = document.getElementById("nombreApellidos");
+    const origenInput = document.getElementById("origen");
+    const personaInfo = document.getElementById("persona-info");
+    const personaNombre = document.getElementById("persona-nombre");
+    const infoProveedor = document.getElementById("registro-desde-proveedor");
+
+    const dni = params.get("dni") || "";
+    const nombreCompleto = params.get("nombreCompleto") || "";
+    const origen = params.get("origen") || "";
+
+    dniInput.value = dni;
+    dniInput.readOnly = true;
+    dniInput.dataset.proveedorSalidaId = proveedorSalidaId;
+
+    nombreApellidosInput.value = "";
+    nombreApellidosInput.disabled = true;
+    nombreApellidosInput.placeholder = "(Tomado del proveedor activo)";
+
+    origenInput.value = origen;
+
+    if (nombreCompleto) {
+        personaEncontrada = { nombre: nombreCompleto };
+        personaNombre.textContent = nombreCompleto;
+        personaInfo.style.display = "block";
+    }
+
+    if (infoProveedor) {
+        infoProveedor.style.display = "block";
+    }
+}
+
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
@@ -61,6 +98,7 @@ async function buscarPersonaPorDni() {
 // Registrar INGRESO a habitación
 async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
+    const proveedorSalidaId = document.getElementById("dni").dataset.proveedorSalidaId;
     const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
     const origen = document.getElementById("origen").value.trim();
     const cuarto = document.getElementById("cuarto").value.trim();
@@ -93,6 +131,7 @@ async function registrarIngreso() {
     try {
         const body = {
             dni,
+            proveedorSalidaId: proveedorSalidaId ? parseInt(proveedorSalidaId) : null,
             origen,
             cuarto: cuarto || null,
             frazadas: frazadas ? parseInt(frazadas) : null
@@ -119,6 +158,8 @@ async function registrarIngreso() {
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
+        document.getElementById("dni").readOnly = false;
+        document.getElementById("dni").dataset.proveedorSalidaId = "";
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("nombreApellidos").disabled = false;
         document.getElementById("nombreApellidos").placeholder = "Solo si DNI no registrado";
@@ -126,6 +167,9 @@ async function registrarIngreso() {
         document.getElementById("cuarto").value = "";
         document.getElementById("frazadas").value = "";
         document.getElementById("persona-info").style.display = "none";
+        const infoProveedor = document.getElementById("registro-desde-proveedor");
+        if (infoProveedor) infoProveedor.style.display = "none";
+        window.history.replaceState({}, document.title, "habitacion_proveedor.html");
         personaEncontrada = null;
 
         // Actualizar lista
@@ -152,6 +196,17 @@ function irASalida(salidaId, dni, nombreCompleto, origen, cuarto, frazadas, fech
         guardiaIngreso
     });
     window.location.href = `habitacion_proveedor_salida.html?${params.toString()}`;
+}
+
+function irAHabitacionDesdeProveedor(proveedorSalidaId, dni, nombreCompleto, origen) {
+    const params = new URLSearchParams({
+        proveedorSalidaId,
+        dni,
+        nombreCompleto,
+        origen
+    });
+
+    window.location.href = `../../HabitacionProveedor/html/habitacion_proveedor.html?${params.toString()}`;
 }
 
 // Cargar proveedores en habitación (sin ingreso)

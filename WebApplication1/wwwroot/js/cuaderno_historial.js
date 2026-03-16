@@ -4,6 +4,7 @@ async function initCuadernoHistorial() {
 
     const tipoOperacion = container.getAttribute("data-tipo");
     if (!tipoOperacion) return;
+    const vistaHistorial = container.getAttribute("data-historial-vista") || "simple";
 
     const inputTexto = container.querySelector("[data-historial-texto]");
     const inputFecha = container.querySelector("[data-historial-fecha]");
@@ -12,8 +13,31 @@ async function initCuadernoHistorial() {
     const btnRecargar = container.querySelector("[data-historial-recargar]");
     const resumen = container.querySelector("[data-historial-resumen]");
     const tbody = container.querySelector("[data-historial-body]");
+    const pageSize = 10;
+    let paginaActual = 1;
 
     let registros = [];
+    let registrosFiltrados = [];
+
+    const paginacion = (() => {
+        let el = container.querySelector("[data-historial-paginacion]");
+        if (!el) {
+            el = document.createElement("div");
+            el.setAttribute("data-historial-paginacion", "");
+            el.style.display = "flex";
+            el.style.gap = "8px";
+            el.style.alignItems = "center";
+            el.style.justifyContent = "flex-end";
+            el.style.marginTop = "8px";
+            const tableContainer = tbody?.closest(".table-container");
+            if (tableContainer && tableContainer.parentElement) {
+                tableContainer.parentElement.insertBefore(el, tableContainer.nextSibling);
+            } else {
+                container.appendChild(el);
+            }
+        }
+        return el;
+    })();
 
     const formatearFecha = (valor) => {
         if (!valor) return "-";
@@ -38,9 +62,12 @@ async function initCuadernoHistorial() {
         };
 
         pushIf("Proveedor", datos.proveedor);
+        pushIf("Ticket", datos.ticket);
         pushIf("Placa", datos.placa);
         pushIf("Procedencia", datos.procedencia);
         pushIf("Destino", datos.destino);
+        pushIf("Tipo habitacion", datos.tipoHabitacion);
+        pushIf("Numero personas", datos.numeroPersonas);
         pushIf("Tipo registro", datos.tipoRegistro === "Almacen" ? "Almacen" : "Normal");
         pushIf("Origen", datos.origen);
         pushIf("Cuarto", datos.cuarto);
@@ -119,6 +146,8 @@ async function initCuadernoHistorial() {
         const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
 
         const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.guardiaResponsable || datos.agenteNombre || "-";
+        const guardiaIngreso = datos.guardiaIngreso || datos.guardiaEntradaAlmuerzo || datos.agenteNombre || datos.guardiaResponsable || "-";
+        const guardiaSalida = datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaCierreNombre || "-";
         const fechaReferenciaRaw = horaIngreso || horaSalida || item.fechaCreacion || fechaBase;
         const timestamp = fechaReferenciaRaw ? new Date(fechaReferenciaRaw).getTime() : 0;
 
@@ -126,6 +155,12 @@ async function initCuadernoHistorial() {
             id: item.id,
             dni: item.dni || "-",
             nombre: item.nombreCompleto || datos.nombre || "-",
+            fechaIngreso: formatearFecha(fechaIngreso),
+            horaIngreso: formatearHora(horaIngreso),
+            guardiaIngreso,
+            fechaSalida: formatearFecha(fechaSalida),
+            horaSalida: formatearHora(horaSalida),
+            guardiaSalida,
             fechaReferencia: formatearFecha(fechaBase),
             horaReferencia: formatearHora(horaIngreso || horaSalida || item.fechaCreacion),
             movimiento: obtenerMovimiento(item, datos),
@@ -137,32 +172,101 @@ async function initCuadernoHistorial() {
         };
     };
 
-    const render = (items) => {
-        if (!tbody) return;
+    const renderPaginacion = (totalRegistros, totalPaginas) => {
+        if (!paginacion) return;
 
-        if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="7">Sin registros.</td></tr>';
-            if (resumen) resumen.textContent = "0 registros";
+        if (!totalRegistros || totalPaginas <= 1) {
+            paginacion.innerHTML = "";
             return;
         }
 
-        const rows = items
-            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-            .map((item) => `
-                <tr>
-                    <td>${item.fechaReferencia}</td>
-                    <td>${item.horaReferencia}</td>
-                    <td>${item.movimiento || "-"}</td>
-                    <td>${item.dni}</td>
-                    <td>${item.nombre}</td>
-                    <td>${item.guardia || "-"}</td>
-                    <td>${item.detalle}</td>
-                </tr>
-            `)
+        const desde = (paginaActual - 1) * pageSize + 1;
+        const hasta = Math.min(paginaActual * pageSize, totalRegistros);
+
+        paginacion.innerHTML = `
+            <span class="muted">Mostrando ${desde}-${hasta} de ${totalRegistros}</span>
+            <button type="button" class="btn-inline btn-small" data-historial-prev ${paginaActual === 1 ? "disabled" : ""}>Anterior</button>
+            <span class="muted">Página ${paginaActual}/${totalPaginas}</span>
+            <button type="button" class="btn-inline btn-small" data-historial-next ${paginaActual === totalPaginas ? "disabled" : ""}>Siguiente</button>
+        `;
+
+        const btnPrev = paginacion.querySelector("[data-historial-prev]");
+        const btnNext = paginacion.querySelector("[data-historial-next]");
+
+        if (btnPrev) {
+            btnPrev.addEventListener("click", () => {
+                if (paginaActual <= 1) return;
+                paginaActual -= 1;
+                render(registrosFiltrados);
+            });
+        }
+
+        if (btnNext) {
+            btnNext.addEventListener("click", () => {
+                if (paginaActual >= totalPaginas) return;
+                paginaActual += 1;
+                render(registrosFiltrados);
+            });
+        }
+    };
+
+    const render = (items) => {
+        if (!tbody) return;
+
+        const totalColumnas = vistaHistorial === "entradas-salidas" ? 9 : 7;
+
+        if (!items.length) {
+            tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
+            if (resumen) resumen.textContent = "0 registros";
+            if (paginacion) paginacion.innerHTML = "";
+            return;
+        }
+
+        const ordenados = items
+            .slice()
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        const totalPaginas = Math.max(1, Math.ceil(ordenados.length / pageSize));
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+        const inicio = (paginaActual - 1) * pageSize;
+        const visibles = ordenados.slice(inicio, inicio + pageSize);
+
+        const rows = visibles
+            .map((item) => {
+                if (vistaHistorial === "entradas-salidas") {
+                    return `
+                        <tr>
+                            <td>${item.dni}</td>
+                            <td>${item.nombre}</td>
+                            <td>${item.fechaIngreso}</td>
+                            <td>${item.horaIngreso}</td>
+                            <td>${item.guardiaIngreso || "-"}</td>
+                            <td>${item.fechaSalida}</td>
+                            <td>${item.horaSalida}</td>
+                            <td>${item.guardiaSalida || "-"}</td>
+                            <td>${item.detalle}</td>
+                        </tr>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>${item.fechaReferencia}</td>
+                        <td>${item.horaReferencia}</td>
+                        <td>${item.movimiento || "-"}</td>
+                        <td>${item.dni}</td>
+                        <td>${item.nombre}</td>
+                        <td>${item.guardia || "-"}</td>
+                        <td>${item.detalle}</td>
+                    </tr>
+                `;
+            })
             .join("");
 
         tbody.innerHTML = rows;
-        if (resumen) resumen.textContent = `${items.length} registros`;
+        if (resumen) resumen.textContent = `${items.length} registros | Página ${paginaActual}/${totalPaginas}`;
+        renderPaginacion(items.length, totalPaginas);
     };
 
     const aplicarFiltros = () => {
@@ -179,7 +283,9 @@ async function initCuadernoHistorial() {
             return true;
         });
 
-        render(filtrados);
+        paginaActual = 1;
+        registrosFiltrados = filtrados;
+        render(registrosFiltrados);
     };
 
     const cargar = async () => {
@@ -188,7 +294,11 @@ async function initCuadernoHistorial() {
         if (!response || !response.ok) {
             const mensaje = response ? await readApiError(response) : "No se pudo cargar historial";
             if (resumen) resumen.textContent = mensaje;
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7">Sin registros.</td></tr>';
+            if (tbody) {
+                const totalColumnas = vistaHistorial === "entradas-salidas" ? 9 : 7;
+                tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
+            }
+            if (paginacion) paginacion.innerHTML = "";
             return;
         }
 

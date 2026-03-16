@@ -3,6 +3,7 @@ const TIPOS_OPERACION = {
     VehiculosProveedores: "Vehiculos Proveedores",
     VehiculoEmpresa: "Vehiculo Empresa",
     HabitacionProveedor: "Habitacion Proveedor",
+    HotelProveedor: "Hotel Proveedor",
     Ocurrencias: "Ocurrencias",
     PersonalLocal: "Personal Local",
     ControlBienes: "Control Bienes",
@@ -63,6 +64,9 @@ function construirDetalle(item) {
     if (item.objetos && item.objetos !== "-") partes.push(`Objetos: ${limpiarTextoDetalle(item.objetos)}`);
     if (item.ocurrencia && item.ocurrencia !== "-") partes.push(`Ocurrencia: ${limpiarTextoDetalle(item.ocurrencia)}`);
     if (item.categoria && item.categoria !== "-") partes.push(`Categoria: ${limpiarTextoDetalle(item.categoria)}`);
+    if (item.ticket && item.ticket !== "-") partes.push(`Ticket: ${limpiarTextoDetalle(item.ticket)}`);
+    if (item.tipoHabitacion && item.tipoHabitacion !== "-") partes.push(`Tipo habitacion: ${limpiarTextoDetalle(item.tipoHabitacion)}`);
+    if (item.numeroPersonas && item.numeroPersonas !== "-") partes.push(`Personas: ${limpiarTextoDetalle(item.numeroPersonas)}`);
     if (item.equipoA && item.equipoA !== "-") partes.push(`Equipo A: ${limpiarTextoDetalle(item.equipoA)}`);
     if (item.equipoB && item.equipoB !== "-") partes.push(`Equipo B: ${limpiarTextoDetalle(item.equipoB)}`);
     if (item.estado && item.estado !== "-") partes.push(`Estado: ${limpiarTextoDetalle(item.estado)}`);
@@ -149,6 +153,9 @@ function normalizarDatos(item) {
             ? datos.objetos.map(o => `${o.nombre || "-"}: ${o.cantidad || 0}`).join("\n")
             : "-",
         categoria: datos.categoria || "-",
+        ticket: datos.ticket || "-",
+        tipoHabitacion: datos.tipoHabitacion || "-",
+        numeroPersonas: datos.numeroPersonas || "-",
         equipoA: Array.isArray(datos.equipoA)
             ? datos.equipoA.join("\n")
             : "-",

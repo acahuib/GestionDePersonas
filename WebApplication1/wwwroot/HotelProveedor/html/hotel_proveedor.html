@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuaderno Hotel Proveedor - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>🏨 Cuaderno Hotel Proveedor</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
+                </a>
+                <a href="hotel_proveedor_historial.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Ver historial</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Registrar Salida a Hotel</h3>
+            <p class="muted">El proveedor debe estar activo en el cuaderno de Proveedores para poder salir al hotel.</p>
+
+            <label>DNI *</label>
+            <input type="text" id="dni" placeholder="Ingrese DNI" maxlength="8">
+
+            <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
+            </div>
+
+            <label>Nombre <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+            <input type="text" id="nombre" placeholder="Nombre completo">
+
+            <label>Ticket *</label>
+            <input type="text" id="ticket" placeholder="Ticket de hotel">
+
+            <label>Fecha *</label>
+            <input type="date" id="fecha" required>
+
+            <label>Tipo de Habitación *</label>
+            <input type="text" id="tipoHabitacion" placeholder="Ejemplo: Simple, Doble">
+
+            <label>Número de Personas *</label>
+            <input type="number" id="numeroPersonas" min="1" value="1">
+
+            <label>Observación</label>
+            <textarea id="observacion" rows="3" placeholder="Opcional"></textarea>
+
+            <div>
+                <button onclick="registrarSalidaHotel()" class="btn-danger btn-block">
+                    <img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA a Hotel
+                </button>
+            </div>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <div>
+            <div class="toolbar">
+                <h3>Registros de Hotel Pendientes de Ingreso</h3>
+                <button onclick="cargarPendientesIngreso()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            </div>
+
+            <div id="lista-pendientes">
+                <p class="text-center muted">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/activos_buscador.js"></script>
+<script src="../js/hotel_proveedor.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    cargarPrefillDesdeProveedor();
+    cargarPendientesIngreso();
+
+    setInterval(cargarPendientesIngreso, 15000);
+
+    const dniInput = document.getElementById("dni");
+    dniInput.addEventListener("blur", buscarPersonaPorDni);
+    dniInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            buscarPersonaPorDni();
+        }
+    });
+
+    addEnterListener("nombre", () => document.getElementById("ticket").focus());
+    addEnterListener("ticket", () => document.getElementById("fecha").focus());
+    addEnterListener("tipoHabitacion", () => document.getElementById("numeroPersonas").focus());
+    addEnterListener("numeroPersonas", registrarSalidaHotel);
+});
+</script>
+
+</body>
+</html>
