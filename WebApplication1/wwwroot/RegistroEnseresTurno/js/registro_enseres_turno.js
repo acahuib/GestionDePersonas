@@ -1,41 +1,62 @@
 const TIPO_OPERACION_ENSERES = "RegistroInformativoEnseresTurno";
+const CONFIG_GUARDIAS_POR_TURNO = {
+    "7am-7pm": {
+        slots: [
+            { rol: "garita", puesto: "Garita 1", zona: "Garita", zonaEditable: false },
+            { rol: "garita", puesto: "Garita 2", zona: "Garita", zonaEditable: false },
+            { rol: "zona", puesto: "Mina", zona: "Zona 2 Mina", zonaEditable: true }
+        ]
+    },
+    "7pm-7am": {
+        slots: [
+            { rol: "garita", puesto: "Garita", zona: "Garita", zonaEditable: false },
+            { rol: "zona", puesto: "Mina 1", zona: "Zona 1 Mina", zonaEditable: true },
+            { rol: "zona", puesto: "Mina 2", zona: "Zona 2 Mina", zonaEditable: true },
+            { rol: "zona", puesto: "Mina 3", zona: "Zona 3 Mina", zonaEditable: true },
+            { rol: "zona", puesto: "Mina 4", zona: "Zona 4 Mina", zonaEditable: true }
+        ]
+    }
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
-    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    const fechaInput = document.getElementById("fecha");
+    const turnoInput = document.getElementById("turno");
 
-    agregarGuardiaZona();
+    fechaInput.value = new Date().toISOString().split("T")[0];
+    turnoInput.addEventListener("change", renderizarGuardiasTurno);
+
+    renderizarGuardiasTurno();
     agregarItem();
     cargarRegistrosDelDia();
 });
 
-function crearGuardiaZonaHtml(index) {
-    return `
-        <div class="form-row" data-zona-index="${index}" style="margin-bottom: 10px;">
-            <div class="form-group" style="flex: 3;">
-                <label>Guardia</label>
-                <input type="text" class="zona-guardia" placeholder="Nombre del guardia">
-            </div>
-            <div class="form-group" style="flex: 3;">
-                <label>Zona</label>
-                <input type="text" class="zona-nombre" placeholder="Ejemplo: Zona 2 Mina">
-            </div>
-            <div class="form-group" style="display:flex;align-items:flex-end;">
-                <button type="button" class="btn-danger btn-small" onclick="eliminarGuardiaZona(${index})">Quitar</button>
-            </div>
-        </div>
-    `;
-}
+function renderizarGuardiasTurno() {
+    const turno = document.getElementById("turno").value;
+    const container = document.getElementById("guardias-turno-container");
+    const config = CONFIG_GUARDIAS_POR_TURNO[turno];
 
-function agregarGuardiaZona() {
-    const container = document.getElementById("zonas-container");
-    const index = Date.now() + Math.floor(Math.random() * 1000);
-    container.insertAdjacentHTML("beforeend", crearGuardiaZonaHtml(index));
-}
+    if (!config) {
+        container.innerHTML = '<p class="muted">Primero seleccione el turno.</p>';
+        return;
+    }
 
-function eliminarGuardiaZona(index) {
-    const fila = document.querySelector(`[data-zona-index='${index}']`);
-    if (fila) fila.remove();
+    container.innerHTML = config.slots.map((slot, index) => {
+        const titulo = slot.rol === "garita" ? `${slot.puesto} *` : `${slot.puesto} *`;
+        const zonaAttr = slot.zonaEditable ? "" : "readonly";
+        return `
+            <div class="form-row" data-guardia-slot data-rol="${slot.rol}" style="margin-bottom: 10px;">
+                <div class="form-group" style="flex: 3;">
+                    <label>${titulo}</label>
+                    <input type="text" class="turno-guardia-nombre" placeholder="Nombre del guardia" data-slot-index="${index}">
+                </div>
+                <div class="form-group" style="flex: 3;">
+                    <label>Zona *</label>
+                    <input type="text" class="turno-guardia-zona" value="${slot.zona}" ${zonaAttr}>
+                </div>
+            </div>
+        `;
+    }).join("");
 }
 
 function crearItemHtml(index) {
@@ -92,34 +113,41 @@ function obtenerItems() {
     return items;
 }
 
-function obtenerGuardiasGarita() {
-    const texto = document.getElementById("guardias-garita")?.value || "";
-    return texto
-        .split(/[\n,]+/)
-        .map((g) => g.trim())
-        .filter((g) => g.length > 0)
-        .filter((g, idx, arr) => arr.findIndex((v) => v.toLowerCase() === g.toLowerCase()) === idx);
-}
+function obtenerGuardiasTurno() {
+    const turno = document.getElementById("turno").value;
+    const slots = document.querySelectorAll("[data-guardia-slot]");
+    const guardiasGarita = [];
+    const guardiasOtrasZonas = [];
+    const faltantes = [];
 
-function obtenerGuardiasOtrasZonas() {
-    const filas = document.querySelectorAll("#zonas-container [data-zona-index]");
-    const guardias = [];
-    let tieneParcial = false;
+    slots.forEach((slot, idx) => {
+        const rol = slot.getAttribute("data-rol");
+        const nombre = slot.querySelector(".turno-guardia-nombre")?.value.trim() || "";
+        const zona = slot.querySelector(".turno-guardia-zona")?.value.trim() || "";
 
-    filas.forEach((fila) => {
-        const guardia = fila.querySelector(".zona-guardia")?.value.trim() || "";
-        const zona = fila.querySelector(".zona-nombre")?.value.trim() || "";
-
-        if (!guardia && !zona) return;
-        if (!guardia || !zona) {
-            tieneParcial = true;
+        if (!nombre || !zona) {
+            faltantes.push(idx + 1);
             return;
         }
 
-        guardias.push({ guardia, zona });
+        if (rol === "garita") {
+            guardiasGarita.push(nombre);
+            return;
+        }
+
+        guardiasOtrasZonas.push({ guardia: nombre, zona });
     });
 
-    return { guardias, tieneParcial };
+    const config = CONFIG_GUARDIAS_POR_TURNO[turno];
+    const totalEsperado = config ? config.slots.length : 0;
+
+    return {
+        guardiasGarita,
+        guardiasOtrasZonas,
+        faltantes,
+        totalEsperado,
+        totalLleno: guardiasGarita.length + guardiasOtrasZonas.length
+    };
 }
 
 async function registrarEnseres() {
@@ -128,8 +156,7 @@ async function registrarEnseres() {
     const observaciones = document.getElementById("observaciones").value.trim();
     const mensaje = document.getElementById("mensaje");
     const objetos = obtenerItems();
-    const guardiasGarita = obtenerGuardiasGarita();
-    const otrasZonasInfo = obtenerGuardiasOtrasZonas();
+    const guardiasTurno = obtenerGuardiasTurno();
 
     mensaje.className = "";
     mensaje.innerText = "";
@@ -156,15 +183,15 @@ async function registrarEnseres() {
         return;
     }
 
-    if (!guardiasGarita.length) {
+    if (guardiasTurno.faltantes.length > 0 || guardiasTurno.totalLleno !== guardiasTurno.totalEsperado) {
         mensaje.className = "error";
-        mensaje.innerText = "Registre al menos un guardia en garita";
+        mensaje.innerText = "Complete todos los campos de guardias del turno (nombre y zona)";
         return;
     }
 
-    if (otrasZonasInfo.tieneParcial) {
+    if (!guardiasTurno.guardiasGarita.length) {
         mensaje.className = "error";
-        mensaje.innerText = "En guardias por zona complete ambos campos: guardia y zona";
+        mensaje.innerText = "Debe existir al menos un guardia en garita";
         return;
     }
 
@@ -175,8 +202,8 @@ async function registrarEnseres() {
                 turno,
                 fecha: new Date(`${fecha}T00:00:00`).toISOString(),
                 objetos,
-                guardiasGarita,
-                guardiasOtrasZonas: otrasZonasInfo.guardias,
+                guardiasGarita: guardiasTurno.guardiasGarita,
+                guardiasOtrasZonas: guardiasTurno.guardiasOtrasZonas,
                 observaciones: observaciones || null
             })
         });
@@ -189,9 +216,7 @@ async function registrarEnseres() {
         mensaje.className = "success";
         mensaje.innerText = "Registro informativo guardado correctamente";
 
-        document.getElementById("guardias-garita").value = "";
-        document.getElementById("zonas-container").innerHTML = "";
-        agregarGuardiaZona();
+        renderizarGuardiasTurno();
         document.getElementById("observaciones").value = "";
         document.getElementById("items-container").innerHTML = "";
         agregarItem();
