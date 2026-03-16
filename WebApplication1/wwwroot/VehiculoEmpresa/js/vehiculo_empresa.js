@@ -4,6 +4,10 @@
 
 let personaEncontrada = null;
 
+function formatearTipoRegistro(tipoRegistro) {
+    return tipoRegistro === "Almacen" ? "Almacen" : "Normal";
+}
+
 function actualizarFormularioPorTipoInicial() {
     const tipoInicial = document.getElementById("tipoInicial").value;
     const esSalida = tipoInicial === "Salida";
@@ -84,6 +88,7 @@ async function buscarPersonaPorDni() {
 async function registrarMovimientoInicial() {
     const tipoInicial = document.getElementById("tipoInicial").value;
     const esSalidaInicial = tipoInicial === "Salida";
+    const tipoRegistro = document.getElementById("tipoRegistro").value;
     const dni = document.getElementById("dni").value.trim();
     const conductor = document.getElementById("conductor").value.trim();
     const placa = document.getElementById("placa").value.trim();
@@ -127,6 +132,7 @@ async function registrarMovimientoInicial() {
     try {
         const body = {
             dni,
+            tipoRegistro,
             placa,
             observacion: observacion || null
         };
@@ -188,6 +194,8 @@ async function registrarMovimientoInicial() {
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("conductor").disabled = false;
         personaEncontrada = null;
+        document.getElementById("tipoRegistro").value = "Normal";
+        actualizarFormularioPorTipoInicial();
         document.getElementById("dni").focus();
 
         // Actualizar lista
@@ -260,6 +268,7 @@ async function cargarActivos() {
         html += '<th>DNI</th>';
         html += '<th>Conductor</th>';
         html += '<th>Placa</th>';
+        html += '<th>Tipo</th>';
         html += '<th>Estado Pendiente</th>';
         html += '<th>Km</th>';
         html += '<th>Origen</th>';
@@ -273,6 +282,7 @@ async function cargarActivos() {
             const dni = (s.dni || "").trim();
             const conductor = s.nombreCompleto || datos.conductor || "N/A";
             const placa = datos.placa || "N/A";
+            const tipoRegistro = formatearTipoRegistro(datos.tipoRegistro);
 
             const horaSalidaValue = s.horaSalida || datos.horaSalida;
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
@@ -297,6 +307,7 @@ async function cargarActivos() {
             html += `<td>${dni}</td>`;
             html += `<td>${conductor}</td>`;
             html += `<td>${placa}</td>`;
+            html += `<td>${tipoRegistro}</td>`;
             html += `<td>${pendienteDe}</td>`;
             html += `<td>${km}</td>`;
             html += `<td>${origen}</td>`;

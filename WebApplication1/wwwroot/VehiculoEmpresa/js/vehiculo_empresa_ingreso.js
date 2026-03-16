@@ -8,6 +8,10 @@ function setElementValueIfExists(id, value) {
     element.value = value ?? "";
 }
 
+function formatearTipoRegistro(tipoRegistro) {
+    return tipoRegistro === "Almacen" ? "Almacen" : "Normal";
+}
+
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
 
@@ -61,6 +65,7 @@ async function cargarDetalleOperacion(salidaId) {
         const detalle = await response.json();
         const datos = detalle.datos || {};
 
+        setElementValueIfExists("tipoRegistroActual", formatearTipoRegistro(datos.tipoRegistro));
         setElementValueIfExists("dni", detalle.dni || "");
         setElementValueIfExists("conductor", detalle.nombreCompleto || datos.conductor || "");
         setElementValueIfExists("placa", datos.placa || "");

@@ -14,6 +14,7 @@ namespace WebApplication1.DTOs
     public class SalidaVehiculoEmpresaDto
     {
         public required string Dni { get; set; }
+        public string? TipoRegistro { get; set; }
         
         /// <summary>
         /// Nombre completo del conductor (opcional si DNI ya está registrado en tabla Personas)

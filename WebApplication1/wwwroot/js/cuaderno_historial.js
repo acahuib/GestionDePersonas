@@ -41,6 +41,7 @@ async function initCuadernoHistorial() {
         pushIf("Placa", datos.placa);
         pushIf("Procedencia", datos.procedencia);
         pushIf("Destino", datos.destino);
+        pushIf("Tipo registro", datos.tipoRegistro === "Almacen" ? "Almacen" : "Normal");
         pushIf("Origen", datos.origen);
         pushIf("Cuarto", datos.cuarto);
         pushIf("Ocurrencia", datos.ocurrencia);

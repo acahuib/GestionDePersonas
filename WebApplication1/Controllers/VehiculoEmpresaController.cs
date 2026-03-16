@@ -65,6 +65,8 @@ namespace WebApplication1.Controllers
                         return BadRequest("VehiculoEmpresa: origenIngreso y destinoIngreso son requeridos para registrar INGRESO");
                 }
 
+                var tipoRegistro = NormalizarTipoRegistro(dto.TipoRegistro);
+
                 var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -79,6 +81,11 @@ namespace WebApplication1.Controllers
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+
+                if (esSalidaInicial)
+                {
+                    await ValidarPersonaEstaDentroParaSalida(dniNormalizado);
+                }
                 
                 if (persona == null)
                 {
@@ -126,6 +133,7 @@ namespace WebApplication1.Controllers
                     "VehiculoEmpresa",
                     new
                     {
+                        tipoRegistro,
                         conductor = persona.Nombre, // Usar nombre de tabla Personas
                         placa = dto.Placa,
                         kmSalida = esSalidaInicial ? dto.KmSalida : null,
@@ -204,6 +212,7 @@ namespace WebApplication1.Controllers
             // Usar TryGetProperty para safe parsing
             var datosActualizados = new
             {
+                tipoRegistro = LeerString(datosActuales, "tipoRegistro") ?? "VehiculoEmpresa",
                 conductor = datosActuales.TryGetProperty("conductor", out var cond) && cond.ValueKind == JsonValueKind.String ? cond.GetString() : null,
                 placa = datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
                 kmSalida = LeerInt(datosActuales, "kmSalida"),
@@ -291,8 +300,23 @@ namespace WebApplication1.Controllers
             var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
             var fechaActual = ahoraLocal.Date;
 
+            var dniMovimiento = salida.Dni;
+            if (string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                dniMovimiento = await _context.Movimientos
+                    .Where(m => m.Id == salida.MovimientoId)
+                    .Select(m => m.Dni)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                await ValidarPersonaEstaDentroParaSalida(dniMovimiento);
+            }
+
             var datosActualizados = new
             {
+                tipoRegistro = LeerString(datosActuales, "tipoRegistro") ?? "VehiculoEmpresa",
                 conductor = LeerString(datosActuales, "conductor"),
                 placa = LeerString(datosActuales, "placa"),
                 kmSalida = dto.KmSalida,
@@ -319,15 +343,6 @@ namespace WebApplication1.Controllers
                 fechaActual
             );
 
-            var dniMovimiento = salida.Dni;
-            if (string.IsNullOrWhiteSpace(dniMovimiento))
-            {
-                dniMovimiento = await _context.Movimientos
-                    .Where(m => m.Id == salida.MovimientoId)
-                    .Select(m => m.Dni)
-                    .FirstOrDefaultAsync();
-            }
-
             if (!string.IsNullOrWhiteSpace(dniMovimiento))
             {
                 var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
@@ -347,6 +362,33 @@ namespace WebApplication1.Controllers
                 tipoOperacion = "VehiculoEmpresa",
                 estado = "Salida completada"
             });
+        }
+
+        private async Task ValidarPersonaEstaDentroParaSalida(string dni)
+        {
+            var ultimoMovimientoGarita = await _movimientosService.GetLastMovimiento(dni, 1);
+
+            if (ultimoMovimientoGarita == null)
+                throw new InvalidOperationException($"No se puede registrar salida para DNI {dni}: la persona no tiene ingreso previo en garita");
+
+            if (ultimoMovimientoGarita.TipoMovimiento != "Entrada" && ultimoMovimientoGarita.TipoMovimiento != "Ingreso")
+                throw new InvalidOperationException($"No se puede registrar salida para DNI {dni}: la persona no esta adentro");
+        }
+
+        private static string NormalizarTipoRegistro(string? tipoRegistro)
+        {
+            if (string.IsNullOrWhiteSpace(tipoRegistro))
+                return "VehiculoEmpresa";
+
+            var valor = tipoRegistro.Trim().ToLowerInvariant();
+            return valor switch
+            {
+                "almacen" => "Almacen",
+                "rutaalmacen" => "Almacen",
+                "ruta almacen" => "Almacen",
+                "normal" => "VehiculoEmpresa",
+                _ => "VehiculoEmpresa"
+            };
         }
 
         private static string? LeerString(JsonElement root, params string[] keys)
