@@ -46,6 +46,17 @@ function obtenerLabelTipo(tipo) {
     return TIPOS_OPERACION[tipo] || tipo || "Sin tipo";
 }
 
+function obtenerLabelTipoConContexto(tipoOperacion, datos) {
+    if (tipoOperacion === "PersonalLocal") {
+        const tipoPersonaLocal = (datos?.tipoPersonaLocal || "").toString().trim().toLowerCase();
+        if (tipoPersonaLocal === "retornando") {
+            return "Personal";
+        }
+    }
+
+    return obtenerLabelTipo(tipoOperacion);
+}
+
 function limpiarTextoDetalle(texto) {
     return String(texto).replace(/\n/g, "; ").trim();
 }
@@ -98,7 +109,7 @@ function normalizarDatos(item) {
     const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
     const ordenFecha = fechaBase ? new Date(fechaBase).getTime() : 0;
     const tipoOperacion = item.tipoOperacion || item.TipoOperacion || datos.tipoOperacion || "";
-    const tipoLabel = obtenerLabelTipo(tipoOperacion);
+    const tipoLabel = obtenerLabelTipoConContexto(tipoOperacion, datos);
 
     const base = {
         dni: item.dni || "-",

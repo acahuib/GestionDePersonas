@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
+using System.Text.Json;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using Microsoft.AspNetCore.Authorization;
@@ -142,7 +143,7 @@ namespace WebApplication1.Controllers
                 TipoPersona = m.Persona?.Tipo,
                 TipoMovimiento = m.TipoMovimiento,
                 TipoOperacion = salidasPorMovimiento.ContainsKey(m.Id) 
-                    ? salidasPorMovimiento[m.Id]?.TipoOperacion 
+                    ? ObtenerTipoOperacionDashboard(salidasPorMovimiento[m.Id])
                     : null,
                 PuntoControlId = m.PuntoControlId
             }).ToList();
@@ -154,6 +155,39 @@ namespace WebApplication1.Controllers
                 pageSize,
                 movimientos = data
             });
+        }
+
+        private static string? ObtenerTipoOperacionDashboard(Models.OperacionDetalle? detalle)
+        {
+            if (detalle == null) return null;
+
+            if (string.Equals(detalle.TipoOperacion, "PersonalLocal", StringComparison.OrdinalIgnoreCase)
+                && EsPersonalLocalRetornando(detalle.DatosJSON))
+            {
+                return "Personal";
+            }
+
+            return detalle.TipoOperacion;
+        }
+
+        private static bool EsPersonalLocalRetornando(string? datosJson)
+        {
+            if (string.IsNullOrWhiteSpace(datosJson)) return false;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                if (doc.RootElement.TryGetProperty("tipoPersonaLocal", out var tipo) &&
+                    tipo.ValueKind == JsonValueKind.String)
+                {
+                    return string.Equals(tipo.GetString(), "Retornando", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
         }
 
         // ======================================================

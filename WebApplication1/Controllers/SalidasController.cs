@@ -936,9 +936,18 @@ namespace WebApplication1.Controllers
                 return partes.Count > 0 ? string.Join(" | ", partes) : "-";
             }
 
-            string ObtenerTipoLabel(string? tipo)
+            string ObtenerTipoLabel(string? tipo, JsonElement datosJson)
             {
                 if (string.IsNullOrWhiteSpace(tipo)) return "Sin tipo";
+
+                if (string.Equals(tipo, "PersonalLocal", StringComparison.OrdinalIgnoreCase) &&
+                    datosJson.TryGetProperty("tipoPersonaLocal", out var tipoPersonaLocal) &&
+                    tipoPersonaLocal.ValueKind == JsonValueKind.String &&
+                    string.Equals(tipoPersonaLocal.GetString(), "Retornando", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Personal";
+                }
+
                 return TipoOperacionLabels.TryGetValue(tipo, out var label) ? label : tipo;
             }
 
@@ -975,7 +984,7 @@ namespace WebApplication1.Controllers
                 DateTime? fechaBase = fechaIngresoDato ?? fechaSalidaDato ?? fechaDato ?? s.FechaCreacion;
 
                 var movimiento = ObtenerMovimiento(s.TipoOperacion, horaIngreso, horaSalida);
-                var tipoLabel = ObtenerTipoLabel(s.TipoOperacion);
+                var tipoLabel = ObtenerTipoLabel(s.TipoOperacion, datosJson);
                 var detalle = ConstruirDetalle(datosJson);
                 var horaReferencia = horaIngreso ?? horaSalida ?? s.FechaCreacion;
 

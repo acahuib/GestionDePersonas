@@ -271,6 +271,16 @@ function renderizarTablaPersonasDentro(personas) {
     `).join('');
 }
 
+function obtenerEstadoCuaderno(mov) {
+    const tipoOperacion = (mov?.tipoOperacion || "").trim();
+    if (tipoOperacion) return tipoOperacion;
+
+    const tipoPersona = (mov?.tipoPersona || "").trim();
+    if (tipoPersona) return tipoPersona;
+
+    return "N/A";
+}
+
 // Renderizar tabla de últimos movimientos
 function renderizarTablaUltimosMovimientos(movimientos) {
     const tbody = document.getElementById('tablaUltimosMovimientos');
@@ -287,7 +297,7 @@ function renderizarTablaUltimosMovimientos(movimientos) {
             <td>${m.nombrePersona}</td>
             <td><span class="badge badge-${getTipoBadge(m.tipoPersona)}">${m.tipoPersona}</span></td>
             <td><span class="badge badge-${m.tipoMovimiento === 'Entrada' ? 'success' : 'warning'}">${m.tipoMovimiento}</span></td>
-            <td>${m.tipoOperacion || 'N/A'}</td>
+            <td>${obtenerEstadoCuaderno(m)}</td>
         </tr>
     `).join('');
 }
