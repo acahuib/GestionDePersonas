@@ -4,9 +4,39 @@ document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
     document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
 
+    agregarGuardiaZona();
     agregarItem();
     cargarRegistrosDelDia();
 });
+
+function crearGuardiaZonaHtml(index) {
+    return `
+        <div class="form-row" data-zona-index="${index}" style="margin-bottom: 10px;">
+            <div class="form-group" style="flex: 3;">
+                <label>Guardia</label>
+                <input type="text" class="zona-guardia" placeholder="Nombre del guardia">
+            </div>
+            <div class="form-group" style="flex: 3;">
+                <label>Zona</label>
+                <input type="text" class="zona-nombre" placeholder="Ejemplo: Zona 2 Mina">
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+                <button type="button" class="btn-danger btn-small" onclick="eliminarGuardiaZona(${index})">Quitar</button>
+            </div>
+        </div>
+    `;
+}
+
+function agregarGuardiaZona() {
+    const container = document.getElementById("zonas-container");
+    const index = Date.now() + Math.floor(Math.random() * 1000);
+    container.insertAdjacentHTML("beforeend", crearGuardiaZonaHtml(index));
+}
+
+function eliminarGuardiaZona(index) {
+    const fila = document.querySelector(`[data-zona-index='${index}']`);
+    if (fila) fila.remove();
+}
 
 function crearItemHtml(index) {
     return `
@@ -62,12 +92,44 @@ function obtenerItems() {
     return items;
 }
 
+function obtenerGuardiasGarita() {
+    const texto = document.getElementById("guardias-garita")?.value || "";
+    return texto
+        .split(/[\n,]+/)
+        .map((g) => g.trim())
+        .filter((g) => g.length > 0)
+        .filter((g, idx, arr) => arr.findIndex((v) => v.toLowerCase() === g.toLowerCase()) === idx);
+}
+
+function obtenerGuardiasOtrasZonas() {
+    const filas = document.querySelectorAll("#zonas-container [data-zona-index]");
+    const guardias = [];
+    let tieneParcial = false;
+
+    filas.forEach((fila) => {
+        const guardia = fila.querySelector(".zona-guardia")?.value.trim() || "";
+        const zona = fila.querySelector(".zona-nombre")?.value.trim() || "";
+
+        if (!guardia && !zona) return;
+        if (!guardia || !zona) {
+            tieneParcial = true;
+            return;
+        }
+
+        guardias.push({ guardia, zona });
+    });
+
+    return { guardias, tieneParcial };
+}
+
 async function registrarEnseres() {
     const turno = document.getElementById("turno").value;
     const fecha = document.getElementById("fecha").value;
     const observaciones = document.getElementById("observaciones").value.trim();
     const mensaje = document.getElementById("mensaje");
     const objetos = obtenerItems();
+    const guardiasGarita = obtenerGuardiasGarita();
+    const otrasZonasInfo = obtenerGuardiasOtrasZonas();
 
     mensaje.className = "";
     mensaje.innerText = "";
@@ -94,6 +156,18 @@ async function registrarEnseres() {
         return;
     }
 
+    if (!guardiasGarita.length) {
+        mensaje.className = "error";
+        mensaje.innerText = "Registre al menos un guardia en garita";
+        return;
+    }
+
+    if (otrasZonasInfo.tieneParcial) {
+        mensaje.className = "error";
+        mensaje.innerText = "En guardias por zona complete ambos campos: guardia y zona";
+        return;
+    }
+
     try {
         const response = await fetchAuth(`${API_BASE}/registro-informativo-enseres`, {
             method: "POST",
@@ -101,6 +175,8 @@ async function registrarEnseres() {
                 turno,
                 fecha: new Date(`${fecha}T00:00:00`).toISOString(),
                 objetos,
+                guardiasGarita,
+                guardiasOtrasZonas: otrasZonasInfo.guardias,
                 observaciones: observaciones || null
             })
         });
@@ -113,6 +189,9 @@ async function registrarEnseres() {
         mensaje.className = "success";
         mensaje.innerText = "Registro informativo guardado correctamente";
 
+        document.getElementById("guardias-garita").value = "";
+        document.getElementById("zonas-container").innerHTML = "";
+        agregarGuardiaZona();
         document.getElementById("observaciones").value = "";
         document.getElementById("items-container").innerHTML = "";
         agregarItem();
@@ -147,7 +226,7 @@ async function cargarRegistrosDelDia() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>Fecha</th><th>Turno</th><th>Agente</th><th>Objetos</th><th>Hora Registro</th>';
+        html += '<th>Fecha</th><th>Turno</th><th>Agente</th><th>Guardias Turno</th><th>Objetos</th><th>Hora Registro</th>';
         html += '</tr></thead><tbody>';
 
         registrosHoy.forEach((r) => {
@@ -156,6 +235,14 @@ async function cargarRegistrosDelDia() {
             const resumenObjetos = objetos.length
                 ? objetos.map((o) => `${o.nombre}: ${o.cantidad}`).join("<br>")
                 : "-";
+
+            const guardiasGarita = Array.isArray(datos.guardiasGarita) ? datos.guardiasGarita : [];
+            const guardiasOtrasZonas = Array.isArray(datos.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+            const resumenGuardiasGarita = guardiasGarita.length ? `Garita: ${guardiasGarita.join(", ")}` : "Garita: -";
+            const resumenGuardiasZonas = guardiasOtrasZonas.length
+                ? `Zonas: ${guardiasOtrasZonas.map((g) => `${g.guardia || "-"} (${g.zona || "-"})`).join(", ")}`
+                : "Zonas: -";
+            const resumenGuardias = `${resumenGuardiasGarita}<br>${resumenGuardiasZonas}`;
 
             const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE") : "-";
             const horaRegistro = r.fechaCreacion
@@ -166,6 +253,7 @@ async function cargarRegistrosDelDia() {
             html += `<td>${fecha}</td>`;
             html += `<td>${datos.turno || "-"}</td>`;
             html += `<td>${datos.agenteNombre || r.nombreCompleto || "-"}</td>`;
+            html += `<td class="cell-wrap" style="max-width: 300px;">${resumenGuardias}</td>`;
             html += `<td class="cell-wrap" style="max-width: 260px;">${resumenObjetos}</td>`;
             html += `<td>${horaRegistro}</td>`;
             html += "</tr>";

@@ -33,6 +33,7 @@ function crearSidebar() {
                     </a>
                     <ul class="sidebar-submenu-items">
                         <li><a href="${basePath}Proveedores/html/proveedor.html">Proveedores</a></li>
+                        <li><a href="${basePath}Cancha/html/cancha.html">Cancha</a></li>
                         <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">Vehículos Empresa</a></li>
                         <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehículos Proveedores</a></li>
                         <li><a href="${basePath}PersonalLocal/html/personal_local.html">Personal Local</a></li>

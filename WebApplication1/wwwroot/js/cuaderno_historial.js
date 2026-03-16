@@ -73,6 +73,18 @@ async function initCuadernoHistorial() {
             partes.push(`Objetos: ${listado}`);
         }
 
+        if (Array.isArray(datos.guardiasGarita) && datos.guardiasGarita.length) {
+            const listado = datos.guardiasGarita.join("; ");
+            partes.push(`Garita: ${listado}`);
+        }
+
+        if (Array.isArray(datos.guardiasOtrasZonas) && datos.guardiasOtrasZonas.length) {
+            const listado = datos.guardiasOtrasZonas
+                .map((g) => `${g.guardia || "-"} (${g.zona || "-"})`)
+                .join("; ");
+            partes.push(`Zonas: ${listado}`);
+        }
+
         return partes.length ? partes.join(" | ") : "-";
     };
 
@@ -105,7 +117,7 @@ async function initCuadernoHistorial() {
         const horaSalida = item.horaSalida || datos.horaSalida;
         const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
 
-        const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.agenteNombre || "-";
+        const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.guardiaResponsable || datos.agenteNombre || "-";
         const fechaReferenciaRaw = horaIngreso || horaSalida || item.fechaCreacion || fechaBase;
         const timestamp = fechaReferenciaRaw ? new Date(fechaReferenciaRaw).getTime() : 0;
 

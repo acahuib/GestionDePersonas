@@ -45,6 +45,25 @@ namespace WebApplication1.Controllers
             if (dto.Objetos.Any(o => o.Cantidad <= 0))
                 return BadRequest("La cantidad debe ser mayor a cero");
 
+            var guardiasGarita = (dto.GuardiasGarita ?? new List<string>())
+                .Where(g => !string.IsNullOrWhiteSpace(g))
+                .Select(g => g.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var guardiasOtrasZonas = (dto.GuardiasOtrasZonas ?? new List<GuardiaZonaTurnoDto>())
+                .Where(g => !string.IsNullOrWhiteSpace(g?.Guardia) && !string.IsNullOrWhiteSpace(g?.Zona))
+                .Select(g => new
+                {
+                    guardia = g.Guardia.Trim(),
+                    zona = g.Zona.Trim()
+                })
+                .Where(g => !string.IsNullOrWhiteSpace(g.guardia) && !string.IsNullOrWhiteSpace(g.zona))
+                .ToList();
+
+            if (!guardiasGarita.Any())
+                return BadRequest("Debe registrar al menos un guardia en garita");
+
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(usuarioIdString, out var usuarioId))
                 return Unauthorized("No se pudo identificar al usuario autenticado");
@@ -97,8 +116,11 @@ namespace WebApplication1.Controllers
                 {
                     turno = dto.Turno.Trim(),
                     fecha = fechaRegistro,
+                    guardiaResponsable = usuario.NombreCompleto,
                     agenteNombre = usuario.NombreCompleto,
                     agenteDni = dniGuardia,
+                    guardiasGarita,
+                    guardiasOtrasZonas,
                     objetos = dto.Objetos.Select(o => new
                     {
                         nombre = o.Nombre.Trim(),
