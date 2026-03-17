@@ -28,6 +28,23 @@ namespace WebApplication1.Controllers
             _movimientosService = movimientosService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         private async Task<Models.OperacionDetalle?> ObtenerHabitacionProveedorActiva(string dni)
         {
             return await _context.OperacionDetalle
@@ -122,15 +139,11 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // NUEVO: Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = dto.HoraIngreso.HasValue 
-                    ? dto.HoraIngreso.Value 
-                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                // Respetar hora seleccionada y normalizar a zona Perú.
+                var ahoraLocal = ResolverHoraPeru(dto.HoraIngreso);
                 var fechaActual = ahoraLocal.Date;
                 
-                // NUEVO: Extraer horaIngreso/fechaIngreso para guardar en columnas
-                // Ya no usamos la hora del cliente, usamos la hora del servidor
+                // Extraer horaIngreso/fechaIngreso para guardar en columnas
                 var horaIngresoCol = ahoraLocal;
                 var fechaIngresoCol = fechaActual;
                 DateTime? horaSalidaCol = null;
@@ -203,11 +216,8 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // NUEVO: Usar hora local del servidor (Perú UTC-5)
-            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = dto.HoraSalida.HasValue 
-                ? dto.HoraSalida.Value 
-                : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            // Respetar hora seleccionada y normalizar a zona Perú.
+            var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
             var fechaActual = ahoraLocal.Date;
             
             // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
@@ -235,7 +245,7 @@ namespace WebApplication1.Controllers
                 usuarioId,
                 null,               // horaIngreso (no se actualiza en PUT de salida)
                 null,               // fechaIngreso (no se actualiza en PUT de salida)
-                ahoraLocal,         // NUEVO: horaSalida va a columna (hora del servidor)
+                ahoraLocal,
                 fechaActual         // NUEVO: fechaSalida va a columna
             );
 

@@ -34,6 +34,23 @@ namespace WebApplication1.Controllers
             _salidaService = salidaService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         /// <summary>
         /// Registra ingreso de personal local (mañana)
         /// POST /api/personal-local
@@ -94,10 +111,9 @@ namespace WebApplication1.Controllers
                     return StatusCode(500, "Error al registrar movimiento");
 
                 // Obtener hora actual en zona horaria de Perú (hora del servidor, NO del cliente)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
                 var fechaHoraActual = dto.HoraIngreso.HasValue 
-                    ? dto.HoraIngreso.Value 
-                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    ? ResolverHoraPeru(dto.HoraIngreso) 
+                    : ResolverHoraPeru(null);
 
                 // Separar fecha y hora para columnas de base de datos (solo ingreso en POST)
                 DateTime horaIngresoColumna = fechaHoraActual;
@@ -173,10 +189,9 @@ namespace WebApplication1.Controllers
                 guardiaNombre ??= "S/N";
 
                 // Obtener hora actual en zona horaria de Perú
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
                 var fechaHoraActual = dto.HoraSalidaAlmuerzo.HasValue 
-                    ? dto.HoraSalidaAlmuerzo.Value 
-                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    ? ResolverHoraPeru(dto.HoraSalidaAlmuerzo) 
+                    : ResolverHoraPeru(null);
 
                 // Obtener datos actuales y actualizar solo horaSalidaAlmuerzo (en JSON)
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
@@ -236,10 +251,9 @@ namespace WebApplication1.Controllers
                 guardiaNombre ??= "S/N";
 
                 // Obtener hora actual en zona horaria de Perú
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
                 var fechaHoraActual = dto.HoraEntradaAlmuerzo.HasValue 
-                    ? dto.HoraEntradaAlmuerzo.Value 
-                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    ? ResolverHoraPeru(dto.HoraEntradaAlmuerzo) 
+                    : ResolverHoraPeru(null);
 
                 // Obtener datos actuales y actualizar solo horaEntradaAlmuerzo (en JSON)
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
@@ -299,10 +313,9 @@ namespace WebApplication1.Controllers
                 guardiaNombre ??= "S/N";
 
                 // Obtener hora actual en zona horaria de Perú
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
                 var fechaHoraActual = dto.HoraSalida.HasValue 
-                    ? dto.HoraSalida.Value 
-                    : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                    ? ResolverHoraPeru(dto.HoraSalida) 
+                    : ResolverHoraPeru(null);
 
                 // Separar fecha y hora para columnas de base de datos
                 DateTime horaSalidaColumna = fechaHoraActual;

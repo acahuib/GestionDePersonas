@@ -55,6 +55,66 @@
         input.addEventListener("input", aplicarFiltro);
     }
 
+    function inferirTipoOperacionDesdeRuta() {
+        const path = (window.location.pathname || "").toLowerCase();
+        if (path.includes("/proveedores/")) return "Proveedor";
+        if (path.includes("/vehiculosproveedores/")) return "VehiculosProveedores";
+        if (path.includes("/vehiculoempresa/")) return "VehiculoEmpresa";
+        if (path.includes("/controlbienes/")) return "ControlBienes";
+        if (path.includes("/oficialpermisos/")) return "OficialPermisos";
+        if (path.includes("/personallocal/")) return "PersonalLocal";
+        if (path.includes("/permisospersonal/")) return "SalidasPermisosPersonal";
+        if (path.includes("/ocurrencias/")) return "Ocurrencias";
+        if (path.includes("/diaslibre/")) return "DiasLibre";
+        if (path.includes("/habitacionproveedor/")) return "HabitacionProveedor";
+        if (path.includes("/hotelproveedor/")) return "HotelProveedor";
+        if (path.includes("/registroenseresturno/")) return "RegistroInformativoEnseresTurno";
+        if (path.includes("/cancha/")) return "Cancha";
+        return "";
+    }
+
+    function obtenerIdDesdeOnclick(textoOnclick) {
+        if (!textoOnclick) return null;
+        const match = textoOnclick.match(/(?:irASalida|irASalidaFinal|registrarSalida)\((\d+)/i);
+        if (!match) return null;
+        const id = Number(match[1]);
+        return Number.isFinite(id) ? id : null;
+    }
+
+    function inyectarBotonEditar(scope) {
+        const tipoOperacion = inferirTipoOperacionDesdeRuta();
+        if (!tipoOperacion) return;
+
+        const botonesAccion = scope.querySelectorAll(
+            "button[onclick*='irASalida('], button[onclick*='irASalidaFinal('], button[onclick*='registrarSalida(']"
+        );
+
+        botonesAccion.forEach((btnSalida) => {
+            if (btnSalida.getAttribute("data-edit-inyectado") === "1") return;
+
+            const onclick = btnSalida.getAttribute("onclick") || "";
+            const id = obtenerIdDesdeOnclick(onclick);
+            if (!id) return;
+
+            const host = btnSalida.parentElement;
+            if (!host) return;
+
+            const btnEditar = document.createElement("button");
+            btnEditar.type = "button";
+            btnEditar.className = "btn-inline btn-small";
+            btnEditar.style.marginLeft = "6px";
+            btnEditar.textContent = "Editar";
+            btnEditar.addEventListener("click", () => {
+                const origen = window.location.pathname + window.location.search;
+                const url = `/edicion_activo.html?id=${id}&tipo=${encodeURIComponent(tipoOperacion)}&origen=${encodeURIComponent(origen)}`;
+                window.location.href = url;
+            });
+
+            host.appendChild(btnEditar);
+            btnSalida.setAttribute("data-edit-inyectado", "1");
+        });
+    }
+
     function renderPaginacion(scope, totalCoincidencias) {
         let pag = document.getElementById("paginacionActivosGlobal");
 
@@ -113,6 +173,8 @@
         const scope = obtenerScopeBusqueda();
         const input = document.getElementById("buscadorActivosGlobal");
         if (!scope || !input) return;
+
+        inyectarBotonEditar(scope);
 
         if (resetPagina) paginaActual = 1;
 

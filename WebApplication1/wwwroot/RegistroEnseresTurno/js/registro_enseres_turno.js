@@ -2,21 +2,126 @@ const TIPO_OPERACION_ENSERES = "RegistroInformativoEnseresTurno";
 const CONFIG_GUARDIAS_POR_TURNO = {
     "7am-7pm": {
         slots: [
-            { rol: "garita", puesto: "Garita 1", zona: "Garita", zonaEditable: false },
-            { rol: "garita", puesto: "Garita 2", zona: "Garita", zonaEditable: false },
-            { rol: "zona", puesto: "Mina", zona: "Zona 2 Mina", zonaEditable: true }
+            { rol: "garita", puesto: "GARITA PRINCIPAL - PV1", zona: "GARITA PRINCIPAL - PV1" },
+            { rol: "zona", puesto: "APOYO GARITA PRINCIPAL - PV2", zona: "APOYO GARITA PRINCIPAL - PV2" },
+            { rol: "zona", puesto: "GARITA/PORTON - PV3", zona: "GARITA/PORTON - PV3" }
         ]
     },
     "7pm-7am": {
         slots: [
-            { rol: "garita", puesto: "Garita", zona: "Garita", zonaEditable: false },
-            { rol: "zona", puesto: "Mina 1", zona: "Zona 1 Mina", zonaEditable: true },
-            { rol: "zona", puesto: "Mina 2", zona: "Zona 2 Mina", zonaEditable: true },
-            { rol: "zona", puesto: "Mina 3", zona: "Zona 3 Mina", zonaEditable: true },
-            { rol: "zona", puesto: "Mina 4", zona: "Zona 4 Mina", zonaEditable: true }
+            { rol: "garita", puesto: "GARITA PRINCIPAL - PV5", zona: "GARITA PRINCIPAL - PV5" },
+            { rol: "zona", puesto: "CRISTO BLANCO - PV1", zona: "CRISTO BLANCO - PV1" },
+            { rol: "zona", puesto: "ESTADIO AGUADITA - PV2", zona: "ESTADIO AGUADITA - PV2" },
+            { rol: "zona", puesto: "PORTON - PV3", zona: "PORTON - PV3" },
+            { rol: "zona", puesto: "PPG - PV4", zona: "PPG - PV4" }
         ]
     }
 };
+
+function obtenerTextoTurno(turno) {
+    if (turno === "7am-7pm") return "7am-7pm (Turno dia)";
+    if (turno === "7pm-7am") return "7pm-7am (Turno noche)";
+    return turno || "-";
+}
+
+// ---- Helpers para panel informativo de guardias ----
+
+function _fechaIsoLocalE(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function _extraerPvE(zona) {
+    const match = (zona || "").toUpperCase().match(/PV\s*([1-5])/);
+    return match ? `PV${match[1]}` : null;
+}
+
+function _renderPanelGuardias(container, datos, turno, fechaTexto) {
+    const guardiasGarita    = Array.isArray(datos.guardiasGarita)    ? datos.guardiasGarita    : [];
+    const guardiasOtrasZonas = Array.isArray(datos.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+
+    const mapaPv = {};
+    guardiasOtrasZonas.forEach(g => {
+        const pv = _extraerPvE(g?.zona);
+        if (pv && !mapaPv[pv]) mapaPv[pv] = g?.guardia || "-";
+    });
+
+    if (turno === "7pm-7am") {
+        const pv5 = guardiasGarita[0] || "-";
+        container.innerHTML = `
+            <div class="form-row" style="gap:16px;align-items:flex-start;">
+                <div class="form-group" style="flex:1;min-width:240px;">
+                    <label>PV5</label><input type="text" readonly value="${pv5}">
+                    <label style="margin-top:8px;">Puesto</label><input type="text" readonly value="GARITA PRINCIPAL">
+                    <label style="margin-top:8px;">Turno</label><input type="text" readonly value="7pm-7am (Turno noche)">
+                    <label style="margin-top:8px;">Fecha</label><input type="text" readonly value="${fechaTexto}">
+                </div>
+                <div class="form-group" style="flex:1;min-width:240px;">
+                    <label>PV1</label><input type="text" readonly value="${mapaPv.PV1 || "-"}">
+                    <label style="margin-top:8px;">PV2</label><input type="text" readonly value="${mapaPv.PV2 || "-"}">
+                    <label style="margin-top:8px;">PV3</label><input type="text" readonly value="${mapaPv.PV3 || "-"}">
+                    <label style="margin-top:8px;">PV4</label><input type="text" readonly value="${mapaPv.PV4 || "-"}">
+                </div>
+            </div>`;
+        return;
+    }
+
+    const pv1 = guardiasGarita[0] || "-";
+    container.innerHTML = `
+        <div class="form-row" style="gap:16px;align-items:flex-start;">
+            <div class="form-group" style="flex:1;min-width:240px;">
+                <label>PV1</label><input type="text" readonly value="${pv1}">
+                <label style="margin-top:8px;">Puesto</label><input type="text" readonly value="GARITA PRINCIPAL">
+                <label style="margin-top:8px;">Turno</label><input type="text" readonly value="7am-7pm (Turno dia)">
+                <label style="margin-top:8px;">Fecha</label><input type="text" readonly value="${fechaTexto}">
+            </div>
+            <div class="form-group" style="flex:1;min-width:240px;">
+                <label>PV2</label><input type="text" readonly value="${mapaPv.PV2 || "-"}">
+                <label style="margin-top:8px;">PV3</label><input type="text" readonly value="${mapaPv.PV3 || "-"}">
+            </div>
+        </div>`;
+}
+
+async function cargarInfoGuardiasTurno() {
+    const container = document.getElementById("info-guardias-turno");
+    if (!container) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/RegistroInformativoEnseresTurno`);
+        if (!response || !response.ok) throw new Error("No se pudo cargar guardias");
+
+        const registros = await response.json();
+        const hoy = _fechaIsoLocalE();
+        const hora = new Date().getHours();
+        const turno = (hora >= 7 && hora < 19) ? "7am-7pm" : "7pm-7am";
+
+        const candidatos = (Array.isArray(registros) ? registros : [])
+            .filter(r => {
+                const datos = r?.datos || {};
+                if (!datos.turno) return false;
+                const fechaDato = datos.fecha ? _fechaIsoLocalE(new Date(datos.fecha)) : null;
+                return fechaDato === hoy && datos.turno === turno;
+            })
+            .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
+
+        const registro = candidatos[0];
+        if (!registro) {
+            container.innerHTML = '<p class="text-center muted">No hay registro de guardias para hoy en el turno actual. <a href="registro_guardias_turno.html">Registrar ahora</a></p>';
+            return;
+        }
+
+        const fechaTexto = registro?.datos?.fecha
+            ? new Date(registro.datos.fecha).toLocaleDateString("es-PE")
+            : new Date().toLocaleDateString("es-PE");
+
+        _renderPanelGuardias(container, registro.datos || {}, turno, fechaTexto);
+
+    } catch (error) {
+        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+    }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
@@ -29,6 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarGuardiasTurno();
     agregarItem();
     cargarRegistrosDelDia();
+    cargarInfoGuardiasTurno();
+    setInterval(cargarInfoGuardiasTurno, 60000);
 });
 
 function renderizarGuardiasTurno() {
@@ -42,17 +149,11 @@ function renderizarGuardiasTurno() {
     }
 
     container.innerHTML = config.slots.map((slot, index) => {
-        const titulo = slot.rol === "garita" ? `${slot.puesto} *` : `${slot.puesto} *`;
-        const zonaAttr = slot.zonaEditable ? "" : "readonly";
         return `
             <div class="form-row" data-guardia-slot data-rol="${slot.rol}" style="margin-bottom: 10px;">
-                <div class="form-group" style="flex: 3;">
-                    <label>${titulo}</label>
+                <div class="form-group" style="flex: 1;">
+                    <label>${slot.puesto} *</label>
                     <input type="text" class="turno-guardia-nombre" placeholder="Nombre del guardia" data-slot-index="${index}">
-                </div>
-                <div class="form-group" style="flex: 3;">
-                    <label>Zona *</label>
-                    <input type="text" class="turno-guardia-zona" value="${slot.zona}" ${zonaAttr}>
                 </div>
             </div>
         `;
@@ -115,15 +216,18 @@ function obtenerItems() {
 
 function obtenerGuardiasTurno() {
     const turno = document.getElementById("turno").value;
+    const config = CONFIG_GUARDIAS_POR_TURNO[turno];
     const slots = document.querySelectorAll("[data-guardia-slot]");
     const guardiasGarita = [];
     const guardiasOtrasZonas = [];
     const faltantes = [];
 
     slots.forEach((slot, idx) => {
+        const slotIndex = Number(slot.querySelector(".turno-guardia-nombre")?.getAttribute("data-slot-index") || idx);
+        const slotConfig = config?.slots?.[slotIndex];
         const rol = slot.getAttribute("data-rol");
         const nombre = slot.querySelector(".turno-guardia-nombre")?.value.trim() || "";
-        const zona = slot.querySelector(".turno-guardia-zona")?.value.trim() || "";
+        const zona = slotConfig?.zona || "";
 
         if (!nombre || !zona) {
             faltantes.push(idx + 1);
@@ -138,7 +242,6 @@ function obtenerGuardiasTurno() {
         guardiasOtrasZonas.push({ guardia: nombre, zona });
     });
 
-    const config = CONFIG_GUARDIAS_POR_TURNO[turno];
     const totalEsperado = config ? config.slots.length : 0;
 
     return {
@@ -153,10 +256,10 @@ function obtenerGuardiasTurno() {
 async function registrarEnseres() {
     const turno = document.getElementById("turno").value;
     const fecha = document.getElementById("fecha").value;
+    const horaRegistroInput = document.getElementById("horaRegistro").value;
     const observaciones = document.getElementById("observaciones").value.trim();
     const mensaje = document.getElementById("mensaje");
     const objetos = obtenerItems();
-    const guardiasTurno = obtenerGuardiasTurno();
 
     mensaje.className = "";
     mensaje.innerText = "";
@@ -183,27 +286,18 @@ async function registrarEnseres() {
         return;
     }
 
-    if (guardiasTurno.faltantes.length > 0 || guardiasTurno.totalLleno !== guardiasTurno.totalEsperado) {
-        mensaje.className = "error";
-        mensaje.innerText = "Complete todos los campos de guardias del turno (nombre y zona)";
-        return;
-    }
-
-    if (!guardiasTurno.guardiasGarita.length) {
-        mensaje.className = "error";
-        mensaje.innerText = "Debe existir al menos un guardia en garita";
-        return;
-    }
-
     try {
         const response = await fetchAuth(`${API_BASE}/registro-informativo-enseres`, {
             method: "POST",
             body: JSON.stringify({
                 turno,
                 fecha: new Date(`${fecha}T00:00:00`).toISOString(),
+                horaRegistro: horaRegistroInput
+                    ? new Date(`${obtenerFechaLocalISO()}T${horaRegistroInput}`).toISOString()
+                    : null,
                 objetos,
-                guardiasGarita: guardiasTurno.guardiasGarita,
-                guardiasOtrasZonas: guardiasTurno.guardiasOtrasZonas,
+                guardiasGarita: ["-"],
+                guardiasOtrasZonas: [],
                 observaciones: observaciones || null
             })
         });
@@ -216,8 +310,8 @@ async function registrarEnseres() {
         mensaje.className = "success";
         mensaje.innerText = "Registro informativo guardado correctamente";
 
-        renderizarGuardiasTurno();
         document.getElementById("observaciones").value = "";
+        document.getElementById("horaRegistro").value = "";
         document.getElementById("items-container").innerHTML = "";
         agregarItem();
 
@@ -276,7 +370,7 @@ async function cargarRegistrosDelDia() {
 
             html += "<tr>";
             html += `<td>${fecha}</td>`;
-            html += `<td>${datos.turno || "-"}</td>`;
+            html += `<td>${obtenerTextoTurno(datos.turno)}</td>`;
             html += `<td>${datos.agenteNombre || r.nombreCompleto || "-"}</td>`;
             html += `<td class="cell-wrap" style="max-width: 300px;">${resumenGuardias}</td>`;
             html += `<td class="cell-wrap" style="max-width: 260px;">${resumenObjetos}</td>`;
@@ -289,4 +383,11 @@ async function cargarRegistrosDelDia() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

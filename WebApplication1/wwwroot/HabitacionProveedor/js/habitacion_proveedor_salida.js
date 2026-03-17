@@ -36,9 +36,16 @@ async function registrarSalida() {
     }
 
     try {
+        const horaSalidaInput = document.getElementById("horaSalida").value;
+        const body = {};
+        if (horaSalidaInput) {
+            const today = obtenerFechaLocalISO();
+            body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+        }
+
         const response = await fetchAuth(`${API_BASE}/habitacion-proveedor/${salidaId}/salida`, {
             method: "PUT",
-            body: JSON.stringify({})
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {
@@ -61,4 +68,12 @@ async function registrarSalida() {
         mensaje.className = "error";
         mensaje.innerText = `❌ Error: ${error.message}`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

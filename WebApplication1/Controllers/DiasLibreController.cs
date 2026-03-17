@@ -28,6 +28,23 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         // ======================================================
         // POST: /api/dias-libre
         // Registra permiso de salida DiasLibre (solo SALIDA, no hay INGRESO)
@@ -109,9 +126,10 @@ namespace WebApplication1.Controllers
             // Calcular fecha de regreso al trabajo (día después de Al)
             var fechaTrabaja = dto.Al.Date.AddDays(1);
 
-            // Obtener hora actual en zona horaria de Perú (para columnas de BD)
-            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
+            var ahoraLocal = dto.HoraSalida.HasValue
+                ? ResolverHoraPeru(dto.HoraSalida)
+                : ResolverHoraPeru(null);
             var fechaActual = ahoraLocal.Date;
 
             // Crear OperacionDetalle - JSON solo contiene datos específicos (sin nombre/dni)

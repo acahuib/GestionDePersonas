@@ -144,7 +144,7 @@ async function registrarMovimientoInicial() {
             // Enviar horaSalida solo si se especifica
             if (horaMovimientoInput) {
                 // Combinar con la fecha actual para crear un datetime completo
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = obtenerFechaLocalISO(); // YYYY-MM-DD
                 body.horaSalida = new Date(`${today}T${horaMovimientoInput}`).toISOString();
             } else {
                 body.horaSalida = new Date().toISOString();
@@ -156,7 +156,7 @@ async function registrarMovimientoInicial() {
             // Enviar horaIngreso solo si se especifica
             if (horaMovimientoInput) {
                 // Combinar con la fecha actual para crear un datetime completo
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = obtenerFechaLocalISO(); // YYYY-MM-DD
                 body.horaIngreso = new Date(`${today}T${horaMovimientoInput}`).toISOString();
             } else {
                 body.horaIngreso = new Date().toISOString();
@@ -323,4 +323,12 @@ async function cargarActivos() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

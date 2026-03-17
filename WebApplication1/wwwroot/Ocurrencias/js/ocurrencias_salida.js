@@ -61,7 +61,12 @@ async function registrarSalida() {
     mensaje.className = '';
 
     try {
-        const horaSalida = new Date().toISOString();
+        const horaSalidaInput = document.getElementById('horaSalida').value;
+        let horaSalida = new Date().toISOString();
+        if (horaSalidaInput) {
+            const today = obtenerFechaLocalISO();
+            horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+        }
 
         const responseSalida = await fetchAuth(`${API_BASE}/ocurrencias/${salidaId}/horario`, {
             method: 'PUT',
@@ -92,4 +97,12 @@ async function registrarSalida() {
 
 function volver() {
     window.location.href = 'ocurrencias.html?refresh=1';
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

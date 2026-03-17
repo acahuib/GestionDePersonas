@@ -55,6 +55,9 @@
         <label>Frazadas</label>
         <input type="number" id="frazadas" placeholder="Número de frazadas (opcional)" min="0">
 
+        <label>Hora de Ingreso <span class="muted">(Opcional)</span></label>
+        <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
+
         <div>
             <button onclick="registrarIngreso()" class="btn-success btn-block">
                 <img src="/images/check-lg.svg" class="icon-white"> Registrar INGRESO
@@ -108,7 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("nombreApellidos", () => document.getElementById("origen").focus());
     addEnterListener("origen", () => document.getElementById("cuarto").focus());
     addEnterListener("cuarto", () => document.getElementById("frazadas").focus());
-    addEnterListener("frazadas", registrarIngreso);
+    addEnterListener("frazadas", () => document.getElementById("horaIngreso").focus());
+    addEnterListener("horaIngreso", registrarIngreso);
 });
 </script>
 

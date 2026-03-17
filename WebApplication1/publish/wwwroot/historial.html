@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historiales - Guardia</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/historial.css">
+</head>
+<body>
+    <div class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <div>
+                    <h2>Historial General</h2>
+                    <p class="muted">Consulta rapida para todos los movimientos.</p>
+                </div>
+                <div class="header-actions">
+                    <span id="usuario-info"></span>
+                    <button class="btn-inline" onclick="cerrarSesion()">Cerrar Sesion</button>
+                </div>
+            </div>
+
+            <div class="historial-filtros">
+                <div class="filtro">
+                    <label for="filtroTipo">Cuaderno</label>
+                    <select id="filtroTipo"></select>
+                </div>
+                <div class="filtro">
+                    <label for="busquedaTexto">Busqueda</label>
+                    <input id="busquedaTexto" type="text" placeholder="DNI, nombre, placa..." />
+                </div>
+                <div class="filtro">
+                    <label for="filtroMovimiento">Movimiento</label>
+                    <select id="filtroMovimiento">
+                        <option value="">Todos</option>
+                        <option value="Entrada">Entrada</option>
+                        <option value="Salida">Salida</option>
+                        <option value="Info">Info</option>
+                    </select>
+                </div>
+                <div class="filtro">
+                    <label for="fechaInicio">Desde</label>
+                    <input id="fechaInicio" type="date" />
+                </div>
+                <div class="filtro">
+                    <label for="fechaFin">Hasta</label>
+                    <input id="fechaFin" type="date" />
+                </div>
+                <div class="filtro acciones">
+                    <button id="btnBuscar" class="btn-inline">Buscar</button>
+                    <button id="btnLimpiar" class="btn-inline btn-muted">Limpiar</button>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div>
+                    <strong>Resultados</strong>
+                    <span id="resumenResultados" class="muted">0 registros</span>
+                </div>
+                <div class="toolbar-actions">
+                    <button id="btnRecargar" class="btn-inline">Recargar</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead id="tablaHead"></thead>
+                    <tbody id="tablaBody"></tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="btnPrev" class="btn-inline">Anterior</button>
+                <span id="infoPagina">Pagina 0 de 0</span>
+                <button id="btnNext" class="btn-inline">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/historial.js"></script>
+</body>
+</html>

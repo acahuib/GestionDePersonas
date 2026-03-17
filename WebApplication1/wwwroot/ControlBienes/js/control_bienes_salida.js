@@ -93,6 +93,7 @@ function marcarTodosBienes(marcar) {
 // Registrar SALIDA
 async function registrarSalida() {
     const observacionSalida = document.getElementById("observacion-salida").value.trim();
+    const horaSalidaInput = document.getElementById("horaSalida").value;
     const mensaje = document.getElementById("mensaje");
     const checks = Array.from(document.querySelectorAll(".bien-check:checked"));
     const bienIds = checks.map(ch => ch.value);
@@ -109,6 +110,9 @@ async function registrarSalida() {
     try {
         const body = {
             bienIds,
+            horaSalida: horaSalidaInput
+                ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+                : null,
             observacion: observacionSalida || null
         };
 
@@ -135,4 +139,12 @@ async function registrarSalida() {
         mensaje.className = "error";
         mensaje.innerText = `❌ Error: ${error.message}`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

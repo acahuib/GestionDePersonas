@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú Principal - Control de Accesos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+ <!--   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">-->
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2><img src="/images/pin-angle.svg" alt="Bootstrap" width="32" height="32"> Menú Principal</h2>
+            <div class="header-actions">
+                <span id="usuario-info"></span>
+            </div>
+        </div>
+
+        <hr>
+
+    <p>Seleccione el cuaderno que desea abrir:</p>
+
+    <div class="card-grid">
+        <a href="Proveedores/html/proveedor.html" class="card-link">
+            <div class="card">
+                <h3>Proveedores</h3>
+                <img src="images/IngresoProvedores.png" alt="Proveedores" class="card-image">
+                <p>Ingreso/salida de proveedores sin vehiculo.</p>
+            </div>
+        </a>
+
+        <a href="VehiculoEmpresa/html/vehiculo_empresa.html" class="card-link">
+            <div class="card">
+                <h3>Vehículos Empresa</h3>
+                <img src="images/VehiculoEmpresa.png" alt="Vehículos Empresa" class="card-image">
+                <p>Registro de salida/ingreso de vehículos de empresa.</p>
+            </div>
+        </a>
+
+        <a href="VehiculosProveedores/html/vehiculos_proveedores.html" class="card-link">
+            <div class="card">
+                <h3>Vehiculos Proveedores</h3>
+                <img src="images/VehiculoProveedores.png" alt="Vehículos Proveedores" class="card-image">
+                <p>Ingreso/salida de proveedores con vehiculo.</p>
+            </div>
+        </a>
+
+        <a href="PersonalLocal/html/personal_local.html" class="card-link">
+            <div class="card">
+                <h3>Personal Local</h3>
+                <img src="images/PersonalLocal.png" alt="Personal Local" class="card-image">
+                <p>Ingreso/salida del personal local con registro de almuerzo opcional.</p>
+            </div>
+        </a>
+
+        <a href="OficialPermisos/html/oficial_permisos.html" class="card-link">
+            <div class="card">
+                <h3>Control Personal Permisos</h3>
+                <img src="images/ControlPermisos.png" alt="Permisos Oficiales" class="card-image">
+                <p>Registro de permisos de salida autorizados del personal.</p>
+            </div>
+        </a>
+
+        <a href="Ocurrencias/html/ocurrencias.html" class="card-link">
+            <div class="card">
+                <h3>Ocurrencias</h3>
+                <img src="images/Ocurrencias.png" alt="Ocurrencias" class="card-image">
+                <p>Registro de casos especiales: visitantes, técnicos, familiares.</p>
+            </div>
+        </a>    
+
+        <a href="ControlBienes/html/control_bienes.html" class="card-link">
+            <div class="card">
+                <h3>Control de Bienes</h3>
+                <img src="images/ControlBienes.png" alt="Control de Bienes" class="card-image">
+                <p>Registro de ingreso/salida de personal con bienes declarados.</p>
+            </div>
+        </a>
+
+        <a href="DiasLibre/html/dias_libre.html" class="card-link">
+            <div class="card">
+                <h3>Días Libres</h3>
+                <img src="images/DiasLibres.png" alt="Días Libres" class="card-image">
+                <p>Registro de permisos de días libres del personal.</p>
+            </div>
+        </a>
+
+        <a href="HabitacionProveedor/html/habitacion_proveedor.html" class="card-link">
+            <div class="card">
+                <h3>Habitación Proveedor</h3>
+                <img src="images/HabitacionProveedor.png" alt="Habitación Proveedor" class="card-image">
+                <p>Control de proveedores en habitación de espera.</p>
+            </div>
+        </a>
+
+        <a href="HotelProveedor/html/hotel_proveedor.html" class="card-link">
+            <div class="card">
+                <h3>Hotel Proveedor</h3>
+                <img src="images/HabitacionProveedor.png" alt="Hotel Proveedor" class="card-image">
+                <p>Control de salida a hotel externo y retorno a mina.</p>
+            </div>
+        </a>
+
+        <a href="Cancha/html/cancha.html" class="card-link">
+            <div class="card">
+                <h3>Cancha</h3>
+                <img src="images/Cancha.png" alt="Cancha" class="card-image">
+                <p>Registro de uso de cancha por fecha, hora y equipos.</p>
+            </div>
+        </a>
+
+        <a href="RegistroEnseresTurno/html/registro_enseres_turno.html" class="card-link">
+            <div class="card">
+                <h3>Enseres por Turno</h3>
+                <img src="images/Ocurrencias.png" alt="Registro Enseres por Turno" class="card-image">
+                <p>Registro informativo de objetos y cantidades al cierre del turno.</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/auth.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+});
+</script>
+
+</body>
+</html>

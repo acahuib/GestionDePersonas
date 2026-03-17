@@ -14,6 +14,7 @@ namespace WebApplication1.DTOs
         public string? NombresApellidos { get; set; } // Opcional - solo si DNI no está en tabla Personas
         public required string Origen { get; set; }
         public string? Cuarto { get; set; } // Número de cuarto o null
+        public DateTime? HoraIngreso { get; set; }
         
         // Frazadas: número o null
         public int? Frazadas { get; set; }

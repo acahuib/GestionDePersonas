@@ -19,6 +19,19 @@
                 <a href="ocurrencias_historial.html">
                     <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Ver historial</button>
                 </a>
+                <a href="../../RegistroEnseresTurno/html/registro_guardias_turno.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/person-badge.svg" class="icon-white"> Registrar Guardias</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Guardias del Turno (Informativo)</h3>
+            <p class="muted">Este bloque se alimenta del ultimo registro de Enseres por Turno del dia actual.</p>
+            <div id="info-guardias-turno">
+                <p class="text-center muted">Cargando guardias del turno...</p>
             </div>
         </div>
 
@@ -38,6 +51,9 @@
 
             <label>Nombre <span class="muted">(Opcional)</span></label>
             <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
+
+            <label>Hora de Ingreso <span class="muted">(Opcional)</span></label>
+            <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
             <label>Descripción de Ocurrencia *</label>
             <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4" required></textarea>
@@ -77,9 +93,11 @@
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
     cargarActivos();
+    cargarInfoGuardiasTurno();
 
     // Auto-actualizar cada 30 segundos
     setInterval(cargarActivos, 30000);
+    setInterval(cargarInfoGuardiasTurno, 60000);
 
     // Enter listeners
     const dniInput = document.getElementById("dni");

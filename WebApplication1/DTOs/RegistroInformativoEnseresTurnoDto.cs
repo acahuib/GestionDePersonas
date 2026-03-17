@@ -5,6 +5,7 @@ namespace WebApplication1.DTOs
         public required string Turno { get; set; }
         public string? Puesto { get; set; }
         public DateTime Fecha { get; set; }
+        public DateTime? HoraRegistro { get; set; }
         public required List<RegistroInformativoEnserItemDto> Objetos { get; set; }
         public List<string>? GuardiasGarita { get; set; }
         public List<GuardiaZonaTurnoDto>? GuardiasOtrasZonas { get; set; }

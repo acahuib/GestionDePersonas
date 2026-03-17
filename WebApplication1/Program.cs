@@ -98,6 +98,12 @@ if (!app.Environment.IsDevelopment())
     {
         errorApp.Run(async context =>
         {
+            var exceptionFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+            if (exceptionFeature?.Error != null)
+            {
+                app.Logger.LogError(exceptionFeature.Error, "Error no controlado en {Path}", exceptionFeature.Path);
+            }
+
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new { mensaje = "Error interno del servidor" });
@@ -115,7 +121,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// HTTPS redirect desactivado: sistema intranet, se usa HTTP en la red local de la mina.
 
 app.UseStaticFiles();
 

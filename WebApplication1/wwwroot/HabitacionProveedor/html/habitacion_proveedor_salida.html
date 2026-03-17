@@ -54,7 +54,10 @@
         <hr>
 
         <h3>Registrar Salida de Habitación</h3>
-        <p class="muted">Se registrará la salida con la hora actual del sistema</p>
+        <p class="muted">Puede seleccionar la hora de salida o dejar vacío para usar hora actual.</p>
+
+        <label>Hora de Salida <span class="muted">(Opcional)</span></label>
+        <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
         <div>
             <button onclick="registrarSalida()" class="btn-success btn-block">

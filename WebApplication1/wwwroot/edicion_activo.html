@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Registro Activo</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>Editar Registro Activo</h2>
+            <div class="header-actions">
+                <button type="button" class="btn-inline btn-secondary" onclick="volverOrigen()"><img src="/images/arrow-left.svg" class="icon-white"> Volver</button>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3 id="titulo-registro">Cargando...</h3>
+            <div id="form-edicion">
+                <p class="text-center muted">Cargando datos...</p>
+            </div>
+            <div style="margin-top:12px;">
+                <button type="button" class="btn-success btn-block" onclick="guardarCambios()">
+                    <img src="/images/check-lg.svg" class="icon-white"> Guardar cambios
+                </button>
+            </div>
+            <p id="mensaje"></p>
+        </div>
+    </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/edicion_activo.js"></script>
+</body>
+</html>

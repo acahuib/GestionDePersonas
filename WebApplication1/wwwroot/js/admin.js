@@ -503,6 +503,7 @@ function formatearFechaHora(fechaHora) {
 function getTipoBadge(tipo) {
     const tipos = {
         'Personal Local': 'primary',
+        'Cuaderno de Asistencia Personal de Mina': 'primary',
         'Proveedor': 'warning',
         'Oficial': 'success',
         'Guardia': 'info'

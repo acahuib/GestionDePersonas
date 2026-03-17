@@ -33,6 +33,23 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         private int? ExtractUsuarioIdFromToken()
         {
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -146,9 +163,8 @@ namespace WebApplication1.Controllers
 
                 // MODO INFORMATIVO: NO crear movimiento en tabla Movimientos.
                 // Solo enlazar al último movimiento existente del DNI como referencia técnica.
-                // Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                // Respetar hora seleccionada y normalizar a zona Perú.
+                var ahoraLocal = ResolverHoraPeru(dto.HoraIngreso);
                 var fechaActual = ahoraLocal.Date;
 
                 // Crear OperacionDetalle con datos de HabitacionProveedor
@@ -223,9 +239,8 @@ namespace WebApplication1.Controllers
                     : null;
                 string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
-                // Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                // Respetar hora seleccionada y normalizar a zona Perú.
+                var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
                 var fechaActual = ahoraLocal.Date;
 
                 // Deserializar datos actuales

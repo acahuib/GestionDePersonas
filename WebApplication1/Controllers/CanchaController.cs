@@ -101,6 +101,16 @@ namespace WebApplication1.Controllers
             var fechaRegistro = dto.Fecha.Date;
             var fechaHoraRegistro = fechaRegistro.Add(hora);
 
+            // Evita doble reserva activa en el mismo horario.
+            var yaReservado = await _context.OperacionDetalle
+                .AnyAsync(o => o.TipoOperacion == TipoOperacion &&
+                               o.HoraIngreso.HasValue &&
+                               o.HoraIngreso.Value == fechaHoraRegistro &&
+                               o.HoraSalida == null);
+
+            if (yaReservado)
+                return Conflict("Ya existe una reserva activa para esa fecha y hora. Debe marcarse como terminado para volver a reservar.");
+
             var movimiento = new Movimiento
             {
                 Dni = dni,
@@ -118,6 +128,7 @@ namespace WebApplication1.Controllers
                 TipoOperacion,
                 new
                 {
+                    estado = "Reservado",
                     categoria = categoriaNormalizada,
                     fecha = fechaRegistro,
                     hora = dto.Hora,
@@ -195,7 +206,7 @@ namespace WebApplication1.Controllers
             guardiaNombre ??= User.FindFirst(ClaimTypes.Name)?.Value ?? "Guardia";
 
             var fechaCierre = DateTime.Now;
-            datos["estado"] = "Completado";
+            datos["estado"] = "Terminado";
             datos["observacionCierre"] = string.IsNullOrWhiteSpace(dto.Observacion) ? null : dto.Observacion.Trim();
             datos["fechaCierre"] = fechaCierre.Date;
             datos["horaCierre"] = fechaCierre;
@@ -209,7 +220,7 @@ namespace WebApplication1.Controllers
                 horaSalida: fechaCierre,
                 fechaSalida: fechaCierre.Date);
 
-            return Ok(new { mensaje = "Registro completado" });
+            return Ok(new { mensaje = "Reserva marcada como terminada" });
         }
     }
 }

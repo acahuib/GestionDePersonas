@@ -44,6 +44,9 @@
             <label>Fecha *</label>
             <input type="date" id="fecha" required>
 
+            <label>Hora de Salida <span class="muted">(Opcional)</span></label>
+            <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
+
             <label>Tipo de Habitación *</label>
             <input type="text" id="tipoHabitacion" placeholder="Ejemplo: Simple, Doble">
 
@@ -67,6 +70,9 @@
                 <h3>Registros de Hotel Pendientes de Ingreso</h3>
                 <button onclick="cargarPendientesIngreso()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
             </div>
+
+            <label>Hora de Ingreso para próximos registros <span class="muted">(Opcional)</span></label>
+            <input type="time" id="horaIngresoPendiente" placeholder="Dejar vacío para usar hora actual">
 
             <div id="lista-pendientes">
                 <p class="text-center muted">Cargando...</p>

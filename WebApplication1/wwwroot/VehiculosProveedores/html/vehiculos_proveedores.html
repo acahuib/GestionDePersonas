@@ -28,39 +28,36 @@
     <div class="form-card">
         <h3>Registrar Entrada</h3>
 
+        <label>Hora de Ingreso (opcional)</label>
+        <input type="time" id="horaIngreso" placeholder="Dejar vacio para usar hora actual">
+
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del conductor" maxlength="8">
 
-        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="nombres" placeholder="Nombres del conductor">
+        <label>Placa *</label>
+        <input type="text" id="placa" placeholder="Placa del vehiculo">
 
-        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="apellidos" placeholder="Apellidos del conductor">
+        <label>Nombre y Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombreCompleto" placeholder="Nombre completo del conductor">
 
         <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
             <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
         </div>
 
-        <label>Proveedor/Empresa *</label>
-        <input type="text" id="proveedor" placeholder="Empresa o proveedor">
-
-        <label>Placa *</label>
-        <input type="text" id="placa" placeholder="Placa del vehículo">
-
-        <label>Tipo *</label>
-        <input type="text" id="tipo" placeholder="Tipo (ej: M, LL)">
-
-        <label>Lote *</label>
-        <input type="text" id="lote" placeholder="Número de lote">
+        <label>Trae *</label>
+        <input type="text" id="tipo" placeholder="Trae">
 
         <label>Cantidad *</label>
         <input type="text" id="cantidad" placeholder="Cantidad">
 
+        <label>Lote *</label>
+        <input type="text" id="lote" placeholder="Numero de lote">
+
         <label>Procedencia *</label>
         <input type="text" id="procedencia" placeholder="Procedencia">
 
-        <label>Hora de Ingreso (opcional)</label>
-        <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
+        <label>Proveedor/Empresa *</label>
+        <input type="text" id="proveedor" placeholder="Empresa o proveedor">
 
         <label>Observación</label>
         <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
@@ -118,14 +115,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
-    addEnterListener("apellidos", () => document.getElementById("proveedor").focus());
-    addEnterListener("proveedor", () => document.getElementById("placa").focus());
-    addEnterListener("placa", () => document.getElementById("tipo").focus());
-    addEnterListener("tipo", () => document.getElementById("lote").focus());
-    addEnterListener("lote", () => document.getElementById("cantidad").focus());
-    addEnterListener("cantidad", () => document.getElementById("procedencia").focus());
-    addEnterListener("procedencia", registrarEntrada);
+    addEnterListener("placa", () => document.getElementById("nombreCompleto").focus());
+    addEnterListener("nombreCompleto", () => document.getElementById("tipo").focus());
+    addEnterListener("tipo", () => document.getElementById("cantidad").focus());
+    addEnterListener("cantidad", () => document.getElementById("lote").focus());
+    addEnterListener("lote", () => document.getElementById("procedencia").focus());
+    addEnterListener("procedencia", () => document.getElementById("proveedor").focus());
+    addEnterListener("proveedor", registrarEntrada);
 });
 </script>
 

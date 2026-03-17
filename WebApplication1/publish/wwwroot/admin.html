@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Administrador - Sistema de Garita</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>📊 Dashboard Administrador</h1>
+                <p class="subtitle">Sistema de Control de Garita</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="nombreUsuario">Admin</span>
+                    <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesión</button>
+                </div>
+                <div class="last-update">
+                    <span>Última actualización: <span id="lastUpdate">--:--</span></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Estadísticas Cards -->
+        <section class="stats-grid">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="totalDentro">--</h3>
+                    <p>Personas Dentro</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">📅</div>
+                <div class="stat-content">
+                    <h3 id="movimientosHoy">--</h3>
+                    <p>Movimientos Hoy</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">📥</div>
+                <div class="stat-content">
+                    <h3 id="ingresosHoy">--</h3>
+                    <p>Ingresos Hoy</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-card-info">
+                <div class="stat-icon">📤</div>
+                <div class="stat-content">
+                    <h3 id="salidasHoy">--</h3>
+                    <p>Salidas Hoy</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contenido Principal -->
+        <div class="main-content">
+            <!-- Personas Actualmente Dentro -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>🏢 Personas Actualmente Dentro</h2>
+                </div>
+                <button onclick="actualizarDashboard()" class="btn-refresh"><img src="images/arrow-clockwise.svg" class="icon-white" alt="Actualizar">Actualizar</button>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Tipo Registro</th>
+                                <th>Fecha Ingreso</th>
+                                <th>Hora Ingreso</th>
+                                <th>Tiempo Dentro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPersonasDentro">
+                            <tr>
+                                <td colspan="6" class="loading">Cargando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button onclick="cambiarPaginaPersonasDentro(-1)" id="btnPersonasAnterior" class="btn-page">← Anterior</button>
+                    <span id="paginaPersonasActual">Página 1</span>
+                    <button onclick="cambiarPaginaPersonasDentro(1)" id="btnPersonasSiguiente" class="btn-page">Siguiente →</button>
+                </div>
+            </section>
+
+            <!-- Últimos Movimientos -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📋 Últimos Movimientos del Día</h2>
+                    <div class="filter-controls">
+                        <select id="filtroTipo" onchange="actualizarDashboard()">
+                            <option value="">Todos los tipos</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Salida">Salida</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha/Hora</th>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Tipo Persona</th>
+                                <th>Tipo Movimiento</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaUltimosMovimientos">
+                            <tr>
+                                <td colspan="6" class="loading">Cargando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button onclick="cambiarPagina(-1)" id="btnAnterior" class="btn-page">← Anterior</button>
+                    <span id="paginaActual">Página 1</span>
+                    <button onclick="cambiarPagina(1)" id="btnSiguiente" class="btn-page">Siguiente →</button>
+                </div>
+            </section>
+
+
+            <!-- Registro Informativo Enseres por Turno (Solo lectura) -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📒 Registro Informativo de Guardias (Enseres por Turno)</h2>
+                    <button onclick="cargarRegistrosEnseresTurno(true)" class="btn-refresh"><img src="images/arrow-clockwise.svg" class="icon-white" alt="Actualizar">Actualizar</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Turno</th>
+                                <th>Guardia</th>
+                                <th>DNI</th>
+                                <th>Objetos</th>
+                                <th>Hora Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaEnseresTurnoAdmin">
+                            <tr>
+                                <td colspan="6" class="loading">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button onclick="irAPaginaEnseres(1)" id="btnEnseresPrimera" class="btn-page">Primera</button>
+                    <button onclick="cambiarPaginaEnseres(-1)" id="btnEnseresAnterior" class="btn-page">← Anterior</button>
+                    <span id="paginaEnseresActual">Página 1 de 1</span>
+                    <button onclick="cambiarPaginaEnseres(1)" id="btnEnseresSiguiente" class="btn-page">Siguiente →</button>
+                    <button onclick="irAUltimaPaginaEnseres()" id="btnEnseresUltima" class="btn-page">Última</button>
+                </div>
+            </section>
+
+            <!-- Historial general (admin) -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>🗂️ Historial General</h2>
+                </div>
+                <a class="historial-card" href="admin-historial.html">
+                    <span class="historial-icon">📚</span>
+                    <span class="historial-title">Ver Historial General (Admin)</span>
+                </a>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>Sistema de Control de Garita © 2026 | Dashboard Administrativo</p>
+        </footer>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
+-

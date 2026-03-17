@@ -45,6 +45,23 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         // ======================================================
         // POST: /api/control-bienes
         // Registra INGRESO con bienes
@@ -103,9 +120,10 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return BadRequest("No existe movimiento previo para este DNI. Registre primero a la persona en su cuaderno correspondiente.");
 
-                // Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
+                var ahoraLocal = dto.HoraIngreso.HasValue
+                    ? ResolverHoraPeru(dto.HoraIngreso)
+                    : ResolverHoraPeru(null);
 
                 var operacionAbierta = await _context.OperacionDetalle
                     .Where(o => o.TipoOperacion == "ControlBienes" &&
@@ -239,9 +257,10 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // NUEVO: Usar hora local del servidor (Perú UTC-5) - NO confiar en hora del cliente
-            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
+            var ahoraLocal = dto.HoraSalida.HasValue
+                ? ResolverHoraPeru(dto.HoraSalida)
+                : ResolverHoraPeru(null);
 
             var bienesActuales = LeerBienesDesdeJson(salida.DatosJSON);
             var idsSeleccionados = dto.BienIds

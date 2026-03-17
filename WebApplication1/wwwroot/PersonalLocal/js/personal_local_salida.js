@@ -49,7 +49,7 @@ async function registrarSalida() {
         // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
             // Combinar con la fecha actual para crear un datetime completo
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
             body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
         }
 
@@ -80,4 +80,12 @@ async function registrarSalida() {
 
 function volver() {
     window.location.href = "personal_local.html?refresh=1";
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

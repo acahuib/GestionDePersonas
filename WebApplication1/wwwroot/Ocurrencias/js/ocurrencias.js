@@ -4,6 +4,132 @@
 
 let personaEncontrada = null;
 
+function obtenerTurnoActual() {
+    const hora = new Date().getHours();
+    return (hora >= 7 && hora < 19) ? "7am-7pm" : "7pm-7am";
+}
+
+function extraerPvDesdeZona(zona) {
+    const match = (zona || "").toUpperCase().match(/PV\s*([1-5])/);
+    return match ? `PV${match[1]}` : null;
+}
+
+function fechaIsoLocal(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function turnoTexto(turno) {
+    if (turno === "7am-7pm") return "7am-7pm (Turno dia)";
+    if (turno === "7pm-7am") return "7pm-7am (Turno noche)";
+    return turno || "-";
+}
+
+function renderInfoGuardias(container, datos, turno, fecha) {
+    const guardiasGarita = Array.isArray(datos.guardiasGarita) ? datos.guardiasGarita : [];
+    const guardiasOtrasZonas = Array.isArray(datos.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+
+    const mapaPv = {};
+    guardiasOtrasZonas.forEach((g) => {
+        const pv = extraerPvDesdeZona(g?.zona);
+        if (pv && !mapaPv[pv]) {
+            mapaPv[pv] = g?.guardia || "-";
+        }
+    });
+
+    if (turno === "7pm-7am") {
+        const pv5Nombre = guardiasGarita[0] || "-";
+        container.innerHTML = `
+            <div class="form-row" style="gap: 16px; align-items: flex-start;">
+                <div class="form-group" style="flex: 1; min-width: 260px;">
+                    <label>PV5</label>
+                    <input type="text" readonly value="${pv5Nombre}">
+                    <label style="margin-top: 8px;">Puesto</label>
+                    <input type="text" readonly value="GARITA PRINCIPAL">
+                    <label style="margin-top: 8px;">Turno</label>
+                    <input type="text" readonly value="${turnoTexto(turno)}">
+                    <label style="margin-top: 8px;">Fecha</label>
+                    <input type="text" readonly value="${fecha}">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 260px;">
+                    <label>PV1</label>
+                    <input type="text" readonly value="${mapaPv.PV1 || "-"}">
+                    <label style="margin-top: 8px;">PV2</label>
+                    <input type="text" readonly value="${mapaPv.PV2 || "-"}">
+                    <label style="margin-top: 8px;">PV3</label>
+                    <input type="text" readonly value="${mapaPv.PV3 || "-"}">
+                    <label style="margin-top: 8px;">PV4</label>
+                    <input type="text" readonly value="${mapaPv.PV4 || "-"}">
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const pv1Nombre = guardiasGarita[0] || "-";
+    container.innerHTML = `
+        <div class="form-row" style="gap: 16px; align-items: flex-start;">
+            <div class="form-group" style="flex: 1; min-width: 260px;">
+                <label>PV1</label>
+                <input type="text" readonly value="${pv1Nombre}">
+                <label style="margin-top: 8px;">Puesto</label>
+                <input type="text" readonly value="GARITA PRINCIPAL">
+                <label style="margin-top: 8px;">Turno</label>
+                <input type="text" readonly value="${turnoTexto(turno)}">
+                <label style="margin-top: 8px;">Fecha</label>
+                <input type="text" readonly value="${fecha}">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 260px;">
+                <label>PV2</label>
+                <input type="text" readonly value="${mapaPv.PV2 || "-"}">
+                <label style="margin-top: 8px;">PV3</label>
+                <input type="text" readonly value="${mapaPv.PV3 || "-"}">
+            </div>
+        </div>
+    `;
+}
+
+async function cargarInfoGuardiasTurno() {
+    const container = document.getElementById("info-guardias-turno");
+    if (!container) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/RegistroInformativoEnseresTurno`);
+        if (!response || !response.ok) {
+            throw new Error("No se pudo cargar guardias del turno");
+        }
+
+        const registros = await response.json();
+        const hoy = fechaIsoLocal();
+        const turno = obtenerTurnoActual();
+
+        const candidatos = (Array.isArray(registros) ? registros : [])
+            .filter((r) => {
+                const datos = r?.datos || {};
+                if (!datos.turno) return false;
+                const fechaDato = datos.fecha ? fechaIsoLocal(new Date(datos.fecha)) : null;
+                return fechaDato === hoy && datos.turno === turno;
+            })
+            .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
+
+        const registro = candidatos[0];
+        if (!registro) {
+            container.innerHTML = '<p class="text-center muted">No hay registro de Enseres por Turno para hoy en este turno.</p>';
+            return;
+        }
+
+        const fechaTexto = registro?.datos?.fecha
+            ? new Date(registro.datos.fecha).toLocaleDateString("es-PE")
+            : new Date().toLocaleDateString("es-PE");
+
+        renderInfoGuardias(container, registro.datos || {}, turno, fechaTexto);
+    } catch (error) {
+        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+    }
+}
+
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
@@ -69,6 +195,7 @@ async function buscarPersonaPorDni() {
 async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombre = document.getElementById("nombre").value.trim();
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const ocurrencia = document.getElementById("ocurrencia").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -91,9 +218,15 @@ async function registrarIngreso() {
 
     try {
         const body = {
-            ocurrencia,
-            horaIngreso: new Date().toISOString() // Enviar horaIngreso
+            ocurrencia
         };
+
+        if (horaIngresoInput) {
+            const today = obtenerFechaLocalISO();
+            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+        } else {
+            body.horaIngreso = new Date().toISOString();
+        }
 
         // Agregar DNI y nombre solo si se proporcionaron
         if (dni) body.dni = dni;
@@ -121,6 +254,7 @@ async function registrarIngreso() {
         // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombre").value = "";
+        document.getElementById("horaIngreso").value = "";
         document.getElementById("ocurrencia").value = "";
         
         // Reset persona encontrada
@@ -231,3 +365,11 @@ async function cargarActivos() {
     }
 }
 
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}

@@ -50,6 +50,23 @@ namespace WebApplication1.Controllers
             var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
         }
+        
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
 
         private async Task<Models.OperacionDetalle?> ObtenerProveedorActivo(string dni)
         {
@@ -197,7 +214,7 @@ namespace WebApplication1.Controllers
 
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var guardiaNombre = await ObtenerNombreGuardia(usuarioId);
-                var ahoraLocal = ObtenerAhoraPeru();
+                var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
                 var fechaActual = ahoraLocal.Date;
 
                 using (var proveedorDoc = JsonDocument.Parse(proveedorActivo.DatosJSON))
@@ -295,7 +312,7 @@ namespace WebApplication1.Controllers
 
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var guardiaNombre = await ObtenerNombreGuardia(usuarioId);
-                var ahoraLocal = dto.HoraIngreso.HasValue ? dto.HoraIngreso.Value : ObtenerAhoraPeru();
+                var ahoraLocal = ResolverHoraPeru(dto.HoraIngreso);
                 var fechaActual = ahoraLocal.Date;
 
                 using var hotelDoc = JsonDocument.Parse(salidaHotel.DatosJSON);
@@ -405,7 +422,7 @@ namespace WebApplication1.Controllers
 
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var guardiaNombre = await ObtenerNombreGuardia(usuarioId);
-                var ahoraLocal = dto.HoraCierre.HasValue ? dto.HoraCierre.Value : ObtenerAhoraPeru();
+                var ahoraLocal = ResolverHoraPeru(dto.HoraCierre);
 
                 using var hotelDoc = JsonDocument.Parse(salidaHotel.DatosJSON);
                 var root = hotelDoc.RootElement;

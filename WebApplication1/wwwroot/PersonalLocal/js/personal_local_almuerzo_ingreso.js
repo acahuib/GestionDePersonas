@@ -39,7 +39,7 @@ async function registrarIngresoAlmuerzo() {
         // Enviar horaEntradaAlmuerzo solo si se especifica
         if (horaEntradaAlmuerzoInput) {
             // Combinar con la fecha actual para crear un datetime completo
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
             body.horaEntradaAlmuerzo = new Date(`${today}T${horaEntradaAlmuerzoInput}`).toISOString();
         }
 
@@ -70,4 +70,12 @@ async function registrarIngresoAlmuerzo() {
 
 function volver() {
     window.location.href = "personal_local.html?refresh=1";
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

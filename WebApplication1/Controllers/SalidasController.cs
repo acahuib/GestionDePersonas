@@ -5,6 +5,7 @@ using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ClosedXML.Excel;
 using System.Security.Claims;
 using System.Globalization;
@@ -24,6 +25,15 @@ namespace WebApplication1.Controllers
     // [Authorize(Roles = "Admin,Guardia")]
     public class SalidasController : ControllerBase
     {
+        public class EditarActivoDto
+        {
+            public Dictionary<string, JsonElement>? Datos { get; set; }
+            public DateTime? HoraIngreso { get; set; }
+            public DateTime? FechaIngreso { get; set; }
+            public DateTime? HoraSalida { get; set; }
+            public DateTime? FechaSalida { get; set; }
+        }
+
         private const string EstadoActivo = "Activo";
         private const string EstadoRetirado = "Retirado";
 
@@ -723,6 +733,71 @@ namespace WebApplication1.Controllers
                 fechaIngreso = _salidasService.ObtenerFechaIngreso(salida),
                 horaSalida = _salidasService.ObtenerHoraSalida(salida),
                 fechaSalida = _salidasService.ObtenerFechaSalida(salida)
+            });
+        }
+
+        // ======================================================
+        // PUT: /api/salidas/{id}/edicion-activo
+        // Edición genérica desde tabla de activos
+        // NO permite editar DNI ni nombre/nombreApellidos
+        // ======================================================
+        [HttpPut("{id}/edicion-activo")]
+        public async Task<IActionResult> EditarActivo(int id, [FromBody] EditarActivoDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("OperacionDetalle no encontrada");
+
+            JsonElement datosActuales;
+            try
+            {
+                datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+            }
+            catch
+            {
+                return BadRequest("DatosJSON inválido en el registro");
+            }
+
+            var resultado = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prop in datosActuales.EnumerateObject())
+            {
+                resultado[prop.Name] = prop.Value.Clone();
+            }
+
+            var camposBloqueados = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "dni",
+                "nombre",
+                "nombreApellidos"
+            };
+
+            if (dto.Datos != null)
+            {
+                foreach (var kv in dto.Datos)
+                {
+                    if (camposBloqueados.Contains(kv.Key))
+                        continue;
+
+                    resultado[kv.Key] = kv.Value.Clone();
+                }
+            }
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            await _salidasService.ActualizarSalidaDetalle(
+                id,
+                resultado,
+                usuarioId,
+                dto.HoraIngreso,
+                dto.FechaIngreso,
+                dto.HoraSalida,
+                dto.FechaSalida);
+
+            return Ok(new
+            {
+                mensaje = "Registro actualizado correctamente",
+                id
             });
         }
 

@@ -22,7 +22,7 @@ namespace WebApplication1.DTOs
         // Lista de bienes que ingresa la persona
         public List<BienDeclarado>? Bienes { get; set; }
         
-        public DateTime? HoraIngreso { get; set; }  // Se envía pero el servidor usa su propia hora
+        public DateTime? HoraIngreso { get; set; }
         
         public string? Observacion { get; set; }
     }

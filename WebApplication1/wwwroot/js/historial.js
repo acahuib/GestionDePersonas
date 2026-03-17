@@ -5,7 +5,7 @@ const TIPOS_OPERACION = {
     HabitacionProveedor: "Habitacion Proveedor",
     HotelProveedor: "Hotel Proveedor",
     Ocurrencias: "Ocurrencias",
-    PersonalLocal: "Personal Local",
+    PersonalLocal: "Cuaderno de Asistencia Personal de Mina",
     ControlBienes: "Control Bienes",
     DiasLibre: "Dias Libre",
     OficialPermisos: "Oficial Permisos",

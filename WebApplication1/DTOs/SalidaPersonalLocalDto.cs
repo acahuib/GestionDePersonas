@@ -23,7 +23,7 @@ namespace WebApplication1.DTOs
         /// </summary>
         public string? NombreApellidos { get; set; }
         
-        public DateTime? HoraIngreso { get; set; } // Entrada mañana (servidor ignora y usa su propia hora)
+        public DateTime? HoraIngreso { get; set; }
         
         // Almuerzo opcional
         public DateTime? HoraSalidaAlmuerzo { get; set; }

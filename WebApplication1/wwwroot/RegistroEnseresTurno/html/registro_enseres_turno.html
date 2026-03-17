@@ -19,6 +19,22 @@
                 <a href="registro_enseres_turno_historial.html">
                     <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Ver historial</button>
                 </a>
+                <a href="registro_guardias_turno.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/person-badge.svg" class="icon-white"> Registrar Guardias</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <div class="toolbar">
+                <h3>Guardias del Turno Actual</h3>
+                <button onclick="cargarInfoGuardiasTurno()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            </div>
+            <p class="muted">Tomado del ultimo registro de <a href="registro_guardias_turno.html">Registro de Guardias</a> del dia.</p>
+            <div id="info-guardias-turno">
+                <p class="text-center muted">Cargando...</p>
             </div>
         </div>
 
@@ -31,17 +47,15 @@
             <label>Turno *</label>
             <select id="turno" required>
                 <option value="">Seleccione...</option>
-                <option value="7am-7pm">7am-7pm</option>
-                <option value="7pm-7am">7pm-7am</option>
+                <option value="7am-7pm">7am-7pm (Turno dia)</option>
+                <option value="7pm-7am">7pm-7am (Turno noche)</option>
             </select>
 
             <label>Fecha *</label>
             <input type="date" id="fecha" required>
 
-            <hr>
-            <h3>Guardias del Turno</h3>
-            <p class="muted">Seleccione turno para cargar campos listos. Solo complete nombre y zona.</p>
-            <div id="guardias-turno-container"></div>
+            <label>Hora de Registro <span class="muted">(Opcional)</span></label>
+            <input type="time" id="horaRegistro" placeholder="Dejar vacío para usar hora actual">
 
             <hr>
             <div class="toolbar">

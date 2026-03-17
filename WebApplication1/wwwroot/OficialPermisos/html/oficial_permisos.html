@@ -50,6 +50,9 @@
         <label>Quién Autoriza *</label>
         <input type="text" id="quienAutoriza" placeholder="Nombre de quien autoriza">
 
+        <label>Hora de Salida <span class="muted">(Opcional)</span></label>
+        <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
+
         <label>Observación</label>
         <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
 
@@ -109,7 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("nombres", () => document.getElementById("apellidos").focus());
     addEnterListener("apellidos", () => document.getElementById("deDonde").focus());
     addEnterListener("deDonde", () => document.getElementById("tipo").focus());
-    addEnterListener("quienAutoriza", registrarSalida);
+    addEnterListener("quienAutoriza", () => document.getElementById("horaSalida").focus());
+    addEnterListener("horaSalida", registrarSalida);
 });
 </script>
 

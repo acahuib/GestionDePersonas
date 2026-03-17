@@ -36,6 +36,7 @@ function cargarDatosDesdeUrl() {
 
 async function registrarIngreso() {
     const observacion = document.getElementById("observacion").value.trim();
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -49,6 +50,9 @@ async function registrarIngreso() {
 
     try {
         const body = {
+            horaIngreso: horaIngresoInput
+                ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
+                : null,
             observacion: observacion || null
         };
 
@@ -78,4 +82,12 @@ async function registrarIngreso() {
 
 function volver() {
     window.location.href = "oficial_permisos.html";
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

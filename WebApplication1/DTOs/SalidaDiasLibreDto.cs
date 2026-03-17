@@ -10,6 +10,7 @@ namespace WebApplication1.DTOs
         public required string Dni { get; set; }
         public required DateTime Del { get; set; }
         public required DateTime Al { get; set; }
+        public DateTime? HoraSalida { get; set; }
         public string? Observaciones { get; set; }
     }
 }

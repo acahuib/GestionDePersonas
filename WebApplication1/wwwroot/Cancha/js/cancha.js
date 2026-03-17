@@ -202,7 +202,7 @@ async function registrarCancha() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "Registro de cancha guardado correctamente";
+        mensaje.innerText = "Reserva de cancha guardada correctamente";
 
         document.getElementById("equipoA-container").innerHTML = "";
         document.getElementById("equipoB-container").innerHTML = "";
@@ -230,12 +230,12 @@ async function cargarRegistrosActivos() {
         const data = await response.json();
 
         const registrosActivos = (data || []).filter((r) => {
-            const estado = r?.datos?.estado || "Pendiente";
-            return estado !== "Completado";
+            const estado = (r?.datos?.estado || "Reservado").toString().toLowerCase();
+            return estado !== "completado" && estado !== "terminado";
         });
 
         if (!registrosActivos.length) {
-            container.innerHTML = '<p class="text-center muted">No hay registros activos</p>';
+            container.innerHTML = '<p class="text-center muted">No hay reservas activas</p>';
             return;
         }
 
@@ -247,10 +247,12 @@ async function cargarRegistrosActivos() {
             const datos = r.datos || {};
             const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE") : "-";
             const hora = datos.hora || "-";
-            const estado = datos.estado || "Pendiente";
+            const estado = datos.estado || "Reservado";
             const observacion = datos.observacionCierre || "";
-            const disabled = estado === "Completado" ? "disabled" : "";
-            const btnLabel = estado === "Completado" ? "Completado" : "Completar";
+            const estadoNormalizado = estado.toString().toLowerCase();
+            const cerrado = estadoNormalizado === "completado" || estadoNormalizado === "terminado";
+            const disabled = cerrado ? "disabled" : "";
+            const btnLabel = cerrado ? "Terminado" : "Marcar terminado";
 
             html += '<tr>';
             html += `<td>${fecha}</td>`;

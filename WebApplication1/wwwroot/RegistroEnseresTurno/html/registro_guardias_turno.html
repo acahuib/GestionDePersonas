@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Guardias por Turno</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+
+<div class="main-content">
+    <div class="container">
+        <div class="page-header">
+            <h2>👮 Registro de Guardias por Turno</h2>
+            <div class="header-actions">
+                <a href="../../index.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
+                </a>
+                <a href="registro_enseres_turno.html">
+                    <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Enseres por Turno</button>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="form-card">
+            <h3>Registrar Guardias del Turno</h3>
+            <p class="muted">Registra los guardias asignados a cada puesto para el turno seleccionado.</p>
+
+            <label>Turno *</label>
+            <select id="turno" required>
+                <option value="">Seleccione...</option>
+                <option value="7am-7pm">7am-7pm (Turno dia)</option>
+                <option value="7pm-7am">7pm-7am (Turno noche)</option>
+            </select>
+
+            <label>Fecha *</label>
+            <input type="date" id="fecha" required>
+
+            <label>Hora de Registro <span class="muted">(Opcional)</span></label>
+            <input type="time" id="horaRegistro" placeholder="Dejar vacío para usar hora actual">
+
+            <hr>
+            <h3>Puestos del Turno</h3>
+            <p class="muted">Complete el nombre del guardia para cada puesto.</p>
+            <div id="guardias-turno-container">
+                <p class="muted">Primero seleccione el turno.</p>
+            </div>
+
+            <button onclick="guardarGuardias()" class="btn-success btn-block">
+                <img src="/images/check-lg.svg" class="icon-white"> Guardar Guardias del Turno
+            </button>
+
+            <p id="mensaje"></p>
+        </div>
+
+        <hr>
+
+        <div>
+            <div class="toolbar">
+                <h3>Registros del dia</h3>
+                <button onclick="cargarRegistrosDia()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            </div>
+            <div id="tabla-registros-dia">
+                <p class="text-center muted">Cargando...</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="../../js/sidebar.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../js/registro_guardias_turno.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    verificarAutenticacion();
+    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("turno").addEventListener("change", renderizarSlots);
+    renderizarSlots();
+    cargarRegistrosDia();
+});
+</script>
+
+</body>
+</html>

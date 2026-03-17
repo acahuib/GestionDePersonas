@@ -259,6 +259,7 @@ async function registrarIngreso() {
     const nombres = document.getElementById("nombres").value.trim();
     const apellidos = document.getElementById("apellidos").value.trim();
     const observacion = document.getElementById("observacion").value.trim();
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -297,7 +298,9 @@ async function registrarIngreso() {
         const body = {
             dni,
             bienes,
-            horaIngreso: new Date().toISOString(), // Se envía pero el servidor usará su propia hora local
+            horaIngreso: horaIngresoInput
+                ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
+                : new Date().toISOString(),
             observacion: observacion || null
         };
 
@@ -329,6 +332,7 @@ async function registrarIngreso() {
         document.getElementById("nombres").value = "";
         document.getElementById("apellidos").value = "";
         document.getElementById("observacion").value = "";
+        document.getElementById("horaIngreso").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombres").disabled = false;
         document.getElementById("apellidos").disabled = false;
@@ -464,4 +468,12 @@ async function cargarActivos() {
             <img src="/images/x-circle.svg">Error al cargar datos: ${error.message}</p>`;
 
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

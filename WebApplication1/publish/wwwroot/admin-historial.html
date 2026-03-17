@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial General - Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/admin-historial.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>Historial General</h1>
+                <p class="subtitle">Vista administrativa de todos los movimientos.</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="nombreUsuario">Admin</span>
+                    <button onclick="cerrarSesion()" class="btn-logout">Cerrar Sesion</button>
+                </div>
+                <div class="header-actions">
+                    <a href="admin.html">
+                        <button class="btn-refresh">Volver al Dashboard</button>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>Filtros</h2>
+                    <div class="header-actions">
+                        <button id="btnRecargar" class="btn-refresh">Recargar</button>
+                        <button id="btnDescargar" class="btn-refresh">Descargar Excel</button>
+                    </div>
+                </div>
+
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filtroTipo">Cuaderno</label>
+                        <select id="filtroTipo"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="busquedaTexto">Busqueda</label>
+                        <input id="busquedaTexto" type="text" placeholder="DNI, nombre, placa..." />
+                    </div>
+                    <div class="filter-group">
+                        <label for="filtroMovimiento">Movimiento</label>
+                        <select id="filtroMovimiento">
+                            <option value="">Todos</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Salida">Salida</option>
+                            <option value="Info">Info</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="fechaInicio">Desde</label>
+                        <input id="fechaInicio" type="date" />
+                    </div>
+                    <div class="filter-group">
+                        <label for="fechaFin">Hasta</label>
+                        <input id="fechaFin" type="date" />
+                    </div>
+                    <div class="filter-actions">
+                        <button id="btnBuscar" class="btn-refresh">Buscar</button>
+                        <button id="btnLimpiar" class="btn-muted">Limpiar</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>Resultados</h2>
+                    <span id="resumenResultados" class="muted">0 registros</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead id="tablaHead"></thead>
+                        <tbody id="tablaBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button id="btnPrev" class="btn-page">Anterior</button>
+                    <span id="infoPagina">Pagina 0 de 0</span>
+                    <button id="btnNext" class="btn-page">Siguiente</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin-historial.js"></script>
+</body>
+</html>

@@ -30,6 +30,23 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         [HttpPost]
         public async Task<IActionResult> Registrar([FromBody] RegistroInformativoEnseresTurnoDto dto)
         {
@@ -105,6 +122,10 @@ namespace WebApplication1.Controllers
                 "Info",
                 usuarioId);
 
+            var horaRegistro = dto.HoraRegistro.HasValue
+                ? ResolverHoraPeru(dto.HoraRegistro)
+                : ResolverHoraPeru(null);
+
             var fechaRegistro = dto.Fecha == default
                 ? DateTime.Now.Date
                 : dto.Fecha.Date;
@@ -129,8 +150,8 @@ namespace WebApplication1.Controllers
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim()
                 },
                 usuarioId,
-                null,
-                null,
+                horaRegistro,
+                fechaRegistro,
                 null,
                 null,
                 dniGuardia);

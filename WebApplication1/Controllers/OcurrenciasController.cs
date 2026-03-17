@@ -33,6 +33,23 @@ namespace WebApplication1.Controllers
             _salidasService = salidasService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         /// <summary>
         /// Registra una ocurrencia
         /// POST /api/ocurrencias
@@ -93,16 +110,19 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // NUEVO: Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
-                var fechaActual = ahoraLocal.Date;
+                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
+                var horaIngresoBase = dto.HoraIngreso.HasValue
+                    ? ResolverHoraPeru(dto.HoraIngreso)
+                    : ResolverHoraPeru(null);
+                var horaSalidaBase = dto.HoraSalida.HasValue
+                    ? ResolverHoraPeru(dto.HoraSalida)
+                    : ResolverHoraPeru(null);
                 
-                // NUEVO: Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
-                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
-                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
+                // Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
+                var horaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase : (DateTime?)null;
+                var fechaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase.Date : (DateTime?)null;
+                var horaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase : (DateTime?)null;
+                var fechaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase.Date : (DateTime?)null;
 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // DNI se guarda en columna para JOIN directo con Personas
@@ -229,10 +249,15 @@ namespace WebApplication1.Controllers
                 {
                     var root = doc.RootElement;
 
-                    // Usar zona horaria Perú
-                    var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                    var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
-                    var fechaActual = ahoraLocal.Date;
+                    // Respetar horas enviadas; si no vienen, usar hora local del servidor
+                    var horaIngresoNueva = dto.HoraIngreso.HasValue
+                        ? ResolverHoraPeru(dto.HoraIngreso)
+                        : ResolverHoraPeru(null);
+                    var horaSalidaNueva = dto.HoraSalida.HasValue
+                        ? ResolverHoraPeru(dto.HoraSalida)
+                        : ResolverHoraPeru(null);
+                    var fechaIngresoNueva = horaIngresoNueva.Date;
+                    var fechaSalidaNueva = horaSalidaNueva.Date;
                     
                     var usuarioId = ExtractUsuarioIdFromToken();
                     var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -272,10 +297,10 @@ namespace WebApplication1.Controllers
                         id, 
                         datosActualizados, 
                         usuarioId,
-                        dto.HoraIngreso.HasValue ? ahoraLocal : horaIngresoActual,  // horaIngreso
-                        dto.HoraIngreso.HasValue ? fechaActual : fechaIngresoActual, // fechaIngreso
-                        dto.HoraSalida.HasValue ? ahoraLocal : horaSalidaActual,     // horaSalida
-                        dto.HoraSalida.HasValue ? fechaActual : fechaSalidaActual    // fechaSalida
+                        dto.HoraIngreso.HasValue ? horaIngresoNueva : horaIngresoActual,
+                        dto.HoraIngreso.HasValue ? fechaIngresoNueva : fechaIngresoActual,
+                        dto.HoraSalida.HasValue ? horaSalidaNueva : horaSalidaActual,
+                        dto.HoraSalida.HasValue ? fechaSalidaNueva : fechaSalidaActual
                     );
 
                     var registroIngresoNuevo = dto.HoraIngreso.HasValue && !horaIngresoActual.HasValue;

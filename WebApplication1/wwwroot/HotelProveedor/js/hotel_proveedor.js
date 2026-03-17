@@ -77,6 +77,7 @@ async function registrarSalidaHotel() {
     const nombre = document.getElementById("nombre").value.trim();
     const ticket = document.getElementById("ticket").value.trim();
     const fecha = document.getElementById("fecha").value;
+    const horaSalidaInput = document.getElementById("horaSalida").value;
     const tipoHabitacion = document.getElementById("tipoHabitacion").value.trim();
     const numeroPersonas = Number(document.getElementById("numeroPersonas").value);
     const observacion = document.getElementById("observacion").value.trim();
@@ -108,6 +109,9 @@ async function registrarSalidaHotel() {
             dni,
             ticket,
             fecha: new Date(`${fecha}T00:00:00`).toISOString(),
+            horaSalida: horaSalidaInput
+                ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+                : null,
             tipoHabitacion,
             numeroPersonas,
             observacion: observacion || null
@@ -137,6 +141,7 @@ async function registrarSalidaHotel() {
         document.getElementById("nombre").placeholder = "Nombre completo";
         document.getElementById("ticket").value = "";
         document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        document.getElementById("horaSalida").value = "";
         document.getElementById("tipoHabitacion").value = "";
         document.getElementById("numeroPersonas").value = "1";
         document.getElementById("observacion").value = "";
@@ -158,9 +163,14 @@ async function registrarIngresoHotel(id) {
     if (!confirmar) return;
 
     try {
+        const horaIngresoInput = document.getElementById("horaIngresoPendiente")?.value || "";
         const response = await fetchAuth(`${API_BASE}/hotel-proveedor/${id}/ingreso`, {
             method: "PUT",
-            body: JSON.stringify({})
+            body: JSON.stringify({
+                horaIngreso: horaIngresoInput
+                    ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
+                    : null
+            })
         });
 
         if (!response || !response.ok) {
@@ -272,4 +282,12 @@ async function cargarPendientesIngreso() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

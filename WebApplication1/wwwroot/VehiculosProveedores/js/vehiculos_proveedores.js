@@ -9,25 +9,27 @@ async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
-    const nombresInput = document.getElementById("nombres");
-    const apellidosInput = document.getElementById("apellidos");
+    const nombreCompletoInput = document.getElementById("nombreCompleto");
 
     // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.value = "";
-        apellidosInput.value = "";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.value = "";
         return;
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
+        console.log(`🔍 Buscando DNI en tabla Personas y último registro: '${dni}'`);
+
+        // Consultar persona y último registro en paralelo
+        const [response, ultimoResponse] = await Promise.all([
+            fetchAuth(`${API_BASE}/personas/${dni}`),
+            fetchAuth(`${API_BASE}/vehiculos-proveedores/ultimo/${dni}`)
+        ]);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`📡 Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
@@ -37,48 +39,54 @@ async function buscarPersonaPorDni() {
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campos de nombre/apellido
-            nombresInput.value = "";
-            apellidosInput.value = "";
-            nombresInput.disabled = true;
-            apellidosInput.disabled = true;
-            nombresInput.placeholder = "(Ya registrado)";
-            apellidosInput.placeholder = "(Ya registrado)";
-            
-            // Saltar a proveedor
-            document.getElementById("proveedor").focus();
+            // Limpiar y deshabilitar campo de nombre completo
+            nombreCompletoInput.value = "";
+            nombreCompletoInput.disabled = true;
+            nombreCompletoInput.placeholder = "(Ya registrado)";
         } else if (response.status === 404) {
             // DNI no existe, habilitar campos para registro
             console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
-            nombresInput.disabled = false;
-            apellidosInput.disabled = false;
-            nombresInput.placeholder = "Nombres del conductor";
-            apellidosInput.placeholder = "Apellidos del conductor";
-            nombresInput.focus();
+            nombreCompletoInput.disabled = false;
+            nombreCompletoInput.placeholder = "Nombre completo del conductor";
         } else {
             const error = await readApiError(response);
             console.error(`❌ Error del servidor: ${error}`);
             throw new Error(error);
         }
+
+        // Pre-rellenar campos con el último registro si existe
+        if (ultimoResponse.ok) {
+            const ultimo = await ultimoResponse.json();
+            console.log(`📋 Precargando datos del último registro:`, ultimo);
+            if (ultimo.placa)       document.getElementById("placa").value = ultimo.placa;
+            if (ultimo.tipo)        document.getElementById("tipo").value = ultimo.tipo;
+            if (ultimo.lote)        document.getElementById("lote").value = ultimo.lote;
+            if (ultimo.cantidad)    document.getElementById("cantidad").value = ultimo.cantidad;
+            if (ultimo.procedencia) document.getElementById("procedencia").value = ultimo.procedencia;
+            if (ultimo.proveedor)   document.getElementById("proveedor").value = ultimo.proveedor;
+            if (ultimo.observacion) document.getElementById("observacion").value = ultimo.observacion;
+        }
+
+        // Saltar a placa para seguir el nuevo orden de llenado
+        document.getElementById("placa").focus();
+
     } catch (error) {
         console.error("❌ Error al buscar persona:", error);
         // En caso de error, permitir registro manual
         personaEncontrada = null;
         personaInfo.style.display = "none";
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.placeholder = "Nombres del conductor";
-        apellidosInput.placeholder = "Apellidos del conductor";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.placeholder = "Nombre completo del conductor";
+        document.getElementById("placa").focus();
     }
 }
 
 // Registrar ENTRADA de vehículo proveedor
 async function registrarEntrada() {
     const dni = document.getElementById("dni").value.trim();
-    const nombres = document.getElementById("nombres").value.trim();
-    const apellidos = document.getElementById("apellidos").value.trim();
+    const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
     const proveedor = document.getElementById("proveedor").value.trim();
     const placa = document.getElementById("placa").value.trim();
     const tipo = document.getElementById("tipo").value.trim();
@@ -105,10 +113,10 @@ async function registrarEntrada() {
         return;
     }
 
-    // Si no hay persona encontrada, validar nombres y apellidos
-    if (!personaEncontrada && (!nombres || !apellidos)) {
+    // Si no hay persona encontrada, validar nombre completo
+    if (!personaEncontrada && !nombreCompleto) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI no registrado. Complete Nombres y Apellidos para registrar la persona.";
+        mensaje.innerText = "DNI no registrado. Complete Nombre y Apellidos para registrar la persona.";
         return;
     }
 
@@ -127,13 +135,13 @@ async function registrarEntrada() {
         // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
             // Combinar con la fecha actual para crear un datetime completo
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
             body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
         }
 
-        // Solo enviar nombres/apellidos si DNI no existe en tabla Personas
+        // Solo enviar nombre completo si DNI no existe en tabla Personas
         if (!personaEncontrada) {
-            body.nombreApellidos = `${nombres} ${apellidos}`;
+            body.nombreApellidos = nombreCompleto;
         }
 
         const response = await fetchAuth(`${API_BASE}/vehiculos-proveedores`, {
@@ -146,14 +154,13 @@ async function registrarEntrada() {
             throw new Error(error);
         }
 
-        const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : `${nombres} ${apellidos}`;
+        const nombreCompletoRegistro = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
-        mensaje.innerText = `ENTRADA registrada para ${nombreCompleto} - Placa: ${placa}`;
+        mensaje.innerText = `ENTRADA registrada para ${nombreCompletoRegistro} - Placa: ${placa}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
-        document.getElementById("nombres").value = "";
-        document.getElementById("apellidos").value = "";
+        document.getElementById("nombreCompleto").value = "";
         document.getElementById("proveedor").value = "";
         document.getElementById("placa").value = "";
         document.getElementById("tipo").value = "";
@@ -163,8 +170,8 @@ async function registrarEntrada() {
         document.getElementById("horaIngreso").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
-        document.getElementById("nombres").disabled = false;
-        document.getElementById("apellidos").disabled = false;
+        document.getElementById("nombreCompleto").disabled = false;
+        document.getElementById("nombreCompleto").placeholder = "Nombre completo del conductor";
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
@@ -291,4 +298,12 @@ async function cargarActivos() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

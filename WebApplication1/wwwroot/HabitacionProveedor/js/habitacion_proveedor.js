@@ -103,6 +103,7 @@ async function registrarIngreso() {
     const origen = document.getElementById("origen").value.trim();
     const cuarto = document.getElementById("cuarto").value.trim();
     const frazadas = document.getElementById("frazadas").value.trim();
+    const horaIngresoInput = document.getElementById("horaIngreso").value;
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -137,6 +138,11 @@ async function registrarIngreso() {
             frazadas: frazadas ? parseInt(frazadas) : null
         };
 
+        if (horaIngresoInput) {
+            const today = obtenerFechaLocalISO();
+            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+        }
+
         // Solo enviar nombreApellidos si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombresApellidos = nombreApellidos;
@@ -166,6 +172,7 @@ async function registrarIngreso() {
         document.getElementById("origen").value = "";
         document.getElementById("cuarto").value = "";
         document.getElementById("frazadas").value = "";
+        document.getElementById("horaIngreso").value = "";
         document.getElementById("persona-info").style.display = "none";
         const infoProveedor = document.getElementById("registro-desde-proveedor");
         if (infoProveedor) infoProveedor.style.display = "none";
@@ -302,4 +309,12 @@ async function cargarActivos() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

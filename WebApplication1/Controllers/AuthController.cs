@@ -16,11 +16,13 @@ namespace WebApplication1.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _config;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AppDbContext context, IConfiguration config)
+        public AuthController(AppDbContext context, IConfiguration config, ILogger<AuthController> logger)
         {
             _context = context;
             _config = config;
+            _logger = logger;
         }
 
         // POST: api/auth/login
@@ -28,49 +30,90 @@ namespace WebApplication1.Controllers
         [HttpPost("login")]
         public IActionResult Login(LoginDto dto)
         {
-            var usuario = _context.Usuarios
-                .FirstOrDefault(u => u.UsuarioLogin == dto.Usuario);
-
-            if (usuario == null || !PasswordSecurity.VerifyPassword(dto.Password, usuario.PasswordHash))
-                return Unauthorized("Credenciales incorrectas");
-
-            if (PasswordSecurity.IsLegacyPlainText(usuario.PasswordHash))
+            try
             {
-                usuario.PasswordHash = PasswordSecurity.HashPassword(dto.Password);
-                _context.SaveChanges();
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Usuario) || string.IsNullOrWhiteSpace(dto.Password))
+                    return BadRequest("Usuario y password son obligatorios");
+
+                var usuario = _context.Usuarios
+                    .Where(u => u.UsuarioLogin == dto.Usuario)
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.UsuarioLogin,
+                        u.PasswordHash,
+                        u.Rol,
+                        u.NombreCompleto,
+                        u.Activo
+                    })
+                    .FirstOrDefault();
+
+                if (usuario == null)
+                    return Unauthorized("Credenciales incorrectas");
+
+                if (!usuario.Activo)
+                    return Unauthorized("Usuario inactivo");
+
+                if (string.IsNullOrWhiteSpace(usuario.PasswordHash))
+                {
+                    _logger.LogWarning("Usuario con PasswordHash vacio. UsuarioId={UsuarioId}, UsuarioLogin={UsuarioLogin}", usuario.Id, usuario.UsuarioLogin);
+                    return Unauthorized("Credenciales incorrectas");
+                }
+
+                if (!PasswordSecurity.VerifyPassword(dto.Password, usuario.PasswordHash))
+                    return Unauthorized("Credenciales incorrectas");
+
+                if (PasswordSecurity.IsLegacyPlainText(usuario.PasswordHash))
+                {
+                    var usuarioEntity = _context.Usuarios.FirstOrDefault(u => u.Id == usuario.Id);
+                    if (usuarioEntity != null)
+                    {
+                        usuarioEntity.PasswordHash = PasswordSecurity.HashPassword(dto.Password);
+                        _context.SaveChanges();
+                    }
+                }
+
+                var usuarioLogin = string.IsNullOrWhiteSpace(usuario.UsuarioLogin) ? "usuario" : usuario.UsuarioLogin;
+                var rolUsuario = string.IsNullOrWhiteSpace(usuario.Rol) ? "User" : usuario.Rol;
+                var nombreCompleto = string.IsNullOrWhiteSpace(usuario.NombreCompleto) ? usuarioLogin : usuario.NombreCompleto;
+
+                var claims = new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuarioLogin),
+                    new Claim(ClaimTypes.Role, rolUsuario),
+                    new Claim("NombreCompleto", nombreCompleto)
+                };
+
+                var jwtKey = _config["Jwt:Key"];
+                if (string.IsNullOrEmpty(jwtKey))
+                    return StatusCode(500, "JWT Key no configurada");
+
+                var key = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey));
+
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var token = new JwtSecurityToken(
+                    issuer: _config["Jwt:Issuer"],
+                    audience: _config["Jwt:Audience"],
+                    claims: claims,
+                    expires: DateTime.UtcNow.AddHours(4),
+                    signingCredentials: creds
+                );
+
+                return Ok(new
+                {
+                    token = new JwtSecurityTokenHandler().WriteToken(token),
+                    rol = rolUsuario,
+                    nombreCompleto
+                });
             }
-
-            var claims = new[]
+            catch (Exception ex)
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Name, usuario.UsuarioLogin),
-                new Claim(ClaimTypes.Role, usuario.Rol),
-                new Claim("NombreCompleto", usuario.NombreCompleto)
-            };
-
-            var jwtKey = _config["Jwt:Key"];
-            if (string.IsNullOrEmpty(jwtKey))
-                return StatusCode(500, "JWT Key no configurada");
-
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(4),
-                signingCredentials: creds
-            );
-
-            return Ok(new
-            {
-                token = new JwtSecurityTokenHandler().WriteToken(token),
-                rol = usuario.Rol,
-                nombreCompleto = usuario.NombreCompleto
-            });
+                _logger.LogError(ex, "Error interno en login para usuario {Usuario}", dto?.Usuario);
+                return StatusCode(500, new { mensaje = "No se pudo procesar el login", detalle = ex.Message });
+            }
         }
     }
 }

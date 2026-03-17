@@ -5,6 +5,6 @@ namespace WebApplication1.DTOs
     /// </summary>
     public class ActualizarSalidaHabitacionProveedorDto
     {
-        // Se puede agregar observaciones si se necesita en el futuro
+        public DateTime? HoraSalida { get; set; }
     }
 }

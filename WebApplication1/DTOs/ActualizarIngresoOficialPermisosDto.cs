@@ -6,6 +6,7 @@ namespace WebApplication1.DTOs
     /// </summary>
     public class ActualizarIngresoOficialPermisosDto
     {
+        public DateTime? HoraIngreso { get; set; }
         public string? Observacion { get; set; }
     }
 }

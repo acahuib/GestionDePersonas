@@ -29,6 +29,23 @@ namespace WebApplication1.Controllers
             _movimientosService = movimientosService;
         }
 
+        private static DateTime ResolverHoraPeru(DateTime? horaSeleccionada)
+        {
+            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            if (!horaSeleccionada.HasValue)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            }
+
+            var hora = horaSeleccionada.Value;
+            return hora.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(hora, zonaHorariaPeru),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(hora, zonaHorariaPeru),
+                _ => hora
+            };
+        }
+
         // ======================================================
         // POST: /api/vehiculos-proveedores
         // Registra INGRESO de proveedor con vehículo
@@ -90,16 +107,19 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // NUEVO: Usar hora local del servidor (Perú UTC-5)
-                var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-                var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
-                var fechaActual = ahoraLocal.Date;
+                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
+                var horaIngresoBase = dto.HoraIngreso.HasValue
+                    ? ResolverHoraPeru(dto.HoraIngreso)
+                    : ResolverHoraPeru(null);
+                var horaSalidaBase = dto.HoraSalida.HasValue
+                    ? ResolverHoraPeru(dto.HoraSalida)
+                    : ResolverHoraPeru(null);
                 
-                // NUEVO: Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
-                var horaIngresoCol = dto.HoraIngreso.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaIngresoCol = dto.HoraIngreso.HasValue ? fechaActual : (DateTime?)null;
-                var horaSalidaCol = dto.HoraSalida.HasValue ? ahoraLocal : (DateTime?)null;
-                var fechaSalidaCol = dto.HoraSalida.HasValue ? fechaActual : (DateTime?)null;
+                // Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
+                var horaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase : (DateTime?)null;
+                var fechaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase.Date : (DateTime?)null;
+                var horaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase : (DateTime?)null;
+                var fechaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase.Date : (DateTime?)null;
                 
                 // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
                 // DNI se guarda en columna para JOIN directo con Personas
@@ -147,6 +167,38 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
+        // GET: /api/vehiculos-proveedores/ultimo/{dni}
+        // Devuelve los datos del último registro de un DNI dado
+        // para pre-rellenar el formulario de ingreso
+        // ======================================================
+        [HttpGet("ultimo/{dni}")]
+        public async Task<IActionResult> ObtenerUltimoPorDni(string dni)
+        {
+            var ultimo = await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "VehiculosProveedores" && o.Dni == dni.Trim())
+                .OrderByDescending(o => o.HoraIngreso ?? o.FechaIngreso)
+                .ThenByDescending(o => o.Id)
+                .FirstOrDefaultAsync();
+
+            if (ultimo == null)
+                return NotFound();
+
+            using var doc = JsonDocument.Parse(ultimo.DatosJSON);
+            var datos = doc.RootElement;
+
+            return Ok(new
+            {
+                placa = datos.TryGetProperty("placa", out var placa) && placa.ValueKind == JsonValueKind.String ? placa.GetString() : null,
+                tipo = datos.TryGetProperty("tipo", out var tipo) && tipo.ValueKind == JsonValueKind.String ? tipo.GetString() : null,
+                lote = datos.TryGetProperty("lote", out var lote) && lote.ValueKind == JsonValueKind.String ? lote.GetString() : null,
+                cantidad = datos.TryGetProperty("cantidad", out var cantidad) && cantidad.ValueKind == JsonValueKind.String ? cantidad.GetString() : null,
+                procedencia = datos.TryGetProperty("procedencia", out var procedencia) && procedencia.ValueKind == JsonValueKind.String ? procedencia.GetString() : null,
+                proveedor = datos.TryGetProperty("proveedor", out var proveedor) && proveedor.ValueKind == JsonValueKind.String ? proveedor.GetString() : null,
+                observacion = datos.TryGetProperty("observacion", out var observacion) && observacion.ValueKind == JsonValueKind.String ? observacion.GetString() : null
+            });
+        }
+
+        // ======================================================
         // PUT: /api/vehiculos-proveedores/{id}/salida
         // Actualiza hora de SALIDA
         // ======================================================
@@ -172,9 +224,9 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // NUEVO: Usar hora local del servidor (Perú UTC-5)
+            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
             var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHorariaPeru);
+            var ahoraLocal = dto.HoraSalida;
             var fechaActual = ahoraLocal.Date;
 
             object ConstruirDatosActualizados(JsonElement datos, string? observacionNueva)

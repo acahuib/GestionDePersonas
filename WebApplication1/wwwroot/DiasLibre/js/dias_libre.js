@@ -91,7 +91,7 @@ function calcularFechaTrabaja() {
     if (fechaAl) {
         const al = new Date(fechaAl + 'T00:00:00');
         al.setDate(al.getDate() + 1);
-        const trabaja = al.toISOString().split('T')[0];
+        const trabaja = `${al.getFullYear()}-${String(al.getMonth() + 1).padStart(2, '0')}-${String(al.getDate()).padStart(2, '0')}`;
         document.getElementById('trabaja').value = trabaja;
     } else {
         document.getElementById('trabaja').value = '';
@@ -107,6 +107,7 @@ async function registrarDiasLibre(e) {
     const nombreApellidos = document.getElementById('nombreApellidos').value.trim();
     const del = document.getElementById('del').value;
     const al = document.getElementById('al').value;
+    const horaSalidaInput = document.getElementById('horaSalida').value;
     const observaciones = document.getElementById('observaciones').value.trim();
 
     // Validaciones
@@ -137,6 +138,9 @@ async function registrarDiasLibre(e) {
         nombresApellidos: nombreApellidos || null,
         del: new Date(del + 'T00:00:00').toISOString(),
         al: new Date(al + 'T00:00:00').toISOString(),
+        horaSalida: horaSalidaInput
+            ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+            : null,
         observaciones: observaciones || null
     };
 
@@ -172,7 +176,7 @@ async function registrarDiasLibre(e) {
 // Cargar permisos registrados hoy
 async function cargarDiasLibreHoy() {
     try {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = obtenerFechaLocalISO();
         const response = await fetchAuth(`${API_BASE}/salidas/tipo/DiasLibre`);
 
         const tbody = document.querySelector('#tablaDiasLibre tbody');
@@ -225,4 +229,12 @@ async function cargarDiasLibreHoy() {
         document.querySelector('#tablaDiasLibre tbody').innerHTML = 
             '<tr><td colspan="9" class="text-center text-danger">Error al cargar permisos</td></tr>';
     }
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
