@@ -4,7 +4,7 @@ async function initCuadernoHistorial() {
 
     const tipoOperacion = container.getAttribute("data-tipo");
     if (!tipoOperacion) return;
-    const vistaHistorial = container.getAttribute("data-historial-vista") || "simple";
+    const vistaHistorial = container.getAttribute("data-historial-vista") || "entradas-salidas";
 
     const inputTexto = container.querySelector("[data-historial-texto]");
     const inputFecha = container.querySelector("[data-historial-fecha]");
@@ -13,6 +13,7 @@ async function initCuadernoHistorial() {
     const btnRecargar = container.querySelector("[data-historial-recargar]");
     const resumen = container.querySelector("[data-historial-resumen]");
     const tbody = container.querySelector("[data-historial-body]");
+    const thead = container.querySelector("thead");
     const pageSize = 10;
     let paginaActual = 1;
 
@@ -46,6 +47,15 @@ async function initCuadernoHistorial() {
         return fecha.toLocaleDateString("es-PE");
     };
 
+    const escaparHtml = (texto) => {
+        return String(texto ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    };
+
     const formatearHora = (valor) => {
         if (!valor) return "-";
         const fecha = new Date(valor);
@@ -57,7 +67,10 @@ async function initCuadernoHistorial() {
         const partes = [];
         const pushIf = (label, valor) => {
             if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
-                partes.push(`${label}: ${String(valor).replace(/\n/g, "; ")}`);
+                partes.push({
+                    label,
+                    valor: String(valor).replace(/\n/g, "; ")
+                });
             }
         };
 
@@ -79,41 +92,88 @@ async function initCuadernoHistorial() {
 
         if (Array.isArray(datos.equipoA) && datos.equipoA.length) {
             const listado = datos.equipoA.join("; ");
-            partes.push(`Equipo A: ${listado}`);
+            partes.push({ label: "Equipo A", valor: listado });
         }
 
         if (Array.isArray(datos.equipoB) && datos.equipoB.length) {
             const listado = datos.equipoB.join("; ");
-            partes.push(`Equipo B: ${listado}`);
+            partes.push({ label: "Equipo B", valor: listado });
         }
 
         if (Array.isArray(datos.bienes) && datos.bienes.length) {
             const listado = datos.bienes
                 .map((b) => `${b.cantidad || 1}x ${b.descripcion || "-"}`)
                 .join("; ");
-            partes.push(`Bienes: ${listado}`);
+            partes.push({ label: "Bienes", valor: listado });
         }
 
         if (Array.isArray(datos.objetos) && datos.objetos.length) {
             const listado = datos.objetos
                 .map((o) => `${o.nombre || "-"}: ${o.cantidad || 0}`)
                 .join("; ");
-            partes.push(`Objetos: ${listado}`);
+            partes.push({ label: "Objetos", valor: listado });
         }
 
         if (Array.isArray(datos.guardiasGarita) && datos.guardiasGarita.length) {
             const listado = datos.guardiasGarita.join("; ");
-            partes.push(`Garita: ${listado}`);
+            partes.push({ label: "Garita", valor: listado });
         }
 
         if (Array.isArray(datos.guardiasOtrasZonas) && datos.guardiasOtrasZonas.length) {
             const listado = datos.guardiasOtrasZonas
                 .map((g) => `${g.guardia || "-"} (${g.zona || "-"})`)
                 .join("; ");
-            partes.push(`Zonas: ${listado}`);
+            partes.push({ label: "Zonas", valor: listado });
         }
 
-        return partes.length ? partes.join(" | ") : "-";
+        if (!partes.length) {
+            return {
+                html: "-",
+                texto: ""
+            };
+        }
+
+        const html = `<div class="detalle-lista">${partes
+            .map((p) => `<div class="detalle-item"><strong>${escaparHtml(p.label)}:</strong> ${escaparHtml(p.valor)}</div>`)
+            .join("")}</div>`;
+
+        return {
+            html,
+            texto: partes.map((p) => `${p.label}: ${p.valor}`).join(" | ")
+        };
+    };
+
+    const renderHeaders = () => {
+        if (!thead) return;
+
+        if (vistaHistorial === "entradas-salidas") {
+            thead.innerHTML = `
+                <tr>
+                    <th>DNI</th>
+                    <th>Nombre</th>
+                    <th>Fecha Ingreso</th>
+                    <th>Hora Ingreso</th>
+                    <th>Guardia Ingreso</th>
+                    <th>Fecha Salida</th>
+                    <th>Hora Salida</th>
+                    <th>Guardia Salida</th>
+                    <th>Detalle</th>
+                </tr>
+            `;
+            return;
+        }
+
+        thead.innerHTML = `
+            <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Movimiento</th>
+                <th>DNI</th>
+                <th>Nombre</th>
+                <th>Guardia</th>
+                <th>Detalle</th>
+            </tr>
+        `;
     };
 
     const obtenerMovimiento = (item, datos) => {
@@ -139,11 +199,12 @@ async function initCuadernoHistorial() {
             }
         }
 
-        const fechaIngreso = item.fechaIngreso || datos.fechaIngreso;
         const horaIngreso = item.horaIngreso || datos.horaIngreso;
-        const fechaSalida = item.fechaSalida || datos.fechaSalida;
         const horaSalida = item.horaSalida || datos.horaSalida;
+        const fechaIngreso = item.fechaIngreso || datos.fechaIngreso || horaIngreso;
+        const fechaSalida = item.fechaSalida || datos.fechaSalida || horaSalida;
         const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
+        const detalle = construirDetalle(datos);
 
         const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.guardiaResponsable || datos.agenteNombre || "-";
         const guardiaIngreso = datos.guardiaIngreso || datos.guardiaEntradaAlmuerzo || datos.agenteNombre || datos.guardiaResponsable || "-";
@@ -165,10 +226,10 @@ async function initCuadernoHistorial() {
             horaReferencia: formatearHora(horaIngreso || horaSalida || item.fechaCreacion),
             movimiento: obtenerMovimiento(item, datos),
             guardia,
-            detalle: construirDetalle(datos),
+            detalle: detalle.html,
             fechaFiltro: fechaBase ? new Date(fechaBase) : null,
             timestamp,
-            textoBusqueda: `${item.dni || ""} ${item.nombreCompleto || ""} ${JSON.stringify(datos)}`.toLowerCase()
+            textoBusqueda: `${item.dni || ""} ${item.nombreCompleto || ""} ${detalle.texto} ${JSON.stringify(datos)}`.toLowerCase()
         };
     };
 
@@ -318,6 +379,8 @@ async function initCuadernoHistorial() {
         aplicarFiltros();
     });
     if (inputFecha) inputFecha.addEventListener("change", aplicarFiltros);
+
+    renderHeaders();
 
     await cargar();
 }

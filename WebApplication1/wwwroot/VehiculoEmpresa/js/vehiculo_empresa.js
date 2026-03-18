@@ -3,68 +3,15 @@
 // =========================================
 
 let personaEncontrada = null;
-let modoDesdeProveedor = false;
-let salidaProveedorIdGlobal = null;
 
 function formatearTipoRegistro(tipoRegistro) {
     return tipoRegistro === "Almacen" ? "Almacen" : "Normal";
 }
 
-async function cargarDatosDesdeProveedor() {
-    const params = new URLSearchParams(window.location.search);
-    const salidaProveedorId = params.get("salidaProveedorId");
-    const modo = params.get("modo");
-
-    if (modo !== "desde-proveedor" || !salidaProveedorId) {
-        return;
-    }
-
-    modoDesdeProveedor = true;
-    salidaProveedorIdGlobal = parseInt(salidaProveedorId);
-
-    try {
-        const response = await fetchAuth(`${API_BASE}/salidas/${salidaProveedorId}`);
-        if (!response || !response.ok) {
-            throw new Error("No se pudo cargar el registro origen");
-        }
-
-        const salida = await response.json();
-        const datos = salida.datos || {};
-
-        // Precargar DNI y conductor
-        document.getElementById("dni").value = salida.dni || "";
-        document.getElementById("conductor").value = salida.nombreCompleto || datos.nombreApellidos || "";
-        document.getElementById("conductor").disabled = true;
-        document.getElementById("placa").value = datos.placa || "";
-        document.getElementById("placa").disabled = true;
-        document.getElementById("tipoInicial").value = "Ingreso";
-        document.getElementById("tipoInicial").disabled = true;
-        document.getElementById("origenMovimiento").value = datos.procedencia || "";
-        document.getElementById("destinoMovimiento").value = "MP";
-        document.getElementById("observacion").value = datos.observacion || "";
-        document.getElementById("kmMovimiento").value = "";
-        document.getElementById("kmMovimiento").focus();
-
-        actualizarFormularioPorTipoInicial();
-    } catch (error) {
-        const mensaje = document.getElementById("mensaje");
-        if (mensaje) {
-            mensaje.className = "error";
-            mensaje.innerText = `Error al cargar datos: ${error.message}`;
-        }
-    }
-}
-
 function actualizarFormularioPorTipoInicial() {
     const tipoInicialSelect = document.getElementById("tipoInicial");
-    let tipoInicial = tipoInicialSelect.value;
-    let esSalida = tipoInicial === "Salida";
-    
-    // Si es modo desde-proveedor, forzar Ingreso
-    if (modoDesdeProveedor) {
-        tipoInicial = "Ingreso";
-        esSalida = false;
-    }
+    const tipoInicial = tipoInicialSelect.value;
+    const esSalida = tipoInicial === "Salida";
 
     document.getElementById("label-km").textContent = esSalida ? "Kilometraje de Salida *" : "Kilometraje de Ingreso *";
     document.getElementById("label-origen").textContent = esSalida ? "Origen de Salida *" : "Origen de Ingreso *";
@@ -140,12 +87,6 @@ async function buscarPersonaPorDni() {
 
 // Registrar movimiento inicial (SALIDA o INGRESO)
 async function registrarMovimientoInicial() {
-    // Si es modo desde-proveedor, delegar a registro espejo
-    if (modoDesdeProveedor && salidaProveedorIdGlobal) {
-        await registrarDesdeProveedorComoEspejo();
-        return;
-    }
-
     const tipoInicial = document.getElementById("tipoInicial").value;
     const esSalidaInicial = tipoInicial === "Salida";
     const tipoRegistro = document.getElementById("tipoRegistro").value;
@@ -267,52 +208,6 @@ async function registrarMovimientoInicial() {
     }
 }
 
-async function registrarDesdeProveedorComoEspejo() {
-    const kmMovimiento = document.getElementById("kmMovimiento").value.trim();
-    const observacion = document.getElementById("observacion").value.trim();
-    const mensaje = document.getElementById("mensaje");
-
-    mensaje.innerText = "";
-    mensaje.className = "";
-
-    if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento) < 0)) {
-        mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un número válido";
-        return;
-    }
-
-    try {
-        const body = {};
-        if (kmMovimiento) {
-            body.kmIngreso = parseInt(kmMovimiento);
-        }
-        if (observacion) {
-            body.observacion = observacion;
-        }
-
-        const response = await fetchAuth(`${API_BASE}/vehiculo-empresa/desde-vehiculo-proveedor/${salidaProveedorIdGlobal}`, {
-            method: "POST",
-            body: JSON.stringify(body)
-        });
-
-        if (!response || !response.ok) {
-            const error = response ? await readApiError(response) : "No autorizado";
-            throw new Error(error || "No se pudo registrar");
-        }
-
-        mensaje.className = "success";
-        mensaje.innerText = "Ingreso compartido registrado en Vehiculo Empresa correctamente";
-
-        // Limpiar y volver
-        setTimeout(() => {
-            window.location.href = "../VehiculosProveedores/html/vehiculos_proveedores.html";
-        }, 1500);
-    } catch (error) {
-        mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
-    }
-}
-
 // Navegar a la pantalla de movimiento complementario
 function irAMovimiento(salidaId, modo) {
     const params = new URLSearchParams({
@@ -320,14 +215,6 @@ function irAMovimiento(salidaId, modo) {
         modo
     });
     window.location.href = `vehiculo_empresa_ingreso.html?${params.toString()}`;
-}
-
-async function registrarEnVehiculosProveedoresDesdeEmpresa(salidaId) {
-    const params = new URLSearchParams({
-        salidaEmpresaId: salidaId,
-        modo: "desde-empresa"
-    });
-    window.location.href = `../VehiculosProveedores/html/vehiculos_proveedores.html?${params.toString()}`;
 }
 
 // Cargar vehículos pendientes (con solo un lado del flujo completo)
@@ -427,8 +314,7 @@ async function cargarActivos() {
             html += `<td>${origen}</td>`;
             html += `<td>${destino}</td>`;
             html += `<td>${hora}</td>`;
-            const botonExtra = !tieneSalida ? ` <button class="btn-small" onclick="registrarEnVehiculosProveedoresDesdeEmpresa(${s.id})">Registrar en Vehículos Proveedores</button>` : "";
-            html += `<td><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button>${botonExtra}</td>`;
+            html += `<td><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button></td>`;
             html += '</tr>';
         });
 

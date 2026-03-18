@@ -4,6 +4,14 @@ let tipoOperacion = "";
 let datosOriginales = {};
 
 const CAMPOS_BLOQUEADOS = new Set(["dni", "nombre", "nombreApellidos"]);
+const DESTINOS_PROVEEDOR = [
+    "RECEPCION",
+    "BALANZA",
+    "AREA COMERCIAL",
+    "LAB. QUIMICO",
+    "TRANSERV.",
+    "EN ESPERA"
+];
 
 function escaparHtml(texto) {
     return String(texto ?? "")
@@ -63,6 +71,25 @@ function volverOrigen() {
 function construirCampo(key, value) {
     const readonly = CAMPOS_BLOQUEADOS.has(key) ? "readonly" : "";
     const safeKey = escaparHtml(key);
+
+    if (tipoOperacion === "Proveedor" && key === "destino") {
+        const valorActual = String(value ?? "").trim();
+        const opciones = ['<option value="">Seleccione destino</option>']
+            .concat(
+                DESTINOS_PROVEEDOR.map((op) => {
+                    const selected = op === valorActual ? " selected" : "";
+                    return `<option value="${escaparHtml(op)}"${selected}>${escaparHtml(op)}</option>`;
+                })
+            )
+            .join("");
+
+        return `
+            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <select data-dato-key="${safeKey}" data-dato-tipo="text" ${readonly ? "disabled" : ""}>
+                ${opciones}
+            </select>
+        `;
+    }
 
     if (value !== null && typeof value === "object") {
         const contenido = escaparHtml(JSON.stringify(value, null, 2));

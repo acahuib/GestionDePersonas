@@ -52,11 +52,11 @@
             <label>Nombre <span class="muted">(Opcional)</span></label>
             <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
 
-            <label>Hora de Ingreso <span class="muted">(Opcional)</span></label>
-            <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
-
             <label>Descripción de Ocurrencia *</label>
             <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4" required></textarea>
+
+            <label>Hora de Ingreso</label>
+            <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
             <div style="margin-top: 10px;">
                 <button onclick="registrarIngreso()" class="btn-success btn-block">
@@ -88,6 +88,7 @@
 <script src="../../js/api.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
+<script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/ocurrencias.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -109,6 +110,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     addEnterListener("nombre", () => document.getElementById("ocurrencia").focus());
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombre"
+    });
 });
 </script>
 

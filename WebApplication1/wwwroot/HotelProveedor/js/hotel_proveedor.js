@@ -164,12 +164,34 @@ async function registrarIngresoHotel(id) {
 
     try {
         const horaIngresoInput = document.getElementById("horaIngresoPendiente")?.value || "";
+        const destinoSugerido = "EN ESPERA";
+
+        const destino = await window.appDialog.prompt(
+            "Destino al que queda el proveedor al regresar del hotel:",
+            {
+                title: "Destino de regreso",
+                placeholder: "Ejemplo: EN ESPERA, BALANZA, RECEPCION",
+                defaultValue: destinoSugerido,
+                required: true,
+                requiredMessage: "Debe ingresar el destino al regreso."
+            }
+        );
+
+        if (destino === null) return;
+
+        const destinoLimpio = destino.trim();
+        if (!destinoLimpio) {
+            window.appDialog.alert("Debe ingresar el destino al regreso.", "Dato requerido");
+            return;
+        }
+
         const response = await fetchAuth(`${API_BASE}/hotel-proveedor/${id}/ingreso`, {
             method: "PUT",
             body: JSON.stringify({
                 horaIngreso: horaIngresoInput
                     ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
-                    : null
+                    : null,
+                destino: destinoLimpio
             })
         });
 

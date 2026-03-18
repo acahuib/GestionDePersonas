@@ -74,7 +74,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 }
 
 async function registrarSalidaTemporal() {
-    await registrarSalida("salida-temporal", "✅ SALIDA TEMPORAL registrada correctamente");
+    await registrarSalida("salida-temporal", "✅ SALIDA CON RETORNO registrada correctamente");
 }
 
 async function registrarSalidaDefinitiva() {

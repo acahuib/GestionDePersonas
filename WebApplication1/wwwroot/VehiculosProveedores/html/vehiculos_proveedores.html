@@ -28,9 +28,6 @@
     <div class="form-card">
         <h3>Registrar Entrada</h3>
 
-        <label>Hora de Ingreso (opcional)</label>
-        <input type="time" id="horaIngreso" placeholder="Dejar vacio para usar hora actual">
-
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del conductor" maxlength="8">
 
@@ -62,6 +59,9 @@
         <label>Observación</label>
         <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
 
+        <label>Hora de Ingreso</label>
+        <input type="time" id="horaIngreso" placeholder="Dejar vacio para usar hora actual">
+
         <div>
             <button onclick="registrarEntrada()" class="btn-success btn-block">
                 <img src="/images/check-circle.svg" class="icon-white"> Registrar ENTRADA
@@ -89,11 +89,11 @@
 <script src="../../js/api.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
+<script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/vehiculos_proveedores.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
-    cargarDatosDesdeEmpresa();
     cargarActivos();
 
     // Auto-actualizar lista cada 15 segundos
@@ -123,6 +123,11 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("lote", () => document.getElementById("procedencia").focus());
     addEnterListener("procedencia", () => document.getElementById("proveedor").focus());
     addEnterListener("proveedor", registrarEntrada);
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombreCompleto"
+    });
 });
 </script>
 

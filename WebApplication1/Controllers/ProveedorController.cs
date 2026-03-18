@@ -120,6 +120,7 @@ namespace WebApplication1.Controllers
             string guardiaNombre,
             string estadoActual,
             string? observacion,
+            string? destino,
             List<object> movimientosInternos,
             DateTime? ultimaSalidaTemporal,
             DateTime? ultimoIngresoRetorno)
@@ -127,7 +128,7 @@ namespace WebApplication1.Controllers
             return new
             {
                 procedencia = LeerString(datosActuales, "procedencia"),
-                destino = LeerString(datosActuales, "destino"),
+                destino = destino,
                 guardiaIngreso = LeerString(datosActuales, "guardiaIngreso"),
                 guardiaSalida = estadoActual == "SalidaDefinitiva" ? guardiaNombre : LeerString(datosActuales, "guardiaSalida"),
                 observacion = observacion,
@@ -306,11 +307,13 @@ namespace WebApplication1.Controllers
             });
 
             var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+            var destinoActualizado = LeerString(datosActuales, "destino");
             var datosActualizados = ConstruirDatosProveedorConEstado(
                 datosActuales,
                 guardiaNombre,
                 "FueraTemporal",
                 observacionActualizada,
+                destinoActualizado,
                 movimientosInternos,
                 horaSalidaTemporal,
                 LeerString(datosActuales, "ultimoIngresoRetorno") is not null && datosActuales.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoEl) && ultimoIngresoEl.ValueKind != JsonValueKind.Null
@@ -397,12 +400,15 @@ namespace WebApplication1.Controllers
                 ? ultimaSalidaEl.GetDateTime()
                 : (DateTime?)null;
             var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+            var destinoActual = LeerString(datosActuales, "destino");
+            var destinoActualizado = string.IsNullOrWhiteSpace(dto.Destino) ? destinoActual : dto.Destino.Trim();
 
             var datosActualizados = ConstruirDatosProveedorConEstado(
                 datosActuales,
                 guardiaNombre,
                 "EnMina",
                 observacionActualizada,
+                destinoActualizado,
                 movimientosInternos,
                 ultimaSalidaTemporal,
                 horaIngresoRetorno);
@@ -490,11 +496,13 @@ namespace WebApplication1.Controllers
                 ? ultimoIngresoEl.GetDateTime()
                 : (DateTime?)null;
             var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+            var destinoActualizado = LeerString(datosActuales, "destino");
             var datosActualizados = ConstruirDatosProveedorConEstado(
                 datosActuales,
                 guardiaNombre,
                 "SalidaDefinitiva",
                 observacionActualizada,
+                destinoActualizado,
                 movimientosInternos,
                 ultimaSalidaTemporal,
                 ultimoIngresoRetorno);

@@ -4,5 +4,6 @@ namespace WebApplication1.DTOs
     {
         public DateTime? HoraIngreso { get; set; }
         public string? Observacion { get; set; }
+        public string? Destino { get; set; }
     }
 }

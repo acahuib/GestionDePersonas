@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     crearSidebar();
     cargarDiasLibreHoy();
     configurarEventos();
+    habilitarAutocompletePersona({
+        dniId: 'dni',
+        nombreId: 'nombreApellidos'
+    });
 });
 
 // Configurar eventos del formulario y botones

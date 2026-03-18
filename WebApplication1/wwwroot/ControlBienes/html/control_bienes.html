@@ -62,7 +62,7 @@
             <img src="/images/plus-lg.svg" class="icon-white">
             Agregar Bien</button>
 
-        <label>Hora de Ingreso <span class="muted">(Opcional)</span></label>
+        <label>Hora de Ingreso</label>
         <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
         <label>Observación</label>
@@ -98,6 +98,7 @@
 <script src="../../js/api.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
+<script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/control_bienes.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -128,6 +129,11 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("nombreCompleto", () => {
         const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
         if (primerBien) primerBien.focus();
+    });
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombreCompleto"
     });
 
     prefillDesdePersonalLocal();

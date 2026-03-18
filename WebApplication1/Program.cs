@@ -36,6 +36,7 @@ builder.Services.AddControllers()
 // Servicios compartidos
 builder.Services.AddScoped<WebApplication1.Services.MovimientosService>();
 builder.Services.AddScoped<WebApplication1.Services.SalidasService>();
+builder.Services.AddScoped<WebApplication1.Services.VehiculoEmpresaSalidaTemporalPolicy>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

@@ -353,6 +353,7 @@ namespace WebApplication1.Controllers
 
                 var proveedorActivo = await ObtenerProveedorActivo(dni);
                 var proveedorReingresoRegistrado = false;
+                var destinoRetorno = string.IsNullOrWhiteSpace(dto.Destino) ? "EN ESPERA" : dto.Destino.Trim();
 
                 if (proveedorActivo == null)
                 {
@@ -362,7 +363,7 @@ namespace WebApplication1.Controllers
                         new
                         {
                             procedencia = "Hotel",
-                            destino = "Mina",
+                            destino = destinoRetorno,
                             guardiaIngreso = guardiaNombre,
                             guardiaSalida = (string?)null,
                             observacion = string.IsNullOrWhiteSpace(dto.Observacion)

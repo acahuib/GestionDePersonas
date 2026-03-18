@@ -142,7 +142,8 @@ namespace WebApplication1.Controllers
                 NombrePersona = m.Persona?.Nombre ?? "Desconocido",
                 TipoPersona = m.Persona?.Tipo,
                 TipoMovimiento = m.TipoMovimiento,
-                TipoOperacion = salidasPorMovimiento.ContainsKey(m.Id) 
+                TipoMovimientoDetalle = ObtenerTipoMovimientoDetalleDashboard(m, salidasPorMovimiento.ContainsKey(m.Id) ? salidasPorMovimiento[m.Id] : null),
+                TipoOperacion = salidasPorMovimiento.ContainsKey(m.Id)
                     ? ObtenerTipoOperacionDashboard(salidasPorMovimiento[m.Id])
                     : null,
                 PuntoControlId = m.PuntoControlId
@@ -185,6 +186,106 @@ namespace WebApplication1.Controllers
             }
             catch
             {
+            }
+
+            return false;
+        }
+
+        private static string ObtenerTipoMovimientoDetalleDashboard(Models.Movimiento movimiento, Models.OperacionDetalle? detalle)
+        {
+            var tipoBase = (movimiento.TipoMovimiento ?? string.Empty).Trim();
+
+            if (detalle == null)
+                return tipoBase;
+
+            var tipoOperacion = (detalle.TipoOperacion ?? string.Empty).Trim();
+            JsonElement root;
+            var tieneDatos = TryParseJson(detalle.DatosJSON, out root);
+
+            if (string.Equals(tipoOperacion, "Proveedor", StringComparison.OrdinalIgnoreCase))
+            {
+                var estadoActual = tieneDatos ? LeerString(root, "estadoActual") : null;
+                var procedencia = tieneDatos ? LeerString(root, "procedencia") : null;
+
+                if (string.Equals(tipoBase, "Salida", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(estadoActual, "SalidaDefinitiva", StringComparison.OrdinalIgnoreCase) || detalle.HoraSalida.HasValue)
+                        return "Salida definitiva de proveedor";
+
+                    if (string.Equals(estadoActual, "FueraTemporal", StringComparison.OrdinalIgnoreCase))
+                        return "Salida con retorno de proveedor";
+
+                    return "Salida de proveedor";
+                }
+
+                if (string.Equals(tipoBase, "Entrada", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(procedencia, "Hotel", StringComparison.OrdinalIgnoreCase))
+                        return "Regreso de hotel";
+
+                    if (tieneDatos && TieneMovimientoInterno(root, "IngresoRetorno"))
+                        return "Regreso de proveedor";
+
+                    return "Entrada de proveedor";
+                }
+            }
+
+            if (string.Equals(tipoOperacion, "HotelProveedor", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(tipoBase, "Salida", StringComparison.OrdinalIgnoreCase))
+                    return "Salida a hotel con retorno";
+
+                if (string.Equals(tipoBase, "Entrada", StringComparison.OrdinalIgnoreCase))
+                    return "Regreso de hotel";
+            }
+
+            if (string.Equals(tipoOperacion, "HabitacionProveedor", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.Equals(tipoBase, "Entrada", StringComparison.OrdinalIgnoreCase))
+                    return "Ingreso a habitacion proveedor";
+
+                if (string.Equals(tipoBase, "Salida", StringComparison.OrdinalIgnoreCase))
+                    return "Salida de habitacion proveedor";
+            }
+
+            return tipoBase;
+        }
+
+        private static bool TryParseJson(string? datosJson, out JsonElement root)
+        {
+            root = default;
+            if (string.IsNullOrWhiteSpace(datosJson))
+                return false;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                root = doc.RootElement.Clone();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string? LeerString(JsonElement root, string propiedad)
+        {
+            return root.TryGetProperty(propiedad, out var value) && value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
+        }
+
+        private static bool TieneMovimientoInterno(JsonElement root, string tipoBuscado)
+        {
+            if (!root.TryGetProperty("movimientosInternos", out var movimientos) || movimientos.ValueKind != JsonValueKind.Array)
+                return false;
+
+            foreach (var mov in movimientos.EnumerateArray())
+            {
+                var tipo = LeerString(mov, "tipo");
+                if (string.Equals(tipo, tipoBuscado, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
 
             return false;

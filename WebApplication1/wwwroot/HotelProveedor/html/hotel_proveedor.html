@@ -44,9 +44,6 @@
             <label>Fecha *</label>
             <input type="date" id="fecha" required>
 
-            <label>Hora de Salida <span class="muted">(Opcional)</span></label>
-            <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
-
             <label>Tipo de Habitación *</label>
             <input type="text" id="tipoHabitacion" placeholder="Ejemplo: Simple, Doble">
 
@@ -55,6 +52,9 @@
 
             <label>Observación</label>
             <textarea id="observacion" rows="3" placeholder="Opcional"></textarea>
+
+            <label>Hora de Salida</label>
+            <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
             <div>
                 <button onclick="registrarSalidaHotel()" class="btn-danger btn-block">
@@ -71,7 +71,7 @@
                 <button onclick="cargarPendientesIngreso()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
             </div>
 
-            <label>Hora de Ingreso para próximos registros <span class="muted">(Opcional)</span></label>
+            <label>Hora de Ingreso para próximos registros</label>
             <input type="time" id="horaIngresoPendiente" placeholder="Dejar vacío para usar hora actual">
 
             <div id="lista-pendientes">
@@ -85,6 +85,7 @@
 <script src="../../js/api.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
+<script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/hotel_proveedor.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -108,6 +109,11 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("ticket", () => document.getElementById("fecha").focus());
     addEnterListener("tipoHabitacion", () => document.getElementById("numeroPersonas").focus());
     addEnterListener("numeroPersonas", registrarSalidaHotel);
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombre"
+    });
 });
 </script>
 

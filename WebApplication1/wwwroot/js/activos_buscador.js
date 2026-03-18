@@ -101,7 +101,7 @@
 
             const btnEditar = document.createElement("button");
             btnEditar.type = "button";
-            btnEditar.className = "btn-inline btn-small";
+            btnEditar.className = "btn-inline btn-small btn-warning";
             btnEditar.style.marginLeft = "6px";
             btnEditar.textContent = "Editar";
             btnEditar.addEventListener("click", () => {

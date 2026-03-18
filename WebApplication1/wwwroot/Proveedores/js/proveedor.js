@@ -188,7 +188,33 @@ function irAHotelDesdeProveedor(dni, nombreCompleto) {
     window.location.href = `../../HotelProveedor/html/hotel_proveedor.html?${params.toString()}`;
 }
 
-async function registrarIngresoRetorno(salidaId) {
+async function solicitarDestinoRetorno(destinoActual) {
+    const valorInicial = (destinoActual || "EN ESPERA").trim();
+
+    if (window.appDialog?.prompt) {
+        const valor = await window.appDialog.prompt(
+            "Destino al que retorna el proveedor:",
+            {
+                title: "Destino de retorno",
+                placeholder: "Ejemplo: EN ESPERA, BALANZA, RECEPCION",
+                defaultValue: valorInicial,
+                required: true,
+                requiredMessage: "Debe indicar el destino al retorno."
+            }
+        );
+
+        if (valor === null) return null;
+        const limpio = valor.trim();
+        return limpio || null;
+    }
+
+    const valor = window.prompt("Destino al que retorna el proveedor:", valorInicial);
+    if (valor === null) return null;
+    const limpio = valor.trim();
+    return limpio || null;
+}
+
+async function registrarIngresoRetorno(salidaId, destinoActual) {
     const mensaje = document.getElementById("mensaje");
     const horaRetornoInput = document.getElementById("horaRetornoPendiente")?.value || "";
     const observacion = window.prompt("Observacion del retorno (opcional):", "") ?? "";
@@ -196,8 +222,18 @@ async function registrarIngresoRetorno(salidaId) {
     if (!salidaId) return;
 
     try {
+        const destino = await solicitarDestinoRetorno(destinoActual);
+        if (!destino) {
+            if (mensaje) {
+                mensaje.className = "error";
+                mensaje.innerText = "Debe indicar el destino de retorno.";
+            }
+            return;
+        }
+
         const body = {
-            observacion: observacion.trim() || null
+            observacion: observacion.trim() || null,
+            destino
         };
 
         if (horaRetornoInput) {
@@ -364,7 +400,7 @@ async function cargarActivos() {
                 html += `<td>${horaIngreso}</td>`;
                 html += `<td>${estaEnHabitacion ? estadoHabitacion.cuarto : 'Disponible'}</td>`;
                 html += '<td>';
-                html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+                html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Salida con Retorno / Definitiva</button>`;
                 html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small btn-inline">Salida por Hotel</button>`;
                 html += estaEnHabitacion
                     ? `<button class="btn-secondary btn-small btn-inline" disabled>En Habitación</button>`
@@ -402,7 +438,7 @@ async function cargarActivos() {
                 htmlRetorno += `<td>${nombreCompleto}</td>`;
                 htmlRetorno += `<td>${ultimaSalida}</td>`;
                 htmlRetorno += `<td>${observacion}</td>`;
-                htmlRetorno += `<td><button onclick="registrarIngresoRetorno(${p.id})" class="btn-success btn-small">Registrar Ingreso</button></td>`;
+                htmlRetorno += `<td><button onclick="registrarIngresoRetorno(${p.id}, '${(datos.destino || '').replace(/'/g, "\\'")}')" class="btn-success btn-small">Retornando</button></td>`;
                 htmlRetorno += '</tr>';
             });
 

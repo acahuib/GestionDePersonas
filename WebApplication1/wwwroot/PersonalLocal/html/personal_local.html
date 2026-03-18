@@ -72,7 +72,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="horaIngreso">Hora de Ingreso (opcional):</label>
+                    <label for="horaIngreso">Hora de Ingreso:</label>
                     <input 
                         type="time" 
                         id="horaIngreso" 
@@ -109,6 +109,7 @@
 <script src="../../js/api.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
+<script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/personal_local.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -122,6 +123,11 @@ document.addEventListener("DOMContentLoaded", () => {
             cargarActivos();
         }, 500);
     }
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombreApellidos"
+    });
 });
 </script>
 

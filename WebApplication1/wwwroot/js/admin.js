@@ -335,10 +335,17 @@ function renderizarTablaUltimosMovimientos(movimientos) {
             <td><strong>${m.dni}</strong></td>
             <td>${m.nombrePersona}</td>
             <td><span class="badge badge-${getTipoBadge(m.tipoPersona)}">${m.tipoPersona}</span></td>
-            <td><span class="badge badge-${m.tipoMovimiento === 'Entrada' ? 'success' : 'warning'}">${m.tipoMovimiento}</span></td>
+            <td><span class="badge badge-${getMovimientoBadge(m.tipoMovimiento)}">${m.tipoMovimientoDetalle || m.tipoMovimiento}</span></td>
             <td>${obtenerEstadoCuaderno(m)}</td>
         </tr>
     `).join('');
+}
+
+function getMovimientoBadge(tipoMovimiento) {
+    const tipo = (tipoMovimiento || '').toLowerCase();
+    if (tipo === 'entrada' || tipo === 'ingreso') return 'success';
+    if (tipo === 'salida') return 'warning';
+    return 'secondary';
 }
 
 // Cargar registros del cuaderno de enseres por turno (solo lectura)
