@@ -20,7 +20,7 @@ function cargarDatosDesdeUrl() {
     document.getElementById("dni").dataset.guardiaIngreso = params.get("guardiaIngreso") || "";
 }
 
-async function registrarSalida() {
+async function registrarSalida(endpoint, mensajeOk) {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
     const observacion = document.getElementById("observacion").value.trim();
@@ -49,7 +49,7 @@ async function registrarSalida() {
         }
 
         // Usar PUT para actualizar el registro existente
-        const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/salida`, {
+        const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/${endpoint}`, {
             method: "PUT",
             body: JSON.stringify(body)
         });
@@ -60,7 +60,7 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA registrada correctamente";
+        mensaje.innerText = mensajeOk;
 
         // Redirigir automáticamente después de 500ms
         setTimeout(() => {
@@ -71,6 +71,14 @@ async function registrarSalida() {
         mensaje.className = "error";
         mensaje.innerText = `❌ Error: ${error.message}`;
     }
+}
+
+async function registrarSalidaTemporal() {
+    await registrarSalida("salida-temporal", "✅ SALIDA TEMPORAL registrada correctamente");
+}
+
+async function registrarSalidaDefinitiva() {
+    await registrarSalida("salida", "✅ SALIDA DEFINITIVA registrada correctamente");
 }
 
 function volver() {

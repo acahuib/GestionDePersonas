@@ -3,6 +3,8 @@
 // =========================================
 
 let personaEncontrada = null;
+let modoDesdeEmpresa = false;
+let salidaEmpresaIdGlobal = null;
 
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
@@ -85,6 +87,12 @@ async function buscarPersonaPorDni() {
 
 // Registrar ENTRADA de vehículo proveedor
 async function registrarEntrada() {
+    // Si es modo desde-empresa, delegar a registro espejo
+    if (modoDesdeEmpresa && salidaEmpresaIdGlobal) {
+        await registrarDesdeEmpresaComoEspejo();
+        return;
+    }
+
     const dni = document.getElementById("dni").value.trim();
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
     const proveedor = document.getElementById("proveedor").value.trim();
@@ -204,6 +212,14 @@ function irASalida(salidaId, dni, nombreCompleto, proveedor, placa, tipo, lote, 
     window.location.href = `vehiculos_proveedores_salida.html?${params.toString()}`;
 }
 
+function registrarEnVehiculoEmpresaDesdeProveedor(salidaId) {
+    const params = new URLSearchParams({
+        salidaProveedorId: salidaId,
+        modo: "desde-proveedor"
+    });
+    window.location.href = `../VehiculoEmpresa/html/vehiculo_empresa_ingreso.html?${params.toString()}`;
+}
+
 // Cargar vehículos activos (sin salida)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
@@ -288,7 +304,7 @@ async function cargarActivos() {
             html += `<td>${cantidad}</td>`;
             html += `<td>${procedencia}</td>`;
             html += `<td>${horaIngreso}</td>`;
-            html += `<td><button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button></td>`;
+            html += `<td><button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button> <button class="btn-small" onclick="registrarEnVehiculoEmpresaDesdeProveedor(${s.id})">Registrar en Vehículo Empresa</button></td>`;
             html += '</tr>';
         });
 
@@ -306,4 +322,109 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+async function cargarDatosDesdeEmpresa() {
+    const params = new URLSearchParams(window.location.search);
+    const salidaEmpresaId = params.get("salidaEmpresaId");
+    const modo = params.get("modo");
+
+    if (modo !== "desde-empresa" || !salidaEmpresaId) {
+        return;
+    }
+
+    modoDesdeEmpresa = true;
+    salidaEmpresaIdGlobal = parseInt(salidaEmpresaId);
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/${salidaEmpresaId}`);
+        if (!response || !response.ok) {
+            throw new Error("No se pudo cargar el registro origen");
+        }
+
+        const salida = await response.json();
+        const datos = salida.datos || {};
+
+        // Precargar datos solo lectura
+        document.getElementById("dni").value = salida.dni || "";
+        document.getElementById("dni").disabled = true;
+        document.getElementById("nombreCompleto").value = salida.nombreCompleto || datos.conductor || "";
+        document.getElementById("nombreCompleto").disabled = true;
+        document.getElementById("placa").value = datos.placa || "";
+        document.getElementById("placa").disabled = true;
+        
+        // Precargar datos editables
+        document.getElementById("procedencia").value = datos.origenIngreso || datos.origen || "";
+        document.getElementById("proveedor").value = "Vehículo Empresa";
+        document.getElementById("observacion").value = datos.observacion || "";
+        
+        // Valores defaults editables
+        document.getElementById("tipo").value = "Empresa";
+        
+        // Foco en procedencia para edición
+        document.getElementById("procedencia").focus();
+        
+        // Ocultar tabla de activos en modo desde-empresa
+        const listaActivos = document.getElementById("lista-activos");
+        if (listaActivos) {
+            listaActivos.style.display = "none";
+        }
+    } catch (error) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = `Error al cargar datos: ${error.message}`;
+        }
+    }
+}
+
+async function registrarDesdeEmpresaComoEspejo() {
+    const procedencia = document.getElementById("procedencia").value.trim();
+    const proveedor = document.getElementById("proveedor").value.trim();
+    const tipo = document.getElementById("tipo").value.trim();
+    const lote = document.getElementById("lote").value.trim();
+    const cantidad = document.getElementById("cantidad").value.trim();
+    const observacion = document.getElementById("observacion").value.trim();
+    const mensaje = document.getElementById("mensaje");
+
+    mensaje.innerText = "";
+    mensaje.className = "";
+
+    if (!procedencia || !proveedor || !tipo) {
+        mensaje.className = "error";
+        mensaje.innerText = "Complete procedencia, proveedor y tipo";
+        return;
+    }
+
+    try {
+        const body = {
+            procedencia,
+            proveedor,
+            tipo,
+            lote: lote || null,
+            cantidad: cantidad || null,
+            observacion: observacion || null
+        };
+
+        const response = await fetchAuth(`${API_BASE}/vehiculos-proveedores/desde-vehiculo-empresa/${salidaEmpresaIdGlobal}`, {
+            method: "POST",
+            body: JSON.stringify(body)
+        });
+
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No autorizado";
+            throw new Error(error || "No se pudo registrar");
+        }
+
+        mensaje.className = "success";
+        mensaje.innerText = "Ingreso compartido registrado en Vehiculos Proveedores correctamente";
+
+        // Limpiar y volver
+        setTimeout(() => {
+            window.location.href = "../VehiculoEmpresa/html/vehiculo_empresa.html";
+        }, 1500);
+    } catch (error) {
+        mensaje.className = "error";
+        mensaje.innerText = `Error: ${error.message}`;
+    }
 }

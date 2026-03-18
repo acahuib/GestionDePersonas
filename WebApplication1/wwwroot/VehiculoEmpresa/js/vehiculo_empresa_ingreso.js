@@ -14,15 +14,41 @@ function formatearTipoRegistro(tipoRegistro) {
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
-
+    const salidaProveedorId = params.get("salidaProveedorId");
     const salidaId = params.get("salidaId");
     const modo = (params.get("modo") || "ingreso").toLowerCase();
+    const idACargar = salidaProveedorId || salidaId;
+    const dniElement = document.getElementById("dni");
 
-    document.getElementById("dni").dataset.salidaId = salidaId || "";
-    document.getElementById("dni").dataset.modo = modo;
+    dniElement.dataset.salidaId = idACargar || "";
+    dniElement.dataset.modo = salidaProveedorId ? "ingreso" : modo;
+    dniElement.dataset.salidaProveedorId = salidaProveedorId || "";
+    dniElement.dataset.esEspejo = salidaProveedorId ? "true" : "false";
 
-    configurarVistaPorModo(modo);
-    cargarDetalleOperacion(salidaId);
+    if (salidaProveedorId) {
+        const bloqueIngreso = document.getElementById("bloque-ingreso");
+        const bloqueSalida = document.getElementById("bloque-salida");
+        const titulo = document.getElementById("titulo-movimiento");
+        const flujoActual = document.getElementById("flujoActual");
+        const boton = document.getElementById("btn-guardar");
+
+        if (bloqueIngreso) bloqueIngreso.style.display = "block";
+        if (bloqueSalida) bloqueSalida.style.display = "none";
+        if (titulo) {
+            titulo.innerHTML = '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO (desde Vehículos Proveedores)';
+        }
+        if (flujoActual) {
+            flujoActual.value = "Espejo desde VEHÍCULOS PROVEEDORES";
+        }
+        if (boton) {
+            boton.className = "btn-success btn-block";
+            boton.innerHTML = '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO';
+        }
+    } else {
+        configurarVistaPorModo(modo);
+    }
+
+    cargarDetalleOperacion(idACargar);
 }
 
 function configurarVistaPorModo(modo) {
@@ -59,7 +85,8 @@ async function cargarDetalleOperacion(salidaId) {
     try {
         const response = await fetchAuth(`${API_BASE}/salidas/${salidaId}`);
         if (!response.ok) {
-            throw new Error("No se pudo cargar el detalle del registro");
+            const error = await response.text();
+            throw new Error(error);
         }
 
         const detalle = await response.json();
@@ -67,7 +94,7 @@ async function cargarDetalleOperacion(salidaId) {
 
         setElementValueIfExists("tipoRegistroActual", formatearTipoRegistro(datos.tipoRegistro));
         setElementValueIfExists("dni", detalle.dni || "");
-        setElementValueIfExists("conductor", detalle.nombreCompleto || datos.conductor || "");
+        setElementValueIfExists("conductor", detalle.nombreCompleto || datos.conductor || datos.nombreApellidos || "");
         setElementValueIfExists("placa", datos.placa || "");
 
         setElementValueIfExists("kmSalidaRegistrado", datos.kmSalida ?? "");
@@ -79,6 +106,11 @@ async function cargarDetalleOperacion(salidaId) {
         setElementValueIfExists("destinoIngresoRegistrado", datos.destinoIngreso || datos.destino || "");
 
         setElementValueIfExists("observacion", datos.observacion || "");
+
+        if (document.getElementById("dni").dataset.esEspejo === "true") {
+            setElementValueIfExists("origenIngreso", datos.procedencia || datos.origenIngreso || datos.origen || "");
+            setElementValueIfExists("destinoIngreso", datos.destinoIngreso || datos.destino || "MP");
+        }
     } catch (error) {
         mensaje.className = "error";
         mensaje.innerText = `❌ Error al cargar el registro: ${error.message}`;
@@ -88,6 +120,8 @@ async function cargarDetalleOperacion(salidaId) {
 async function registrarMovimientoComplementario() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
+    const salidaProveedorId = dniElement.dataset.salidaProveedorId || "";
+    const esEspejo = dniElement.dataset.esEspejo === "true";
     const modo = (dniElement.dataset.modo || "ingreso").toLowerCase();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
@@ -97,7 +131,56 @@ async function registrarMovimientoComplementario() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro de salida";
+        mensaje.innerText = "Error: No se encontró el ID del registro";
+        return;
+    }
+
+    if (esEspejo && salidaProveedorId) {
+        const kmIngreso = document.getElementById("kmIngreso").value.trim();
+        const origenIngreso = document.getElementById("origenIngreso").value.trim();
+        const destinoIngreso = document.getElementById("destinoIngreso").value.trim();
+
+        if (kmIngreso && (isNaN(kmIngreso) || parseInt(kmIngreso, 10) < 0)) {
+            mensaje.className = "error";
+            mensaje.innerText = "El kilometraje debe ser un número válido";
+            return;
+        }
+
+        if (!origenIngreso || !destinoIngreso) {
+            mensaje.className = "error";
+            mensaje.innerText = "Complete origen y destino de ingreso";
+            return;
+        }
+
+        try {
+            const body = {
+                kmIngreso: kmIngreso ? parseInt(kmIngreso, 10) : null,
+                origenIngreso,
+                destinoIngreso,
+                observacion: observacion || null
+            };
+
+            const response = await fetchAuth(`${API_BASE}/vehiculo-empresa/desde-vehiculo-proveedor/${salidaProveedorId}`, {
+                method: "POST",
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            mensaje.className = "success";
+            mensaje.innerText = "✅ Registro espejo creado en Vehículo Empresa correctamente";
+
+            setTimeout(() => {
+                window.location.href = "vehiculo_empresa.html?refresh=1";
+            }, 500);
+        } catch (error) {
+            mensaje.className = "error";
+            mensaje.innerText = `❌ Error: ${error.message}`;
+        }
+
         return;
     }
 
@@ -121,8 +204,7 @@ async function registrarMovimientoComplementario() {
         return;
     }
 
-    // Validar kilometraje
-    if (isNaN(km) || parseInt(km) < 0) {
+    if (isNaN(km) || parseInt(km, 10) < 0) {
         mensaje.className = "error";
         mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
@@ -135,26 +217,23 @@ async function registrarMovimientoComplementario() {
 
         const body = esIngreso
             ? {
-                kmIngreso: parseInt(km),
+                kmIngreso: parseInt(km, 10),
                 origenIngreso: origen,
                 destinoIngreso: destino,
                 observacion: observacion || null
             }
             : {
-                kmSalida: parseInt(km),
+                kmSalida: parseInt(km, 10),
                 origenSalida: origen,
                 destinoSalida: destino,
                 observacion: observacion || null
             };
 
-        // Enviar hora solo si se especifica
+        const horaKey = esIngreso ? "horaIngreso" : "horaSalida";
         if (horaInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            const horaKey = esIngreso ? 'horaIngreso' : 'horaSalida';
+            const today = obtenerFechaLocalISO();
             body[horaKey] = new Date(`${today}T${horaInput}`).toISOString();
         } else {
-            const horaKey = esIngreso ? 'horaIngreso' : 'horaSalida';
             body[horaKey] = new Date().toISOString();
         }
 
@@ -173,11 +252,9 @@ async function registrarMovimientoComplementario() {
             ? "✅ INGRESO registrado correctamente"
             : "✅ SALIDA registrada correctamente";
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             window.location.href = "vehiculo_empresa.html?refresh=1";
         }, 500);
-
     } catch (error) {
         mensaje.className = "error";
         mensaje.innerText = `❌ Error: ${error.message}`;
@@ -191,7 +268,7 @@ function volver() {
 function obtenerFechaLocalISO() {
     const now = new Date();
     const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
 }

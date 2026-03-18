@@ -198,6 +198,119 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
+        // POST: /api/vehiculo-empresa/desde-vehiculo-proveedor/{salidaProveedorId}
+        // Crea un INGRESO en VehiculoEmpresa desde un activo de VehiculosProveedores
+        // Reutiliza MovimientoId para no duplicar el ingreso fisico en garita
+        // ======================================================
+        [HttpPost("desde-vehiculo-proveedor/{salidaProveedorId:int}")]
+        public async Task<IActionResult> RegistrarDesdeVehiculoProveedor(
+            int salidaProveedorId,
+            [FromBody] RegistrarVehiculoEmpresaDesdeProveedorDto? dto)
+        {
+            var salidaProveedor = await _context.OperacionDetalle
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == salidaProveedorId && o.TipoOperacion == "VehiculosProveedores");
+
+            if (salidaProveedor == null)
+                return NotFound("No se encontro el registro de VehiculosProveedores.");
+
+            if (!salidaProveedor.HoraIngreso.HasValue)
+                return BadRequest("El registro origen no tiene ingreso para replicar.");
+
+            if (salidaProveedor.HoraSalida.HasValue)
+                return BadRequest("El registro origen ya tiene salida y no puede replicarse como activo.");
+
+            if (string.IsNullOrWhiteSpace(salidaProveedor.Dni))
+                return BadRequest("El registro origen no tiene DNI asociado.");
+
+            JsonElement datosProveedor;
+            try
+            {
+                datosProveedor = JsonDocument.Parse(salidaProveedor.DatosJSON).RootElement;
+            }
+            catch
+            {
+                return BadRequest("El registro origen tiene DatosJSON invalido.");
+            }
+
+            var placa = LeerString(datosProveedor, "placa")?.Trim();
+            if (string.IsNullOrWhiteSpace(placa))
+                return BadRequest("El registro origen no tiene placa.");
+
+            var yaExisteEspejo = await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "VehiculoEmpresa" && o.Dni == salidaProveedor.Dni && o.HoraIngreso != null && o.HoraSalida == null)
+                .AnyAsync(o => o.DatosJSON.Contains($"\"origenVehiculosProveedoresId\":{salidaProveedorId}"));
+
+            if (yaExisteEspejo)
+                return BadRequest("Este ingreso ya fue registrado en VehiculoEmpresa.");
+
+            var origen = LeerString(datosProveedor, "procedencia")?.Trim();
+            var guardiaIngreso = LeerString(datosProveedor, "guardiaIngreso");
+            var observacionOrigen = LeerString(datosProveedor, "observacion");
+
+            if (dto?.KmIngreso.HasValue == true && dto.KmIngreso.Value < 0)
+                return BadRequest("KmIngreso no puede ser negativo.");
+
+            if (dto?.KmSalida.HasValue == true && dto.KmSalida.Value < 0)
+                return BadRequest("KmSalida no puede ser negativo.");
+
+            var dni = salidaProveedor.Dni.Trim();
+            var persona = await _context.Personas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Dni == dni);
+
+            var conductor = persona?.Nombre;
+            if (string.IsNullOrWhiteSpace(conductor))
+            {
+                conductor = LeerString(datosProveedor, "nombreApellidos") ?? "S/N";
+            }
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            var horaIngreso = salidaProveedor.HoraIngreso.Value;
+            var fechaIngreso = salidaProveedor.FechaIngreso ?? horaIngreso.Date;
+
+            var salidaEmpresa = await _salidasService.CrearSalidaDetalle(
+                salidaProveedor.MovimientoId,
+                "VehiculoEmpresa",
+                new
+                {
+                    tipoRegistro = "VehiculoEmpresa",
+                    conductor,
+                    placa,
+                    kmSalida = dto?.KmSalida,
+                    kmIngreso = dto?.KmIngreso,
+                    origenSalida = (string?)null,
+                    destinoSalida = (string?)null,
+                    origenIngreso = string.IsNullOrWhiteSpace(dto?.OrigenIngreso) ? origen : dto!.OrigenIngreso,
+                    destinoIngreso = string.IsNullOrWhiteSpace(dto?.DestinoIngreso) ? "MP" : dto!.DestinoIngreso,
+                    origen = string.IsNullOrWhiteSpace(dto?.OrigenIngreso) ? origen : dto!.OrigenIngreso,
+                    destino = string.IsNullOrWhiteSpace(dto?.DestinoIngreso) ? "MP" : dto!.DestinoIngreso,
+                    guardiaSalida = (string?)null,
+                    guardiaIngreso,
+                    observacion = string.IsNullOrWhiteSpace(dto?.Observacion) ? observacionOrigen : dto!.Observacion,
+                    origenVehiculosProveedoresId = salidaProveedorId,
+                    movimientoCompartido = true
+                },
+                usuarioId,
+                horaIngreso,
+                fechaIngreso,
+                null,
+                null,
+                dni);
+
+            return Ok(new
+            {
+                mensaje = "Ingreso replicado en VehiculoEmpresa",
+                salidaId = salidaEmpresa.Id,
+                salidaOrigenId = salidaProveedorId,
+                tipoOperacion = "VehiculoEmpresa",
+                estado = "Pendiente de salida"
+            });
+        }
+
+        // ======================================================
         // PUT: /api/vehiculo-empresa/{id}/ingreso
         // Actualiza datos de INGRESO
         // ======================================================
@@ -360,6 +473,46 @@ namespace WebApplication1.Controllers
                 ahoraLocal,
                 fechaActual
             );
+
+            // Cerrar tambien los registros espejo en VehiculosProveedores para evitar doble salida.
+            var espejosProveedor = await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "VehiculosProveedores" &&
+                            o.Dni == dniMovimiento &&
+                            o.HoraIngreso != null &&
+                            o.HoraSalida == null &&
+                            o.DatosJSON.Contains($"\"origenVehiculoEmpresaId\":{id}"))
+                .ToListAsync();
+
+            foreach (var espejo in espejosProveedor)
+            {
+                var datosEspejo = JsonDocument.Parse(espejo.DatosJSON).RootElement;
+
+                var datosEspejoActualizados = new
+                {
+                    nombreApellidos = LeerString(datosEspejo, "nombreApellidos"),
+                    proveedor = LeerString(datosEspejo, "proveedor"),
+                    placa = LeerString(datosEspejo, "placa"),
+                    tipo = LeerString(datosEspejo, "tipo"),
+                    lote = LeerString(datosEspejo, "lote"),
+                    cantidad = LeerString(datosEspejo, "cantidad"),
+                    procedencia = LeerString(datosEspejo, "procedencia"),
+                    guardiaIngreso = LeerString(datosEspejo, "guardiaIngreso"),
+                    guardiaSalida = guardiaNombre,
+                    observacion = LeerString(datosEspejo, "observacion"),
+                    origenVehiculoEmpresaId = id,
+                    movimientoCompartido = true
+                };
+
+                await _salidasService.ActualizarSalidaDetalle(
+                    espejo.Id,
+                    datosEspejoActualizados,
+                    usuarioId,
+                    null,
+                    null,
+                    ahoraLocal,
+                    fechaActual
+                );
+            }
 
             if (!string.IsNullOrWhiteSpace(dniMovimiento))
             {

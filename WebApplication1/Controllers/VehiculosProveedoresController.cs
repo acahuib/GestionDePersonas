@@ -199,6 +199,109 @@ namespace WebApplication1.Controllers
         }
 
         // ======================================================
+        // POST: /api/vehiculos-proveedores/desde-vehiculo-empresa/{salidaEmpresaId}
+        // Crea un INGRESO en VehiculosProveedores desde un activo de VehiculoEmpresa
+        // Reutiliza MovimientoId para no duplicar el ingreso fisico en garita
+        // ======================================================
+        [HttpPost("desde-vehiculo-empresa/{salidaEmpresaId:int}")]
+        public async Task<IActionResult> RegistrarDesdeVehiculoEmpresa(
+            int salidaEmpresaId,
+            [FromBody] RegistrarVehiculoEmpresaDesdeProveedorDto? dto)
+        {
+            var salidaEmpresa = await _context.OperacionDetalle
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == salidaEmpresaId && o.TipoOperacion == "VehiculoEmpresa");
+
+            if (salidaEmpresa == null)
+                return NotFound("No se encontro el registro de VehiculoEmpresa.");
+
+            if (!salidaEmpresa.HoraIngreso.HasValue)
+                return BadRequest("El registro origen no tiene ingreso para replicar.");
+
+            if (salidaEmpresa.HoraSalida.HasValue)
+                return BadRequest("El registro origen ya tiene salida y no puede replicarse como activo.");
+
+            if (string.IsNullOrWhiteSpace(salidaEmpresa.Dni))
+                return BadRequest("El registro origen no tiene DNI asociado.");
+
+            JsonElement datosEmpresa;
+            try
+            {
+                datosEmpresa = JsonDocument.Parse(salidaEmpresa.DatosJSON).RootElement;
+            }
+            catch
+            {
+                return BadRequest("El registro origen tiene DatosJSON invalido.");
+            }
+
+            var placa = LeerString(datosEmpresa, "placa")?.Trim();
+            if (string.IsNullOrWhiteSpace(placa))
+                return BadRequest("El registro origen no tiene placa.");
+
+            var yaExisteEspejo = await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == "VehiculosProveedores" && o.Dni == salidaEmpresa.Dni && o.HoraIngreso != null && o.HoraSalida == null)
+                .AnyAsync(o => o.DatosJSON.Contains($"\"origenVehiculoEmpresaId\":{salidaEmpresaId}"));
+
+            if (yaExisteEspejo)
+                return BadRequest("Este ingreso ya fue registrado en VehiculosProveedores.");
+
+            var origen = LeerString(datosEmpresa, "origenIngreso", "origen")?.Trim() ?? "S/N";
+            var guardiaIngreso = LeerString(datosEmpresa, "guardiaIngreso");
+            var observacionOrigen = LeerString(datosEmpresa, "observacion");
+
+            var dni = salidaEmpresa.Dni.Trim();
+            var persona = await _context.Personas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Dni == dni);
+
+            var nombreApellidos = persona?.Nombre;
+            if (string.IsNullOrWhiteSpace(nombreApellidos))
+            {
+                nombreApellidos = LeerString(datosEmpresa, "conductor") ?? "S/N";
+            }
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            var horaIngreso = salidaEmpresa.HoraIngreso.Value;
+            var fechaIngreso = salidaEmpresa.FechaIngreso ?? horaIngreso.Date;
+
+            var salidaProveedor = await _salidasService.CrearSalidaDetalle(
+                salidaEmpresa.MovimientoId,
+                "VehiculosProveedores",
+                new
+                {
+                    nombreApellidos,
+                    proveedor = string.IsNullOrWhiteSpace(dto?.Proveedor) ? "Vehículo Empresa" : dto!.Proveedor,
+                    placa,
+                    tipo = string.IsNullOrWhiteSpace(dto?.Tipo) ? "Empresa" : dto!.Tipo,
+                    lote = string.IsNullOrWhiteSpace(dto?.Lote) ? null : dto!.Lote,
+                    cantidad = string.IsNullOrWhiteSpace(dto?.Cantidad) ? null : dto!.Cantidad,
+                    procedencia = string.IsNullOrWhiteSpace(dto?.Procedencia) ? origen : dto!.Procedencia,
+                    guardiaIngreso,
+                    guardiaSalida = (string?)null,
+                    observacion = string.IsNullOrWhiteSpace(dto?.Observacion) ? observacionOrigen : dto!.Observacion,
+                    origenVehiculoEmpresaId = salidaEmpresaId,
+                    movimientoCompartido = true
+                },
+                usuarioId,
+                horaIngreso,
+                fechaIngreso,
+                null,
+                null,
+                dni);
+
+            return Ok(new
+            {
+                mensaje = "Ingreso replicado en VehiculosProveedores",
+                salidaId = salidaProveedor.Id,
+                salidaOrigenId = salidaEmpresaId,
+                tipoOperacion = "VehiculosProveedores",
+                estado = "Pendiente de salida"
+            });
+        }
+
+        // ======================================================
         // PUT: /api/vehiculos-proveedores/{id}/salida
         // Actualiza hora de SALIDA
         // ======================================================
@@ -249,6 +352,7 @@ namespace WebApplication1.Controllers
             }
 
             var registrosCerrados = 0;
+            var idsCerradosProveedor = new List<int>();
 
             // Cerrar el registro seleccionado
             await _salidasService.ActualizarSalidaDetalle(
@@ -261,6 +365,7 @@ namespace WebApplication1.Controllers
                 fechaActual
             );
             registrosCerrados++;
+            idsCerradosProveedor.Add(id);
 
             // Si existen registros abiertos legacy del mismo DNI, cerrarlos también
             if (!string.IsNullOrWhiteSpace(salida.Dni))
@@ -287,10 +392,63 @@ namespace WebApplication1.Controllers
                         fechaActual
                     );
                     registrosCerrados++;
+                    idsCerradosProveedor.Add(abierto.Id);
                 }
 
-                // Registrar movimiento de salida para que panel Admin deje de mostrar a la persona "dentro"
-                await _movimientosService.RegistrarMovimientoEnBD(dniNormalizado, 1, "Salida", usuarioId);
+                // Cerrar tambien el/los registros espejo en VehiculoEmpresa para evitar doble salida.
+                foreach (var origenId in idsCerradosProveedor)
+                {
+                    var espejosEmpresa = await _context.OperacionDetalle
+                        .Where(o => o.TipoOperacion == "VehiculoEmpresa" &&
+                                    o.Dni == dniNormalizado &&
+                                    o.HoraIngreso != null &&
+                                    o.HoraSalida == null &&
+                                    o.DatosJSON.Contains($"\"origenVehiculosProveedoresId\":{origenId}"))
+                        .ToListAsync();
+
+                    foreach (var espejo in espejosEmpresa)
+                    {
+                        var datosEspejo = JsonDocument.Parse(espejo.DatosJSON).RootElement;
+
+                        var datosEspejoActualizados = new
+                        {
+                            tipoRegistro = datosEspejo.TryGetProperty("tipoRegistro", out var tr) && tr.ValueKind == JsonValueKind.String ? tr.GetString() : "VehiculoEmpresa",
+                            conductor = datosEspejo.TryGetProperty("conductor", out var cond) && cond.ValueKind == JsonValueKind.String ? cond.GetString() : null,
+                            placa = datosEspejo.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
+                            kmSalida = datosEspejo.TryGetProperty("kmSalida", out var kms) && kms.ValueKind == JsonValueKind.Number && kms.TryGetInt32(out var kmSalida) ? kmSalida : (int?)null,
+                            kmIngreso = datosEspejo.TryGetProperty("kmIngreso", out var kmi) && kmi.ValueKind == JsonValueKind.Number && kmi.TryGetInt32(out var kmIngreso) ? kmIngreso : (int?)null,
+                            origenSalida = datosEspejo.TryGetProperty("origenSalida", out var os) && os.ValueKind == JsonValueKind.String ? os.GetString() : null,
+                            destinoSalida = datosEspejo.TryGetProperty("destinoSalida", out var ds) && ds.ValueKind == JsonValueKind.String ? ds.GetString() : null,
+                            origenIngreso = datosEspejo.TryGetProperty("origenIngreso", out var oi) && oi.ValueKind == JsonValueKind.String ? oi.GetString() : null,
+                            destinoIngreso = datosEspejo.TryGetProperty("destinoIngreso", out var di) && di.ValueKind == JsonValueKind.String ? di.GetString() : null,
+                            origen = datosEspejo.TryGetProperty("origen", out var org) && org.ValueKind == JsonValueKind.String ? org.GetString() : null,
+                            destino = datosEspejo.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String ? dest.GetString() : null,
+                            guardiaSalida = guardiaNombre,
+                            guardiaIngreso = datosEspejo.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String ? gi.GetString() : null,
+                            observacion = datosEspejo.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null,
+                            origenVehiculosProveedoresId = origenId,
+                            movimientoCompartido = true
+                        };
+
+                        await _salidasService.ActualizarSalidaDetalle(
+                            espejo.Id,
+                            datosEspejoActualizados,
+                            usuarioId,
+                            null,
+                            null,
+                            ahoraLocal,
+                            fechaActual
+                        );
+                    }
+                }
+
+                // Registrar movimiento de salida solo si el ultimo movimiento no es ya una salida.
+                var ultimoMovimientoGarita = await _movimientosService.GetLastMovimiento(dniNormalizado, 1);
+                if (ultimoMovimientoGarita == null ||
+                    !string.Equals(ultimoMovimientoGarita.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _movimientosService.RegistrarMovimientoEnBD(dniNormalizado, 1, "Salida", usuarioId);
+                }
             }
 
             return Ok(new
@@ -301,6 +459,32 @@ namespace WebApplication1.Controllers
                 estado = "Salida completada",
                 registrosCerrados
             });
+        }
+
+        private static string? LeerString(JsonElement root, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String)
+                {
+                    return value.GetString();
+                }
+            }
+
+            return null;
+        }
+
+        private static int? LeerInt(JsonElement root, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var numero))
+                {
+                    return numero;
+                }
+            }
+
+            return null;
         }
     }
 }

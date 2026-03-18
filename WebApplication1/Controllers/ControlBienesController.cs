@@ -83,15 +83,19 @@ namespace WebApplication1.Controllers
                 
                 if (persona == null)
                 {
-                    // DNI no existe: validar que se envíen nombres y apellidos
-                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
-                        return BadRequest("DNI no registrado. Debe proporcionar Nombres y Apellidos para registrar la persona.");
+                    var nombreCompleto = dto.NombreCompleto?.Trim();
+                    if (string.IsNullOrWhiteSpace(nombreCompleto))
+                    {
+                        if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                            return BadRequest("DNI no registrado. Debe proporcionar el nombre completo para registrar la persona.");
 
-                    // Crear nuevo registro en tabla Personas
+                        nombreCompleto = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}";
+                    }
+
                     persona = new Models.Persona
                     {
                         Dni = dniNormalizado,
-                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}",
+                        Nombre = nombreCompleto,
                         Tipo = "ControlBienes"
                     };
                     _context.Personas.Add(persona);

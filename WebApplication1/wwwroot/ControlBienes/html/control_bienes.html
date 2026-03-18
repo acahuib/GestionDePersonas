@@ -35,11 +35,8 @@
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI" maxlength="8">
 
-        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="nombres" placeholder="Nombres">
-
-        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="apellidos" placeholder="Apellidos">
+        <label>Nombre Completo <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombreCompleto" placeholder="Nombres y apellidos">
 
         <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
             <strong>
@@ -128,8 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
-    addEnterListener("apellidos", () => {
+    addEnterListener("nombreCompleto", () => {
         const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
         if (primerBien) primerBien.focus();
     });

@@ -31,11 +31,8 @@
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del personal" maxlength="8">
 
-        <label>Nombres <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="nombres" placeholder="Nombres del personal">
-
-        <label>Apellidos <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="apellidos" placeholder="Apellidos del personal">
+        <label>Nombre Completo <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+        <input type="text" id="nombreCompleto" placeholder="Nombres y apellidos del personal">
 
         <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
             <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
@@ -109,8 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    addEnterListener("nombres", () => document.getElementById("apellidos").focus());
-    addEnterListener("apellidos", () => document.getElementById("deDonde").focus());
+    addEnterListener("nombreCompleto", () => document.getElementById("deDonde").focus());
     addEnterListener("deDonde", () => document.getElementById("tipo").focus());
     addEnterListener("quienAutoriza", () => document.getElementById("horaSalida").focus());
     addEnterListener("horaSalida", registrarSalida);

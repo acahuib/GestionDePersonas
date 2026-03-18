@@ -7,37 +7,20 @@ let contadorBienes = 0;
 let bienesPendientes = [];
 let prefillNombreCompleto = null;
 
-function dividirNombreCompleto(nombreCompleto) {
-    const partes = (nombreCompleto || "").trim().split(/\s+/).filter(Boolean);
-    if (partes.length === 0) {
-        return { nombres: "", apellidos: "" };
-    }
-    if (partes.length === 1) {
-        return { nombres: partes[0], apellidos: "" };
-    }
-    return {
-        nombres: partes.slice(0, -1).join(" "),
-        apellidos: partes[partes.length - 1]
-    };
-}
-
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
-    const nombresInput = document.getElementById("nombres");
-    const apellidosInput = document.getElementById("apellidos");
+    const nombreCompletoInput = document.getElementById("nombreCompleto");
     const pendingInfo = document.getElementById("pendientes-info");
 
     // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.value = "";
-        apellidosInput.value = "";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.value = "";
         bienesPendientes = [];
         renderBienesPendientes();
         if (pendingInfo) pendingInfo.style.display = "none";
@@ -59,12 +42,9 @@ async function buscarPersonaPorDni() {
             personaInfo.style.display = "block";
             
             // Limpiar y deshabilitar campos de nombre/apellido
-            nombresInput.value = "";
-            apellidosInput.value = "";
-            nombresInput.disabled = true;
-            apellidosInput.disabled = true;
-            nombresInput.placeholder = "(Ya registrado)";
-            apellidosInput.placeholder = "(Ya registrado)";
+            nombreCompletoInput.value = "";
+            nombreCompletoInput.disabled = true;
+            nombreCompletoInput.placeholder = "(Ya registrado)";
 
             await cargarBienesPendientesPorDni(dni);
             
@@ -76,19 +56,15 @@ async function buscarPersonaPorDni() {
             console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
-            nombresInput.disabled = false;
-            apellidosInput.disabled = false;
-            nombresInput.placeholder = "Nombres";
-            apellidosInput.placeholder = "Apellidos";
+            nombreCompletoInput.disabled = false;
+            nombreCompletoInput.placeholder = "Nombres y apellidos";
             await cargarBienesPendientesPorDni(dni);
             if (prefillNombreCompleto) {
-                const partes = dividirNombreCompleto(prefillNombreCompleto);
-                nombresInput.value = partes.nombres;
-                apellidosInput.value = partes.apellidos;
+                nombreCompletoInput.value = prefillNombreCompleto;
                 prefillNombreCompleto = null;
-                apellidosInput.focus();
+                nombreCompletoInput.focus();
             } else {
-                nombresInput.focus();
+                nombreCompletoInput.focus();
             }
         } else {
             const error = await readApiError(response);
@@ -99,14 +75,10 @@ async function buscarPersonaPorDni() {
         console.error("❌ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.placeholder = "Nombres";
-        apellidosInput.placeholder = "Apellidos";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.placeholder = "Nombres y apellidos";
         if (prefillNombreCompleto) {
-            const partes = dividirNombreCompleto(prefillNombreCompleto);
-            nombresInput.value = partes.nombres;
-            apellidosInput.value = partes.apellidos;
+            nombreCompletoInput.value = prefillNombreCompleto;
             prefillNombreCompleto = null;
         }
         bienesPendientes = [];
@@ -256,8 +228,7 @@ function recopilarBienes() {
 // Registrar INGRESO con bienes
 async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
-    const nombres = document.getElementById("nombres").value.trim();
-    const apellidos = document.getElementById("apellidos").value.trim();
+    const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
     const observacion = document.getElementById("observacion").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const mensaje = document.getElementById("mensaje");
@@ -278,10 +249,9 @@ async function registrarIngreso() {
         return;
     }
 
-    // Si no hay persona encontrada, validar nombres y apellidos
-    if (!personaEncontrada && (!nombres || !apellidos)) {
+    if (!personaEncontrada && !nombreCompleto) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI no registrado. Complete Nombres y Apellidos para registrar la persona.";
+        mensaje.innerText = "DNI no registrado. Complete el nombre completo para registrar la persona.";
         return;
     }
 
@@ -304,10 +274,9 @@ async function registrarIngreso() {
             observacion: observacion || null
         };
 
-        // Solo enviar nombres/apellidos si DNI no existe en tabla Personas
+        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
-            body.nombres = nombres;
-            body.apellidos = apellidos;
+            body.nombreCompleto = nombreCompleto;
         }
 
         const response = await fetchAuth(`${API_BASE}/control-bienes`, {
@@ -321,21 +290,20 @@ async function registrarIngreso() {
         }
 
         const result = await response.json();
-        const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : `${nombres} ${apellidos}`;
+        const nombreMostrar = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         const totalActivos = result?.cantidadBienesActivos ?? (bienesPendientes.length + bienes.length);
         const nuevos = result?.cantidadBienesNuevos ?? bienes.length;
         mensaje.className = "success";
-        mensaje.innerText = `INGRESO registrado para ${nombreCompleto}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}`;
+        mensaje.innerText = `INGRESO registrado para ${nombreMostrar}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
-        document.getElementById("nombres").value = "";
-        document.getElementById("apellidos").value = "";
+        document.getElementById("nombreCompleto").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("horaIngreso").value = "";
         document.getElementById("persona-info").style.display = "none";
-        document.getElementById("nombres").disabled = false;
-        document.getElementById("apellidos").disabled = false;
+        document.getElementById("nombreCompleto").disabled = false;
+        document.getElementById("nombreCompleto").placeholder = "Nombres y apellidos";
         document.getElementById("bienes-container").innerHTML = "";
         document.getElementById("bienes-pendientes-container").innerHTML = '<p class="muted">No hay bienes pendientes.</p>';
         document.getElementById("pendientes-info").style.display = "none";

@@ -9,17 +9,14 @@ async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
-    const nombresInput = document.getElementById("nombres");
-    const apellidosInput = document.getElementById("apellidos");
+    const nombreCompletoInput = document.getElementById("nombreCompleto");
 
     // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.value = "";
-        apellidosInput.value = "";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.value = "";
         return;
     }
 
@@ -38,12 +35,9 @@ async function buscarPersonaPorDni() {
             personaInfo.style.display = "block";
             
             // Limpiar y deshabilitar campos de nombre/apellido
-            nombresInput.value = "";
-            apellidosInput.value = "";
-            nombresInput.disabled = true;
-            apellidosInput.disabled = true;
-            nombresInput.placeholder = "(Ya registrado)";
-            apellidosInput.placeholder = "(Ya registrado)";
+            nombreCompletoInput.value = "";
+            nombreCompletoInput.disabled = true;
+            nombreCompletoInput.placeholder = "(Ya registrado)";
             
             // Saltar a área
             document.getElementById("deDonde").focus();
@@ -52,11 +46,9 @@ async function buscarPersonaPorDni() {
             console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
-            nombresInput.disabled = false;
-            apellidosInput.disabled = false;
-            nombresInput.placeholder = "Nombres del personal";
-            apellidosInput.placeholder = "Apellidos del personal";
-            nombresInput.focus();
+            nombreCompletoInput.disabled = false;
+            nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
+            nombreCompletoInput.focus();
         } else {
             const error = await readApiError(response);
             console.error(`❌ Error del servidor: ${error}`);
@@ -67,18 +59,15 @@ async function buscarPersonaPorDni() {
         // En caso de error, permitir registro manual
         personaEncontrada = null;
         personaInfo.style.display = "none";
-        nombresInput.disabled = false;
-        apellidosInput.disabled = false;
-        nombresInput.placeholder = "Nombres del personal";
-        apellidosInput.placeholder = "Apellidos del personal";
+        nombreCompletoInput.disabled = false;
+        nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
     }
 }
 
 // Registrar SALIDA de personal
 async function registrarSalida() {
     const dni = document.getElementById("dni").value.trim();
-    const nombres = document.getElementById("nombres").value.trim();
-    const apellidos = document.getElementById("apellidos").value.trim();
+    const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
     const deDonde = document.getElementById("deDonde").value.trim();
     const tipo = document.getElementById("tipo").value;
     const quienAutoriza = document.getElementById("quienAutoriza").value.trim();
@@ -102,10 +91,9 @@ async function registrarSalida() {
         return;
     }
 
-    // Si no hay persona encontrada, validar nombres y apellidos
-    if (!personaEncontrada && (!nombres || !apellidos)) {
+    if (!personaEncontrada && !nombreCompleto) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI no registrado. Complete Nombres y Apellidos para registrar la persona.";
+        mensaje.innerText = "DNI no registrado. Complete el nombre completo para registrar la persona.";
         return;
     }
 
@@ -121,10 +109,9 @@ async function registrarSalida() {
             observacion: observacion || null
         };
 
-        // Solo enviar nombres/apellidos si DNI no existe en tabla Personas
+        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
-            body.nombres = nombres;
-            body.apellidos = apellidos;
+            body.nombreCompleto = nombreCompleto;
         }
 
         const response = await fetchAuth(`${API_BASE}/oficial-permisos`, {
@@ -137,22 +124,21 @@ async function registrarSalida() {
             throw new Error(error);
         }
 
-        const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : `${nombres} ${apellidos}`;
+        const nombreMostrar = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
-        mensaje.innerText = `SALIDA registrada para ${nombreCompleto}`;
+        mensaje.innerText = `SALIDA registrada para ${nombreMostrar}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
-        document.getElementById("nombres").value = "";
-        document.getElementById("apellidos").value = "";
+        document.getElementById("nombreCompleto").value = "";
         document.getElementById("deDonde").value = "";
         document.getElementById("tipo").value = "";
         document.getElementById("quienAutoriza").value = "";
         document.getElementById("horaSalida").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
-        document.getElementById("nombres").disabled = false;
-        document.getElementById("apellidos").disabled = false;
+        document.getElementById("nombreCompleto").disabled = false;
+        document.getElementById("nombreCompleto").placeholder = "Nombres y apellidos del personal";
         personaEncontrada = null;
         document.getElementById("dni").focus();
 

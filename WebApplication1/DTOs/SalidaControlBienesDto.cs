@@ -15,6 +15,9 @@ namespace WebApplication1.DTOs
     {
         public required string Dni { get; set; }
         
+        // Preferido: usar NombreCompleto. Nombres/Apellidos se mantienen por compatibilidad.
+        public string? NombreCompleto { get; set; }
+
         // Opcionales: Solo requeridos si DNI NO existe en tabla Personas
         public string? Nombres { get; set; }
         public string? Apellidos { get; set; }

@@ -79,6 +79,67 @@ namespace WebApplication1.Controllers
             };
         }
 
+        private static string? LeerString(JsonElement root, string propiedad)
+        {
+            return root.TryGetProperty(propiedad, out var valor) && valor.ValueKind == JsonValueKind.String
+                ? valor.GetString()
+                : null;
+        }
+
+        private static string LeerEstadoActual(JsonElement root)
+        {
+            var estado = LeerString(root, "estadoActual");
+            return string.IsNullOrWhiteSpace(estado) ? "EnMina" : estado;
+        }
+
+        private static List<object> LeerMovimientosInternos(JsonElement root)
+        {
+            var lista = new List<object>();
+            if (!root.TryGetProperty("movimientosInternos", out var movimientos) || movimientos.ValueKind != JsonValueKind.Array)
+                return lista;
+
+            foreach (var movimiento in movimientos.EnumerateArray())
+            {
+                if (movimiento.ValueKind == JsonValueKind.Object)
+                {
+                    lista.Add(new
+                    {
+                        tipo = LeerString(movimiento, "tipo"),
+                        hora = movimiento.TryGetProperty("hora", out var hora) && hora.ValueKind != JsonValueKind.Null ? hora.GetDateTime() : (DateTime?)null,
+                        guardia = LeerString(movimiento, "guardia"),
+                        observacion = LeerString(movimiento, "observacion")
+                    });
+                }
+            }
+
+            return lista;
+        }
+
+        private static object ConstruirDatosProveedorConEstado(
+            JsonElement datosActuales,
+            string guardiaNombre,
+            string estadoActual,
+            string? observacion,
+            List<object> movimientosInternos,
+            DateTime? ultimaSalidaTemporal,
+            DateTime? ultimoIngresoRetorno)
+        {
+            return new
+            {
+                procedencia = LeerString(datosActuales, "procedencia"),
+                destino = LeerString(datosActuales, "destino"),
+                guardiaIngreso = LeerString(datosActuales, "guardiaIngreso"),
+                guardiaSalida = estadoActual == "SalidaDefinitiva" ? guardiaNombre : LeerString(datosActuales, "guardiaSalida"),
+                observacion = observacion,
+                estadoActual,
+                ultimaSalidaTemporal,
+                ultimoIngresoRetorno,
+                guardiaUltimaSalidaTemporal = estadoActual == "FueraTemporal" ? guardiaNombre : LeerString(datosActuales, "guardiaUltimaSalidaTemporal"),
+                guardiaUltimoIngresoRetorno = estadoActual == "EnMina" && ultimoIngresoRetorno.HasValue ? guardiaNombre : LeerString(datosActuales, "guardiaUltimoIngresoRetorno"),
+                movimientosInternos
+            };
+        }
+
         // ======================================================
         // POST: /api/proveedor
         // Registra INGRESO de Proveedor
@@ -103,15 +164,19 @@ namespace WebApplication1.Controllers
                 
                 if (persona == null)
                 {
-                    // DNI no existe: validar que se envíen nombres y apellidos
-                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
-                        return BadRequest("DNI no registrado. Debe proporcionar Nombres y Apellidos para registrar la persona.");
+                    var nombreCompleto = dto.NombreCompleto?.Trim();
+                    if (string.IsNullOrWhiteSpace(nombreCompleto))
+                    {
+                        if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                            return BadRequest("DNI no registrado. Debe proporcionar el nombre completo para registrar la persona.");
 
-                    // Crear nuevo registro en tabla Personas
+                        nombreCompleto = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}";
+                    }
+
                     persona = new Models.Persona
                     {
                         Dni = dniNormalizado,
-                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}",
+                        Nombre = nombreCompleto,
                         Tipo = "Proveedor"
                     };
                     _context.Personas.Add(persona);
@@ -161,7 +226,13 @@ namespace WebApplication1.Controllers
                         destino = dto.Destino,
                         guardiaIngreso = guardiaNombre,
                         guardiaSalida = (string?)null,
-                        observacion = dto.Observacion
+                        observacion = dto.Observacion,
+                        estadoActual = "EnMina",
+                        ultimaSalidaTemporal = (DateTime?)null,
+                        ultimoIngresoRetorno = (DateTime?)null,
+                        guardiaUltimaSalidaTemporal = (string?)null,
+                        guardiaUltimoIngresoRetorno = (string?)null,
+                        movimientosInternos = Array.Empty<object>()
                     },
                     usuarioId,
                     horaIngresoCol,     // NUEVO: Pasar a columnas
@@ -187,6 +258,185 @@ namespace WebApplication1.Controllers
             {
                 return StatusCode(500, $"Error: {ex.Message}");
             }
+        }
+
+        // ======================================================
+        // PUT: /api/proveedor/{id}/salida-temporal
+        // Marca salida temporal (puede volver a ingresar)
+        // ======================================================
+        [HttpPut("{id}/salida-temporal")]
+        [Authorize(Roles = "Admin,Guardia")]
+        public async Task<IActionResult> RegistrarSalidaTemporal(int id, ActualizarSalidaProveedorDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("OperacionDetalle no encontrada");
+
+            if (salida.TipoOperacion != "Proveedor")
+                return BadRequest("Este endpoint es solo para proveedores");
+
+            if (salida.HoraSalida.HasValue)
+                return BadRequest("Este proveedor ya tiene salida definitiva");
+
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+            var estadoActual = LeerEstadoActual(datosActuales);
+            if (estadoActual == "FueraTemporal")
+                return BadRequest("Este proveedor ya está fuera. Registre el ingreso de retorno.");
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            guardiaNombre ??= "S/N";
+
+            var horaSalidaTemporal = ResolverHoraPeru(dto.HoraSalida);
+            var fechaSalidaTemporal = horaSalidaTemporal.Date;
+
+            var movimientosInternos = LeerMovimientosInternos(datosActuales);
+            movimientosInternos.Add(new
+            {
+                tipo = "SalidaTemporal",
+                hora = horaSalidaTemporal,
+                guardia = guardiaNombre,
+                observacion = dto.Observacion
+            });
+
+            var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+            var datosActualizados = ConstruirDatosProveedorConEstado(
+                datosActuales,
+                guardiaNombre,
+                "FueraTemporal",
+                observacionActualizada,
+                movimientosInternos,
+                horaSalidaTemporal,
+                LeerString(datosActuales, "ultimoIngresoRetorno") is not null && datosActuales.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoEl) && ultimoIngresoEl.ValueKind != JsonValueKind.Null
+                    ? ultimoIngresoEl.GetDateTime()
+                    : (DateTime?)null);
+
+            await _salidasService.ActualizarSalidaDetalle(
+                id,
+                datosActualizados,
+                usuarioId,
+                null,
+                null,
+                null,
+                null
+            );
+
+            var dniMovimiento = salida.Dni;
+            if (!string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniMovimiento,
+                    1,
+                    "Salida",
+                    usuarioId);
+
+                salida.MovimientoId = movimientoSalida.Id;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                mensaje = "Salida temporal registrada",
+                salidaId = id,
+                tipoOperacion = "Proveedor",
+                estado = "Fuera temporal"
+            });
+        }
+
+        // ======================================================
+        // PUT: /api/proveedor/{id}/ingreso-retorno
+        // Registra reingreso luego de salida temporal
+        // ======================================================
+        [HttpPut("{id}/ingreso-retorno")]
+        [Authorize(Roles = "Admin,Guardia")]
+        public async Task<IActionResult> RegistrarIngresoRetorno(int id, ActualizarIngresoProveedorDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("OperacionDetalle no encontrada");
+
+            if (salida.TipoOperacion != "Proveedor")
+                return BadRequest("Este endpoint es solo para proveedores");
+
+            if (salida.HoraSalida.HasValue)
+                return BadRequest("Este proveedor ya tiene salida definitiva");
+
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+            var estadoActual = LeerEstadoActual(datosActuales);
+            if (estadoActual != "FueraTemporal")
+                return BadRequest("Solo se puede registrar ingreso si el proveedor está fuera temporalmente.");
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            guardiaNombre ??= "S/N";
+
+            var horaIngresoRetorno = ResolverHoraPeru(dto.HoraIngreso);
+
+            var movimientosInternos = LeerMovimientosInternos(datosActuales);
+            movimientosInternos.Add(new
+            {
+                tipo = "IngresoRetorno",
+                hora = horaIngresoRetorno,
+                guardia = guardiaNombre,
+                observacion = dto.Observacion
+            });
+
+            var ultimaSalidaTemporal = datosActuales.TryGetProperty("ultimaSalidaTemporal", out var ultimaSalidaEl) && ultimaSalidaEl.ValueKind != JsonValueKind.Null
+                ? ultimaSalidaEl.GetDateTime()
+                : (DateTime?)null;
+            var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+
+            var datosActualizados = ConstruirDatosProveedorConEstado(
+                datosActuales,
+                guardiaNombre,
+                "EnMina",
+                observacionActualizada,
+                movimientosInternos,
+                ultimaSalidaTemporal,
+                horaIngresoRetorno);
+
+            await _salidasService.ActualizarSalidaDetalle(
+                id,
+                datosActualizados,
+                usuarioId,
+                null,
+                null,
+                null,
+                null
+            );
+
+            var dniMovimiento = salida.Dni;
+            if (!string.IsNullOrWhiteSpace(dniMovimiento))
+            {
+                var movimientoEntrada = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniMovimiento,
+                    1,
+                    "Entrada",
+                    usuarioId);
+
+                salida.MovimientoId = movimientoEntrada.Id;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                mensaje = "Ingreso de retorno registrado",
+                salidaId = id,
+                tipoOperacion = "Proveedor",
+                estado = "En mina"
+            });
         }
 
         // ======================================================
@@ -220,23 +470,34 @@ namespace WebApplication1.Controllers
             var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
             var fechaActual = ahoraLocal.Date;
             
-            // NUEVO: horaSalida y fechaSalida ya NO van al JSON, van a columnas
-            // JSON ya NO contiene dni/nombres/apellidos (dni en columna, nombres en tabla Personas)
-            // JSON solo mantiene: procedencia, destino, guardias, observacion
-            var datosActualizados = new
+            var estadoActual = LeerEstadoActual(datosActuales);
+            if (estadoActual == "FueraTemporal")
+                return BadRequest("El proveedor está fuera temporalmente. Registre primero el ingreso de retorno o use salida temporal según corresponda.");
+
+            var movimientosInternos = LeerMovimientosInternos(datosActuales);
+            movimientosInternos.Add(new
             {
-                procedencia = datosActuales.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String
-                    ? proc.GetString()
-                    : null,
-                destino = datosActuales.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String
-                    ? dest.GetString()
-                    : null,
-                guardiaIngreso = datosActuales.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
-                    ? gi.GetString()
-                    : null,
-                guardiaSalida = guardiaNombre,
-                observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
-            };
+                tipo = "SalidaDefinitiva",
+                hora = ahoraLocal,
+                guardia = guardiaNombre,
+                observacion = dto.Observacion
+            });
+
+            var ultimaSalidaTemporal = datosActuales.TryGetProperty("ultimaSalidaTemporal", out var ultimaSalidaEl) && ultimaSalidaEl.ValueKind != JsonValueKind.Null
+                ? ultimaSalidaEl.GetDateTime()
+                : (DateTime?)null;
+            var ultimoIngresoRetorno = datosActuales.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoEl) && ultimoIngresoEl.ValueKind != JsonValueKind.Null
+                ? ultimoIngresoEl.GetDateTime()
+                : (DateTime?)null;
+            var observacionActualizada = dto.Observacion ?? LeerString(datosActuales, "observacion");
+            var datosActualizados = ConstruirDatosProveedorConEstado(
+                datosActuales,
+                guardiaNombre,
+                "SalidaDefinitiva",
+                observacionActualizada,
+                movimientosInternos,
+                ultimaSalidaTemporal,
+                ultimoIngresoRetorno);
 
             // NUEVO: Pasar horaSalida y fechaSalida como columnas
             await _salidasService.ActualizarSalidaDetalle(
@@ -336,7 +597,11 @@ namespace WebApplication1.Controllers
                 fechaSalida = salida.FechaSalida ?? _salidasService.ObtenerFechaSalida(salida),
                 guardiaIngreso = datosJSON.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String ? gi.GetString() : null,
                 guardiaSalida = datosJSON.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind == JsonValueKind.String ? gs.GetString() : null,
-                observacion = datosJSON.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null
+                observacion = datosJSON.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null,
+                estadoActual = LeerEstadoActual(datosJSON),
+                ultimaSalidaTemporal = datosJSON.TryGetProperty("ultimaSalidaTemporal", out var ust) && ust.ValueKind != JsonValueKind.Null ? ust.GetDateTime() : (DateTime?)null,
+                ultimoIngresoRetorno = datosJSON.TryGetProperty("ultimoIngresoRetorno", out var uir) && uir.ValueKind != JsonValueKind.Null ? uir.GetDateTime() : (DateTime?)null,
+                movimientosInternos = LeerMovimientosInternos(datosJSON)
             });
         }
         // ======================================================
