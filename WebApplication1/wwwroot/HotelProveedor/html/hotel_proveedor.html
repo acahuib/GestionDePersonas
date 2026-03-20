@@ -54,6 +54,7 @@
             <textarea id="observacion" rows="3" placeholder="Opcional"></textarea>
 
             <label>Hora de Salida</label>
+            <input type="date" id="fechaSalida" placeholder="Fecha de salida">
             <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
             <div>
@@ -72,6 +73,7 @@
             </div>
 
             <label>Hora de Ingreso para próximos registros</label>
+            <input type="date" id="fechaIngresoPendiente" placeholder="Fecha de ingreso">
             <input type="time" id="horaIngresoPendiente" placeholder="Dejar vacío para usar hora actual">
 
             <div id="lista-pendientes">
@@ -90,7 +92,12 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
-    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    document.getElementById("fecha").value = hoy;
+    const fechaSalida = document.getElementById("fechaSalida");
+    const fechaIngresoPendiente = document.getElementById("fechaIngresoPendiente");
+    if (fechaSalida) fechaSalida.value = hoy;
+    if (fechaIngresoPendiente) fechaIngresoPendiente.value = hoy;
     cargarPrefillDesdeProveedor();
     cargarPendientesIngreso();
 

@@ -20,7 +20,7 @@ function cargarDatos() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'Error: No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 
@@ -52,7 +52,7 @@ async function registrarSalida() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'Error: No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 
@@ -62,10 +62,10 @@ async function registrarSalida() {
 
     try {
         const horaSalidaInput = document.getElementById('horaSalida').value;
-        let horaSalida = new Date().toISOString();
+        const fechaSalidaInput = document.getElementById('fechaSalida')?.value || obtenerFechaLocalISO();
+        let horaSalida = ahoraLocalDateTime();
         if (horaSalidaInput) {
-            const today = obtenerFechaLocalISO();
-            horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+            horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
         const responseSalida = await fetchAuth(`${API_BASE}/ocurrencias/${salidaId}/horario`, {
@@ -77,7 +77,7 @@ async function registrarSalida() {
         });
 
         if (!responseSalida.ok) {
-            const error = await responseSalida.text();
+            const error = await readApiError(responseSalida);
             throw new Error(error);
         }
 
@@ -91,7 +91,7 @@ async function registrarSalida() {
 
     } catch (error) {
         mensaje.className = 'error';
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

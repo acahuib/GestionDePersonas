@@ -63,6 +63,19 @@ async function initCuadernoHistorial() {
         return fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
     };
 
+    const construirFechaHoraCelda = (fechaTexto, horaTexto) => {
+        return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || "-"}</span><span class="hora-linea">${horaTexto || "-"}</span></div>`;
+    };
+
+    const formatearFechaHoraDetalle = (valor) => {
+        if (!valor) return "-";
+        const fecha = new Date(valor);
+        if (Number.isNaN(fecha.getTime())) return "-";
+        const fechaTxt = fecha.toLocaleDateString("es-PE");
+        const horaTxt = fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+        return `${fechaTxt} ${horaTxt}`;
+    };
+
     const construirDetalle = (datos) => {
         const partes = [];
         const pushIf = (label, valor) => {
@@ -147,16 +160,19 @@ async function initCuadernoHistorial() {
         if (!thead) return;
 
         if (vistaHistorial === "entradas-salidas") {
+            const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
+                ? "<th>Movimientos internos</th>"
+                : "";
+
             thead.innerHTML = `
                 <tr>
                     <th>DNI</th>
                     <th>Nombre</th>
-                    <th>Fecha Ingreso</th>
-                    <th>Hora Ingreso</th>
+                    <th>Ingreso</th>
                     <th>Guardia Ingreso</th>
-                    <th>Fecha Salida</th>
-                    <th>Hora Salida</th>
+                    <th>Salida</th>
                     <th>Guardia Salida</th>
+                    ${columnaMovimientosProveedor}
                     <th>Detalle</th>
                 </tr>
             `;
@@ -165,8 +181,7 @@ async function initCuadernoHistorial() {
 
         thead.innerHTML = `
             <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
+                <th>Fecha / Hora</th>
                 <th>Movimiento</th>
                 <th>DNI</th>
                 <th>Nombre</th>
@@ -227,10 +242,45 @@ async function initCuadernoHistorial() {
             movimiento: obtenerMovimiento(item, datos),
             guardia,
             detalle: detalle.html,
+            datos,
             fechaFiltro: fechaBase ? new Date(fechaBase) : null,
             timestamp,
             textoBusqueda: `${item.dni || ""} ${item.nombreCompleto || ""} ${detalle.texto} ${JSON.stringify(datos)}`.toLowerCase()
         };
+    };
+
+    const formatearTipoMovimientoInternoProveedor = (tipo) => {
+        const valor = String(tipo || "").trim().toLowerCase();
+        if (!valor) return "Movimiento";
+        if (valor === "salidatemporal") return "Salida temporal";
+        if (valor === "ingresoretorno") return "Ingreso retorno";
+        if (valor === "salidadefinitiva") return "Salida definitiva";
+        return String(tipo);
+    };
+
+    const construirMovimientosProveedorHtml = (datos) => {
+        if (!Array.isArray(datos?.movimientosInternos) || !datos.movimientosInternos.length) {
+            return "-";
+        }
+
+        return `<div class="detalle-lista">${datos.movimientosInternos
+            .map((mov) => {
+                const tipo = formatearTipoMovimientoInternoProveedor(mov?.tipo);
+                const fechaHora = formatearFechaHoraDetalle(mov?.hora);
+                const guardia = String(mov?.guardia || "").trim();
+                const observacion = String(mov?.observacion || "").trim();
+
+                const piezas = [
+                    `<strong>${escaparHtml(tipo)}</strong>`,
+                    escaparHtml(fechaHora)
+                ];
+
+                if (guardia) piezas.push(`Guardia: ${escaparHtml(guardia)}`);
+                if (observacion) piezas.push(`Obs: ${escaparHtml(observacion)}`);
+
+                return `<div class="detalle-item">${piezas.join(" | ")}</div>`;
+            })
+            .join("")}</div>`;
     };
 
     const renderPaginacion = (totalRegistros, totalPaginas) => {
@@ -274,7 +324,9 @@ async function initCuadernoHistorial() {
     const render = (items) => {
         if (!tbody) return;
 
-        const totalColumnas = vistaHistorial === "entradas-salidas" ? 9 : 7;
+        const totalColumnas = vistaHistorial === "entradas-salidas"
+            ? (tipoOperacion === "Proveedor" ? 8 : 7)
+            : 6;
 
         if (!items.length) {
             tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
@@ -296,16 +348,19 @@ async function initCuadernoHistorial() {
         const rows = visibles
             .map((item) => {
                 if (vistaHistorial === "entradas-salidas") {
+                    const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
+                        ? `<td>${construirMovimientosProveedorHtml(item.datos || {})}</td>`
+                        : "";
+
                     return `
                         <tr>
                             <td>${item.dni}</td>
                             <td>${item.nombre}</td>
-                            <td>${item.fechaIngreso}</td>
-                            <td>${item.horaIngreso}</td>
+                            <td>${construirFechaHoraCelda(item.fechaIngreso, item.horaIngreso)}</td>
                             <td>${item.guardiaIngreso || "-"}</td>
-                            <td>${item.fechaSalida}</td>
-                            <td>${item.horaSalida}</td>
+                            <td>${construirFechaHoraCelda(item.fechaSalida, item.horaSalida)}</td>
                             <td>${item.guardiaSalida || "-"}</td>
+                            ${columnaMovimientosProveedor}
                             <td>${item.detalle}</td>
                         </tr>
                     `;
@@ -313,8 +368,7 @@ async function initCuadernoHistorial() {
 
                 return `
                     <tr>
-                        <td>${item.fechaReferencia}</td>
-                        <td>${item.horaReferencia}</td>
+                        <td>${construirFechaHoraCelda(item.fechaReferencia, item.horaReferencia)}</td>
                         <td>${item.movimiento || "-"}</td>
                         <td>${item.dni}</td>
                         <td>${item.nombre}</td>
@@ -356,7 +410,9 @@ async function initCuadernoHistorial() {
             const mensaje = response ? await readApiError(response) : "No se pudo cargar historial";
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
-                const totalColumnas = vistaHistorial === "entradas-salidas" ? 9 : 7;
+                const totalColumnas = vistaHistorial === "entradas-salidas"
+                    ? (tipoOperacion === "Proveedor" ? 8 : 7)
+                    : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }
             if (paginacion) paginacion.innerHTML = "";

@@ -12,6 +12,8 @@ function cargarDatosDesdeUrl() {
     document.getElementById("nombreApellidos").value = params.get("nombreApellidos") || "";
     document.getElementById("horaIngreso").value = params.get("horaIngreso") || "";
     document.getElementById("fechaIngreso").value = params.get("fechaIngreso") || "";
+    const fechaSalidaAlmuerzo = document.getElementById("fechaSalidaAlmuerzo");
+    if (fechaSalidaAlmuerzo) fechaSalidaAlmuerzo.value = obtenerFechaLocalISO();
     document.getElementById("observaciones").value = params.get("observacion") || "";
 }
 
@@ -20,6 +22,7 @@ async function registrarSalidaAlmuerzo() {
     const salidaId = dniElement.dataset.salidaId;
     const observaciones = document.getElementById("observaciones").value.trim();
     const horaSalidaAlmuerzoInput = document.getElementById("horaSalidaAlmuerzo").value;
+    const fechaSalidaAlmuerzoInput = document.getElementById("fechaSalidaAlmuerzo")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -27,7 +30,7 @@ async function registrarSalidaAlmuerzo() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 
@@ -38,9 +41,7 @@ async function registrarSalidaAlmuerzo() {
 
         // Enviar horaSalidaAlmuerzo solo si se especifica
         if (horaSalidaAlmuerzoInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaSalidaAlmuerzo = new Date(`${today}T${horaSalidaAlmuerzoInput}`).toISOString();
+            body.horaSalidaAlmuerzo = construirDateTimeLocal(fechaSalidaAlmuerzoInput, horaSalidaAlmuerzoInput);
         }
 
         // Usar PUT para actualizar el registro existente
@@ -50,7 +51,7 @@ async function registrarSalidaAlmuerzo() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -64,7 +65,7 @@ async function registrarSalidaAlmuerzo() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

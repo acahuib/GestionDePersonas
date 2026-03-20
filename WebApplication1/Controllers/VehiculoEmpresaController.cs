@@ -52,6 +52,25 @@ namespace WebApplication1.Controllers
             };
         }
 
+        private async Task<bool> TieneSalidaVehiculoPendienteIngreso(string dni, int? excluirOperacionId = null)
+        {
+            var dniNormalizado = (dni ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(dniNormalizado)) return false;
+
+            var query = _context.OperacionDetalle.Where(o =>
+                o.TipoOperacion == "VehiculoEmpresa" &&
+                o.Dni == dniNormalizado &&
+                o.HoraSalida != null &&
+                o.HoraIngreso == null);
+
+            if (excluirOperacionId.HasValue)
+            {
+                query = query.Where(o => o.Id != excluirOperacionId.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+
         // ======================================================
         // POST: /api/vehiculo-empresa
         // Registra operación inicial (SALIDA o INGRESO)
@@ -73,16 +92,16 @@ namespace WebApplication1.Controllers
 
                 if (esSalidaInicial)
                 {
-                    if (!dto.KmSalida.HasValue || dto.KmSalida.Value < 0)
-                        return BadRequest("VehiculoEmpresa: kmSalida es requerido para registrar SALIDA");
+                    if (dto.KmSalida.HasValue && dto.KmSalida.Value < 0)
+                        return BadRequest("VehiculoEmpresa: kmSalida no puede ser negativo");
 
                     if (string.IsNullOrWhiteSpace(dto.OrigenSalida) || string.IsNullOrWhiteSpace(dto.DestinoSalida))
                         return BadRequest("VehiculoEmpresa: origenSalida y destinoSalida son requeridos para registrar SALIDA");
                 }
                 else
                 {
-                    if (!dto.KmIngreso.HasValue || dto.KmIngreso.Value < 0)
-                        return BadRequest("VehiculoEmpresa: kmIngreso es requerido para registrar INGRESO");
+                    if (dto.KmIngreso.HasValue && dto.KmIngreso.Value < 0)
+                        return BadRequest("VehiculoEmpresa: kmIngreso no puede ser negativo");
 
                     if (string.IsNullOrWhiteSpace(dto.OrigenIngreso) || string.IsNullOrWhiteSpace(dto.DestinoIngreso))
                         return BadRequest("VehiculoEmpresa: origenIngreso y destinoIngreso son requeridos para registrar INGRESO");
@@ -108,6 +127,9 @@ namespace WebApplication1.Controllers
                 if (esSalidaInicial)
                 {
                     await ValidarPersonaEstaDentroParaSalida(dniNormalizado);
+
+                    if (await TieneSalidaVehiculoPendienteIngreso(dniNormalizado))
+                        return BadRequest("Ya existe una salida de VehiculoEmpresa pendiente de ingreso para este DNI. Registre primero el ingreso.");
                 }
                 
                 if (persona == null)
@@ -242,6 +264,9 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
+            if (dto.KmIngreso.HasValue && dto.KmIngreso.Value < 0)
+                return BadRequest("VehiculoEmpresa: kmIngreso no puede ser negativo");
+
             // Respetar hora enviada por el usuario
             var ahoraLocal = dto.HoraIngreso;
             var fechaActual = ahoraLocal.Date;
@@ -334,6 +359,9 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
+            if (dto.KmSalida.HasValue && dto.KmSalida.Value < 0)
+                return BadRequest("VehiculoEmpresa: kmSalida no puede ser negativo");
+
             var ahoraLocal = dto.HoraSalida;
             var fechaActual = ahoraLocal.Date;
 
@@ -349,6 +377,9 @@ namespace WebApplication1.Controllers
             if (!string.IsNullOrWhiteSpace(dniMovimiento))
             {
                 await ValidarPersonaEstaDentroParaSalida(dniMovimiento);
+
+                if (await TieneSalidaVehiculoPendienteIngreso(dniMovimiento, id))
+                    return BadRequest("Ya existe otra salida de VehiculoEmpresa pendiente de ingreso para este DNI. Registre primero el ingreso pendiente.");
             }
 
             var datosActualizados = new

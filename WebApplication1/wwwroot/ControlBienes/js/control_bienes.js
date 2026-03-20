@@ -231,6 +231,7 @@ async function registrarIngreso() {
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
     const observacion = document.getElementById("observacion").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -269,8 +270,8 @@ async function registrarIngreso() {
             dni,
             bienes,
             horaIngreso: horaIngresoInput
-                ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
-                : new Date().toISOString(),
+                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
+                : ahoraLocalDateTime(),
             observacion: observacion || null
         };
 
@@ -301,6 +302,8 @@ async function registrarIngreso() {
         document.getElementById("nombreCompleto").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreCompleto").disabled = false;
         document.getElementById("nombreCompleto").placeholder = "Nombres y apellidos";
@@ -318,7 +321,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -398,7 +401,7 @@ async function cargarActivos() {
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
         html += '<th>Bienes</th>';
-        html += '<th>Hora Ingreso</th>';
+        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -422,7 +425,7 @@ async function cargarActivos() {
             html += `<td>${s.dni || 'N/A'}</td>`;
             html += `<td>${nombreCompleto}</td>`;
             html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bienesTexto || 'N/A'}">${bienesTexto || 'N/A'}</td>`;
-            html += `<td>${fechaIngreso} ${horaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
             html += `<button onclick='irASalida(${s.id})' class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
             html += '</td></tr>';
@@ -436,6 +439,10 @@ async function cargarActivos() {
             <img src="/images/x-circle.svg">Error al cargar datos: ${error.message}</p>`;
 
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {

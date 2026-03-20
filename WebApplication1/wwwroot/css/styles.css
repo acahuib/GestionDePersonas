@@ -410,6 +410,25 @@ button:hover {
     text-align: center;
 }
 
+.fecha-hora-celda {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+    gap: 2px;
+}
+
+.fecha-hora-celda .fecha-linea {
+    font-size: 0.84rem;
+    color: #475569;
+}
+
+.fecha-hora-celda .hora-linea {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
 .cell-wrap {
     white-space: pre-wrap;
     max-width: 300px;

@@ -3,6 +3,30 @@
 // =========================================
 
 let personaEncontrada = null;
+const DESTINOS_PROVEEDOR = [
+    "RECEPCION",
+    "BALANZA",
+    "AREA COMERCIAL",
+    "LAB. QUIMICO",
+    "TRANSERV.",
+    "EN ESPERA"
+];
+
+function construirOpcionesDestinoRetorno(destinoSeleccionado) {
+    const destinoNormalizado = (destinoSeleccionado || "").trim().toUpperCase();
+    const opcionesBase = [...DESTINOS_PROVEEDOR];
+
+    if (destinoNormalizado && !opcionesBase.includes(destinoNormalizado)) {
+        opcionesBase.unshift(destinoNormalizado);
+    }
+
+    return opcionesBase
+        .map(opcion => {
+            const selected = opcion === destinoNormalizado ? " selected" : "";
+            return `<option value="${opcion}"${selected}>${opcion}</option>`;
+        })
+        .join("");
+}
 
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
@@ -97,6 +121,7 @@ async function registrarEntrada() {
 
     try {
         const horaIngresoInput = document.getElementById("horaIngreso").value;
+        const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
         const body = {
             dni,
             procedencia,
@@ -106,9 +131,7 @@ async function registrarEntrada() {
 
         // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
         // Solo enviar nombre si DNI no existe en tabla Personas
@@ -137,6 +160,8 @@ async function registrarEntrada() {
         document.getElementById("destino").value = "";
         document.getElementById("observacion").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreCompleto").disabled = false;
         document.getElementById("nombreCompleto").placeholder = "Nombres y apellidos del proveedor";
@@ -148,7 +173,7 @@ async function registrarEntrada() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = obtenerMensajeUsuario(error);
     }
 }
 
@@ -215,14 +240,31 @@ async function solicitarDestinoRetorno(destinoActual) {
 }
 
 async function registrarIngresoRetorno(salidaId, destinoActual) {
+    return registrarIngresoRetornoConOpciones(salidaId, destinoActual, null);
+}
+
+async function registrarIngresoRetornoConOpciones(salidaId, destinoActual, opciones) {
     const mensaje = document.getElementById("mensaje");
-    const horaRetornoInput = document.getElementById("horaRetornoPendiente")?.value || "";
-    const observacion = window.prompt("Observacion del retorno (opcional):", "") ?? "";
+    const horaRetornoInput = opciones?.horaRetorno ?? "";
+    const fechaRetornoInput = opciones?.fechaRetorno ?? obtenerFechaLocalISO();
+
+    let observacion;
+    if (typeof opciones?.observacion === "string") {
+        observacion = opciones.observacion;
+    } else {
+        observacion = window.prompt("Observacion del retorno (opcional):", "") ?? "";
+    }
 
     if (!salidaId) return;
 
     try {
-        const destino = await solicitarDestinoRetorno(destinoActual);
+        let destino = null;
+        if (typeof opciones?.destino === "string") {
+            destino = opciones.destino.trim();
+        } else {
+            destino = await solicitarDestinoRetorno(destinoActual);
+        }
+
         if (!destino) {
             if (mensaje) {
                 mensaje.className = "error";
@@ -237,8 +279,7 @@ async function registrarIngresoRetorno(salidaId, destinoActual) {
         };
 
         if (horaRetornoInput) {
-            const today = obtenerFechaLocalISO();
-            body.horaIngreso = new Date(`${today}T${horaRetornoInput}`).toISOString();
+            body.horaIngreso = construirDateTimeLocal(fechaRetornoInput, horaRetornoInput);
         }
 
         const response = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/ingreso-retorno`, {
@@ -260,15 +301,86 @@ async function registrarIngresoRetorno(salidaId, destinoActual) {
     } catch (error) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = `Error: ${error.message}`;
+            mensaje.innerText = obtenerMensajeUsuario(error);
         }
     }
 }
 
+function registrarIngresoRetornoDesdeFila(salidaId) {
+    const destino = document.getElementById(`retorno-destino-${salidaId}`)?.value?.trim() || "";
+    const observacion = document.getElementById(`retorno-observacion-${salidaId}`)?.value?.trim() || "";
+    const fechaRetorno = document.getElementById(`retorno-fecha-${salidaId}`)?.value || obtenerFechaLocalISO();
+    const horaRetorno = document.getElementById(`retorno-hora-${salidaId}`)?.value || "";
+
+    registrarIngresoRetornoConOpciones(salidaId, destino, {
+        destino,
+        observacion,
+        fechaRetorno,
+        horaRetorno
+    });
+}
+
+async function cancelarRetornoDesdeFila(salidaId) {
+    const mensaje = document.getElementById("mensaje");
+    if (!salidaId) return;
+
+    const confirmar = window.confirm("Se cerrara este registro sin retorno. ¿Desea continuar?");
+    if (!confirmar) return;
+
+    const observacion = document.getElementById(`retorno-observacion-${salidaId}`)?.value?.trim() || "";
+    const fechaRetorno = document.getElementById(`retorno-fecha-${salidaId}`)?.value || obtenerFechaLocalISO();
+    const horaRetorno = document.getElementById(`retorno-hora-${salidaId}`)?.value || "";
+
+    try {
+        const body = {
+            observacion: observacion || null
+        };
+
+        if (horaRetorno) {
+            body.horaSalida = construirDateTimeLocal(fechaRetorno, horaRetorno);
+        }
+
+        const response = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/cancelar-retorno`, {
+            method: "PUT",
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo cancelar el retorno");
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Retorno cancelado. Registro cerrado sin reingreso.";
+        }
+
+        await cargarActivos();
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = obtenerMensajeUsuario(error);
+        }
+    }
+}
+
+function esProveedorFueraTemporal(datos) {
+    const estado = String(datos?.estadoActual || "").trim().toLowerCase();
+    if (estado === "fueratemporal" || estado === "fuera temporal") return true;
+
+    const ultimaSalidaTemporal = datos?.ultimaSalidaTemporal ? new Date(datos.ultimaSalidaTemporal) : null;
+    const ultimoIngresoRetorno = datos?.ultimoIngresoRetorno ? new Date(datos.ultimoIngresoRetorno) : null;
+
+    if (!ultimaSalidaTemporal || Number.isNaN(ultimaSalidaTemporal.getTime())) return false;
+    if (!ultimoIngresoRetorno || Number.isNaN(ultimoIngresoRetorno.getTime())) return true;
+
+    return ultimaSalidaTemporal.getTime() > ultimoIngresoRetorno.getTime();
+}
+
 // Cargar proveedores activos (sin salida)
 async function cargarActivos() {
+    asegurarEstilosVistaProveedores();
     const container = document.getElementById("lista-activos");
-    const retornosContainer = document.getElementById("lista-retornos");
 
     try {
         const [response, responseHabitacion] = await Promise.all([
@@ -323,15 +435,15 @@ async function cargarActivos() {
             return tieneIngreso && !tieneSalida;
         });
 
-        const proveedores = proveedoresAbiertos.filter(s => {
-            const estado = (s.datos?.estadoActual || "EnMina").trim();
-            return estado !== "FueraTemporal";
-        });
+        const proveedores = proveedoresAbiertos.filter(s => !esProveedorFueraTemporal(s.datos || {}));
 
-        const pendientesRetorno = proveedoresAbiertos.filter(s => {
-            const estado = (s.datos?.estadoActual || "EnMina").trim();
-            return estado === "FueraTemporal";
-        });
+        const pendientesRetorno = proveedoresAbiertos.filter(s => esProveedorFueraTemporal(s.datos || {}));
+        const proveedoresUnificados = [...proveedores, ...pendientesRetorno]
+            .sort((a, b) => {
+                const fechaA = a?.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
+                const fechaB = b?.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
+                return fechaB - fechaA;
+            });
 
         const habitacionesActivasPorDni = new Map();
 
@@ -359,7 +471,7 @@ async function cargarActivos() {
                 }
             });
 
-        if (proveedores.length === 0) {
+        if (proveedoresUnificados.length === 0) {
             container.innerHTML = '<p class="text-center muted">No hay proveedores activos en este momento</p>';
         } else {
             let html = '<div class="table-wrapper">';
@@ -369,17 +481,24 @@ async function cargarActivos() {
             html += '<th>Nombre</th>';
             html += '<th>Procedencia</th>';
             html += '<th>Destino</th>';
-            html += '<th>Hora Ingreso</th>';
+            html += '<th>Fecha / Hora Ingreso</th>';
             html += '<th>Habitación</th>';
+            html += '<th>Estado</th>';
             html += '<th>Acciones</th>';
             html += '</tr></thead><tbody>';
 
-            proveedores.forEach(p => {
+            proveedoresUnificados.forEach(p => {
                 const datos = p.datos || {};
+                const esFueraTemporal = esProveedorFueraTemporal(datos);
                 
                 // NUEVO: Leer horaIngreso desde columnas primero, luego fallback al JSON
                 const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
-                const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : 'N/A';
+                const horaIngreso = horaIngresoValue
+                    ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                    : 'N/A';
+                const fechaIngreso = p.fechaIngreso || datos.fechaIngreso
+                    ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE')
+                    : 'N/A';
                 
                 // NUEVO: Obtener nombreCompleto desde el endpoint que hace JOIN con Personas
                 const nombreCompleto = p.nombreCompleto || `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
@@ -391,20 +510,45 @@ async function cargarActivos() {
                 const estadoHabitacion = habitacionesActivasPorDni.get((p.dni || '').trim());
                 const estaEnHabitacion = !!estadoHabitacion;
                 const origenHabitacion = datos.procedencia || datos.destino || '';
+                const claseEstado = esFueraTemporal
+                    ? 'estado-fuera'
+                    : (estaEnHabitacion ? 'estado-habitacion' : 'estado-en-mina');
+                const textoEstado = esFueraTemporal
+                    ? 'Fuera temporal'
+                    : (estaEnHabitacion ? 'En habitación' : 'En mina');
+                const ultimaSalida = datos.ultimaSalidaTemporal
+                    ? new Date(datos.ultimaSalidaTemporal).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+                const destinoRetorno = (datos.destino || '').replace(/"/g, '&quot;');
+                const observacionRetorno = (datos.observacion || '').replace(/"/g, '&quot;');
+                const hoy = obtenerFechaLocalISO();
+                const horaActual = obtenerHoraLocalHHMM();
                 
                 html += '<tr>';
                 html += `<td>${p.dni || 'N/A'}</td>`;
                 html += `<td>${nombreCompleto}</td>`;
                 html += `<td>${datos.procedencia || 'N/A'}</td>`;
                 html += `<td>${datos.destino || 'N/A'}</td>`;
-                html += `<td>${horaIngreso}</td>`;
+                html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
                 html += `<td>${estaEnHabitacion ? estadoHabitacion.cuarto : 'Disponible'}</td>`;
+                html += `<td><span class="estado-etiqueta ${claseEstado}">${textoEstado}</span>${esFueraTemporal && ultimaSalida ? `<div class="retorno-meta">Ultima salida: ${ultimaSalida}</div>` : ''}</td>`;
                 html += '<td>';
-                html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Salida con Retorno / Definitiva</button>`;
-                html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small btn-inline">Salida por Hotel</button>`;
-                html += estaEnHabitacion
-                    ? `<button class="btn-secondary btn-small btn-inline" disabled>En Habitación</button>`
-                    : `<button onclick="irAHabitacion(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${(origenHabitacion || '').replace(/'/g, "\\'")}')" class="btn-success btn-small btn-inline">Ir a Habitación</button>`;
+                html += '<div class="acciones-proveedor">';
+                if (esFueraTemporal) {
+                    html += `<select id="retorno-destino-${p.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoRetorno(destinoRetorno)}</select>`;
+                    html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="Observación" class="retorno-input retorno-input-observacion">`;
+                    html += `<input type="date" id="retorno-fecha-${p.id}" value="${hoy}" class="retorno-input retorno-input-fecha">`;
+                    html += `<input type="time" id="retorno-hora-${p.id}" value="${horaActual}" class="retorno-input retorno-input-hora">`;
+                    html += `<button onclick="registrarIngresoRetornoDesdeFila(${p.id})" class="btn-success btn-small">Ingreso (retorno)</button>`;
+                    html += `<button onclick="cancelarRetornoDesdeFila(${p.id})" class="btn-danger btn-small">Cerrar sin retorno</button>`;
+                } else {
+                    html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
+                    html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
+                    html += estaEnHabitacion
+                        ? `<span class="estado-etiqueta estado-habitacion">Con habitación</span>`
+                        : `<button onclick="irAHabitacion(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${(origenHabitacion || '').replace(/'/g, "\\'")}')" class="btn-success btn-small">Enviar a Habitación</button>`;
+                }
+                html += '</div>';
                 html += '</td></tr>';
             });
 
@@ -412,49 +556,96 @@ async function cargarActivos() {
             container.innerHTML = html;
         }
 
-        if (pendientesRetorno.length === 0) {
-            retornosContainer.innerHTML = '<p class="text-center muted">No hay proveedores fuera pendientes de retorno</p>';
-        } else {
-            let htmlRetorno = '<div class="table-wrapper">';
-            htmlRetorno += '<table class="table">';
-            htmlRetorno += '<thead><tr>';
-            htmlRetorno += '<th>DNI</th>';
-            htmlRetorno += '<th>Nombre</th>';
-            htmlRetorno += '<th>Última Salida</th>';
-            htmlRetorno += '<th>Observación</th>';
-            htmlRetorno += '<th>Acción</th>';
-            htmlRetorno += '</tr></thead><tbody>';
-
-            pendientesRetorno.forEach(p => {
-                const datos = p.datos || {};
-                const nombreCompleto = p.nombreCompleto || 'N/A';
-                const ultimaSalida = datos.ultimaSalidaTemporal
-                    ? new Date(datos.ultimaSalidaTemporal).toLocaleTimeString('es-PE')
-                    : '-';
-                const observacion = datos.observacion || '-';
-
-                htmlRetorno += '<tr>';
-                htmlRetorno += `<td>${p.dni || 'N/A'}</td>`;
-                htmlRetorno += `<td>${nombreCompleto}</td>`;
-                htmlRetorno += `<td>${ultimaSalida}</td>`;
-                htmlRetorno += `<td>${observacion}</td>`;
-                htmlRetorno += `<td><button onclick="registrarIngresoRetorno(${p.id}, '${(datos.destino || '').replace(/'/g, "\\'")}')" class="btn-success btn-small">Retornando</button></td>`;
-                htmlRetorno += '</tr>';
-            });
-
-            htmlRetorno += '</tbody></table></div>';
-            retornosContainer.innerHTML = htmlRetorno;
-        }
-
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
-        if (retornosContainer) {
-            retornosContainer.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
-        }
+        container.innerHTML = `<p class="text-center error">${obtenerMensajeUsuario(error)}</p>`;
     }
 }
 
 // Nota: la salida se registra en una pagina aparte
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
+}
+
+function obtenerMensajeUsuario(error) {
+    const mensajeBase = (error?.message || error || "").toString().trim();
+    if (!mensajeBase) return "No se pudo completar la operación.";
+
+    try {
+        const json = JSON.parse(mensajeBase);
+        if (json?.mensaje) return String(json.mensaje);
+        if (json?.error) return String(json.error);
+    } catch {
+        // Ignorar: no era JSON.
+    }
+
+    return mensajeBase.replace(/^error\s*:\s*/i, "");
+}
+
+function asegurarEstilosVistaProveedores() {
+    if (document.getElementById("proveedor-ui-estilos")) return;
+
+    const style = document.createElement("style");
+    style.id = "proveedor-ui-estilos";
+    style.textContent = `
+        .acciones-proveedor {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .estado-etiqueta {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            line-height: 1.2;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .estado-en-mina {
+            background: #eef9f0;
+            color: #1f7a34;
+            border-color: #b9e2c2;
+        }
+        .estado-habitacion {
+            background: #e8f1ff;
+            color: #1f4ea8;
+            border-color: #b9cdf9;
+        }
+        .estado-fuera {
+            background: #fff4e6;
+            color: #9a4a06;
+            border-color: #ffd7b0;
+        }
+        .retorno-meta {
+            margin-top: 4px;
+            font-size: 0.72rem;
+            color: #7a633d;
+            white-space: nowrap;
+        }
+        .retorno-input {
+            height: 30px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        .retorno-input-destino {
+            min-width: 140px;
+        }
+        .retorno-input-observacion {
+            min-width: 170px;
+        }
+        .retorno-input-fecha {
+            min-width: 130px;
+        }
+        .retorno-input-hora {
+            min-width: 105px;
+        }
+    `;
+
+    document.head.appendChild(style);
+}
 
 function obtenerFechaLocalISO() {
     const now = new Date();
@@ -462,4 +653,11 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+function obtenerHoraLocalHHMM() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
 }

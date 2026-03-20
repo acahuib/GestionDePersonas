@@ -83,6 +83,18 @@
         .actions button.secondary { background: #e2e8f0; color: #0f172a; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 12px; }
         .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .topbar-actions { display:flex; align-items:center; gap:8px; }
+        .btn-users {
+            width: auto;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-users:hover { background: #1e293b; }
         .btn-logout {
             width: auto;
             padding: 8px 12px;
@@ -108,7 +120,10 @@
 <div class="container">
     <div class="topbar">
         <h2>Modo Tecnico - Registro Manual</h2>
-        <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
+        <div class="topbar-actions">
+            <button type="button" class="btn-users" onclick="window.location.href='/tecnico-usuarios.html'">Gestion de Usuarios</button>
+            <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
+        </div>
     </div>
     <p class="subtitle">Formulario rapido para cargar datos del cuaderno fisico sin pelear con el formato.</p>
 

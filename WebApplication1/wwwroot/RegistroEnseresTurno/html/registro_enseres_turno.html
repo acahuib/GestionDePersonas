@@ -11,16 +11,16 @@
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>📒 Registro Informativo de Enseres por Turno</h2>
+            <h2>Registro Informativo de Enseres por Turno</h2>
             <div class="header-actions">
                 <a href="../../index.html">
-                    <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
+                    <button class="btn-inline btn-secondary">Volver al Menú</button>
                 </a>
                 <a href="registro_enseres_turno_historial.html">
-                    <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Ver historial</button>
+                    <button class="btn-inline btn-secondary">Ver historial</button>
                 </a>
                 <a href="registro_guardias_turno.html">
-                    <button class="btn-inline btn-secondary"><img src="/images/person-badge.svg" class="icon-white"> Registrar Guardias</button>
+                    <button class="btn-inline btn-secondary">Registrar Guardias</button>
                 </a>
             </div>
         </div>
@@ -30,7 +30,6 @@
         <div class="form-card">
             <div class="toolbar">
                 <h3>Guardias del Turno Actual</h3>
-                <button onclick="cargarInfoGuardiasTurno()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
             </div>
             <p class="muted">Tomado del ultimo registro de <a href="registro_guardias_turno.html">Registro de Guardias</a> del dia.</p>
             <div id="info-guardias-turno">
@@ -60,18 +59,39 @@
             <hr>
             <div class="toolbar">
                 <h3>Detalle de Objetos</h3>
-                <button type="button" class="btn-inline btn-small" onclick="agregarItem()">
-                    <img src="/images/plus-lg.svg" class="icon-white"> Agregar ítem
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-inline btn-small" onclick="cargarPlantillaBaseEnseres()">
+                        Plantilla base
+                    </button>
+                    <button type="button" class="btn-inline btn-small" onclick="cargarUltimoRegistroEnseres()">
+                        Ultimo registro
+                    </button>
+                    <button type="button" class="btn-inline btn-small" onclick="agregarFilaEnser()">
+                    Agregar ítem
                 </button>
+                </div>
             </div>
 
-            <div id="items-container"></div>
+            <p class="muted" id="resumen-ensere-items">Cargando items...</p>
+
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60%;">Enser</th>
+                            <th style="width: 20%;">Cantidad</th>
+                            <th style="width: 20%;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-container"></tbody>
+                </table>
+            </div>
 
             <label>Observaciones</label>
             <textarea id="observaciones" rows="3" placeholder="Opcional"></textarea>
 
             <button type="button" class="btn-success btn-block" onclick="registrarEnseres()">
-                <img src="/images/check-lg.svg" class="icon-white"> Guardar Registro Informativo
+                Guardar Registro Informativo
             </button>
 
             <p id="mensaje"></p>
@@ -82,7 +102,7 @@
         <div>
             <div class="toolbar">
                 <h3>Registros del día</h3>
-                <button onclick="cargarRegistrosDelDia()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+                <button onclick="cargarRegistrosDelDia()" class="btn-inline btn-small">Actualizar</button>
             </div>
             <div id="tabla-registros">
                 <p class="text-center muted">Cargando...</p>

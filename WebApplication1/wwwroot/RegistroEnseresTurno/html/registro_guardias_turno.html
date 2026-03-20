@@ -78,8 +78,15 @@
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
     document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("turno").addEventListener("change", renderizarSlots);
+    document.getElementById("turno").addEventListener("change", async () => {
+        renderizarSlots();
+        await verificarEstadoGuardiasTurno();
+    });
+    document.getElementById("fecha").addEventListener("change", async () => {
+        await verificarEstadoGuardiasTurno();
+    });
     renderizarSlots();
+    verificarEstadoGuardiasTurno();
     cargarRegistrosDia();
 });
 </script>

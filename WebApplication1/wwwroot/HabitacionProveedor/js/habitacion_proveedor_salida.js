@@ -31,16 +31,16 @@ async function registrarSalida() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ Error: ID de ingreso no encontrado";
+        mensaje.innerText = "ID de ingreso no encontrado";
         return;
     }
 
     try {
         const horaSalidaInput = document.getElementById("horaSalida").value;
+        const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
         const body = {};
         if (horaSalidaInput) {
-            const today = obtenerFechaLocalISO();
-            body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+            body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
         const response = await fetchAuth(`${API_BASE}/habitacion-proveedor/${salidaId}/salida`, {
@@ -49,7 +49,7 @@ async function registrarSalida() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "Error al registrar salida");
         }
 
@@ -66,7 +66,7 @@ async function registrarSalida() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

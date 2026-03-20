@@ -829,7 +829,16 @@ namespace WebApplication1.Controllers
                         destino = LeerString("destino"),
                         guardiaIngreso = LeerString("guardiaIngreso"),
                         guardiaSalida = LeerString("guardiaSalida"),
-                        observacion = LeerString("observacion")
+                        observacion = LeerString("observacion"),
+                        estadoActual = LeerString("estadoActual"),
+                        ultimaSalidaTemporal = datosJson.TryGetProperty("ultimaSalidaTemporal", out var ultimaSalidaTemporal)
+                            ? ultimaSalidaTemporal
+                            : (JsonElement?)null,
+                        ultimoIngresoRetorno = datosJson.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoRetorno)
+                            ? ultimoIngresoRetorno
+                            : (JsonElement?)null,
+                        guardiaUltimaSalidaTemporal = LeerString("guardiaUltimaSalidaTemporal"),
+                        guardiaUltimoIngresoRetorno = LeerString("guardiaUltimoIngresoRetorno")
                     });
                 }
 

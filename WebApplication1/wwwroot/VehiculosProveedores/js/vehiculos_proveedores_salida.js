@@ -71,7 +71,9 @@ async function cargarDatosDesdeVehiculoEmpresa(salidaEmpresaId) {
         document.getElementById("observacion").value = datos.observacion || "";
         
         // Guardar datos de ingreso
-        document.getElementById("dni").dataset.fechaIngreso = new Date().toISOString().split('T')[0];
+        document.getElementById("dni").dataset.fechaIngreso = typeof fechaLocalIso === "function"
+            ? fechaLocalIso()
+            : obtenerFechaLocalISO();
         document.getElementById("dni").dataset.horaIngreso = new Date().toTimeString().slice(0, 5);
         document.getElementById("dni").dataset.guardiaIngreso = "";
         
@@ -85,7 +87,7 @@ async function cargarDatosDesdeVehiculoEmpresa(salidaEmpresaId) {
         mensaje.innerText = "";
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error al cargar el registro: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 
@@ -96,6 +98,7 @@ async function registrarSalida() {
     const esEspejo = dniElement.dataset.esEspejo === "true";
     const observacion = document.getElementById("observacion").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
+    const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -103,7 +106,7 @@ async function registrarSalida() {
 
     if (!salidaId && !salidaEmpresaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 
@@ -114,9 +117,7 @@ async function registrarSalida() {
 
         // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+            body.horaSalida = combinarFechaHoraLocal(fechaSalidaInput, horaSalidaInput);
         }
 
         let endpoint, method;
@@ -128,7 +129,7 @@ async function registrarSalida() {
         } else {
             // No hay salidaId directo - esto no debería ocurrir normalmente
             mensaje.className = "error";
-            mensaje.innerText = "Error: No se puede determinar el registro de ingreso";
+            mensaje.innerText = "No se puede determinar el registro de ingreso";
             return;
         }
 
@@ -139,7 +140,7 @@ async function registrarSalida() {
         });
 
         if (!responseSalida.ok) {
-            const error = await responseSalida.text();
+            const error = await readApiError(responseSalida);
             throw new Error(error);
         }
 
@@ -154,7 +155,7 @@ async function registrarSalida() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 
@@ -168,4 +169,18 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+function combinarFechaHoraLocal(fechaIso, horaTexto) {
+    if (!fechaIso || !horaTexto) return null;
+    const horaLimpia = String(horaTexto).trim();
+    if (!horaLimpia) return null;
+
+    if (typeof construirDateTimeLocal === "function") {
+        return construirDateTimeLocal(fechaIso, horaLimpia);
+    }
+
+    return /^\d{2}:\d{2}$/.test(horaLimpia)
+        ? `${fechaIso}T${horaLimpia}:00`
+        : `${fechaIso}T${horaLimpia}`;
 }

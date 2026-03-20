@@ -7,6 +7,8 @@ let personaEncontrada = null;
 document.addEventListener('DOMContentLoaded', () => {
     verificarAutenticacion();
     crearSidebar();
+    const fechaRegistro = document.getElementById('fechaRegistro');
+    if (fechaRegistro) fechaRegistro.value = obtenerFechaLocalISO();
     cargarDiasLibreHoy();
     configurarEventos();
     habilitarAutocompletePersona({
@@ -112,6 +114,7 @@ async function registrarDiasLibre(e) {
     const del = document.getElementById('del').value;
     const al = document.getElementById('al').value;
     const horaSalidaInput = document.getElementById('horaSalida').value;
+    const fechaRegistroInput = document.getElementById('fechaRegistro')?.value || obtenerFechaLocalISO();
     const observaciones = document.getElementById('observaciones').value.trim();
 
     // Validaciones
@@ -143,7 +146,7 @@ async function registrarDiasLibre(e) {
         del: new Date(del + 'T00:00:00').toISOString(),
         al: new Date(al + 'T00:00:00').toISOString(),
         horaSalida: horaSalidaInput
-            ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+            ? construirDateTimeLocal(fechaRegistroInput, horaSalidaInput)
             : null,
         observaciones: observaciones || null
     };
@@ -161,6 +164,8 @@ async function registrarDiasLibre(e) {
             // Resetear formulario y estado
             document.getElementById('formDiasLibre').reset();
             document.getElementById('trabaja').value = '';
+            const fechaRegistro = document.getElementById('fechaRegistro');
+            if (fechaRegistro) fechaRegistro.value = obtenerFechaLocalISO();
             document.getElementById('nombreApellidos').disabled = false;
             document.getElementById('nombreApellidos').placeholder = 'Solo si DNI no registrado';
             document.getElementById('persona-info').style.display = 'none';

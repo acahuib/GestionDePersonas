@@ -33,8 +33,8 @@ function configurarVistaPorModo(modo) {
     document.getElementById("bloque-salida").style.display = esIngreso ? "none" : "block";
 
     document.getElementById("titulo-movimiento").innerHTML = esIngreso
-        ? '<img src="/images/check-circle.svg" class="icon-white"> Registrar Ingreso de Vehículo de Empresa'
-        : '<img src="/images/check-lg.svg" class="icon-white"> Registrar Salida de Vehículo de Empresa';
+        ? '<img src="/images/check-circle.svg" class="icon-white"> Registrar Ingreso de Vehiculo Empresa MP'
+        : '<img src="/images/check-lg.svg" class="icon-white"> Registrar Salida de Vehiculo Empresa MP';
 
     document.getElementById("flujoActual").value = esIngreso
         ? "Inicio por SALIDA - pendiente INGRESO"
@@ -54,14 +54,14 @@ async function cargarDetalleOperacion(salidaId) {
     const mensaje = document.getElementById("mensaje");
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro";
+        mensaje.innerText = "No se encontró el ID del registro";
         return;
     }
 
     try {
         const response = await fetchAuth(`${API_BASE}/salidas/${salidaId}`);
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -85,7 +85,7 @@ async function cargarDetalleOperacion(salidaId) {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error al cargar el registro: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 
@@ -101,7 +101,7 @@ async function registrarMovimientoComplementario() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro";
+        mensaje.innerText = "No se encontró el ID del registro";
         return;
     }
 
@@ -118,14 +118,17 @@ async function registrarMovimientoComplementario() {
     const horaInput = esIngreso
         ? document.getElementById("horaIngreso").value
         : document.getElementById("horaSalida").value;
+    const fechaInput = esIngreso
+        ? (document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO())
+        : (document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO());
 
-    if (!km || !origen || !destino) {
+    if (!origen || !destino) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete kilometraje, origen y destino obligatorios";
+        mensaje.innerText = "Complete origen y destino obligatorios";
         return;
     }
 
-    if (isNaN(km) || parseInt(km, 10) < 0) {
+    if (km && (isNaN(km) || parseInt(km, 10) < 0)) {
         mensaje.className = "error";
         mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
@@ -138,13 +141,13 @@ async function registrarMovimientoComplementario() {
 
         const body = esIngreso
             ? {
-                kmIngreso: parseInt(km, 10),
+                kmIngreso: km ? parseInt(km, 10) : null,
                 origenIngreso: origen,
                 destinoIngreso: destino,
                 observacion: observacion || null
             }
             : {
-                kmSalida: parseInt(km, 10),
+                kmSalida: km ? parseInt(km, 10) : null,
                 origenSalida: origen,
                 destinoSalida: destino,
                 observacion: observacion || null
@@ -152,10 +155,9 @@ async function registrarMovimientoComplementario() {
 
         const horaKey = esIngreso ? "horaIngreso" : "horaSalida";
         if (horaInput) {
-            const today = obtenerFechaLocalISO();
-            body[horaKey] = new Date(`${today}T${horaInput}`).toISOString();
+            body[horaKey] = construirDateTimeLocal(fechaInput, horaInput);
         } else {
-            body[horaKey] = new Date().toISOString();
+            body[horaKey] = ahoraLocalDateTime();
         }
 
         const response = await fetchAuth(endpoint, {
@@ -164,7 +166,7 @@ async function registrarMovimientoComplementario() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -178,7 +180,7 @@ async function registrarMovimientoComplementario() {
         }, 500);
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

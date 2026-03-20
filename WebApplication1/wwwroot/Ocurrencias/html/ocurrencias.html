@@ -56,6 +56,7 @@
             <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4" required></textarea>
 
             <label>Hora de Ingreso</label>
+            <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
             <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
             <div style="margin-top: 10px;">
@@ -93,6 +94,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaIngreso = document.getElementById("fechaIngreso");
+    if (fechaIngreso) fechaIngreso.value = hoy;
     cargarActivos();
     cargarInfoGuardiasTurno();
 

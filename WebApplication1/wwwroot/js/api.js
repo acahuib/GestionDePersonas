@@ -258,16 +258,88 @@ async function fetchAuth(url, options = {}) {
 async function readApiError(response) {
     if (!response) return "Error desconocido";
 
+    const resolverMensajePayload = (payload) => {
+        if (!payload) return "";
+
+        if (typeof payload === "string") {
+            const texto = payload.trim();
+            if (!texto) return "";
+
+            try {
+                const parsed = JSON.parse(texto);
+                return resolverMensajePayload(parsed);
+            } catch {
+                return texto.replace(/^"|"$/g, "");
+            }
+        }
+
+        if (typeof payload !== "object") return String(payload);
+
+        const camposDirectos = [
+            payload.mensaje,
+            payload.message,
+            payload.error,
+            payload.detail,
+            payload.title
+        ];
+
+        for (const campo of camposDirectos) {
+            if (typeof campo === "string" && campo.trim()) {
+                return campo.trim();
+            }
+        }
+
+        if (payload.errors && typeof payload.errors === "object") {
+            const mensajesValidacion = Object.values(payload.errors)
+                .flatMap((valor) => Array.isArray(valor) ? valor : [valor])
+                .map((valor) => String(valor || "").trim())
+                .filter(Boolean);
+
+            if (mensajesValidacion.length) {
+                return mensajesValidacion.join(" | ");
+            }
+        }
+
+        return "";
+    };
+
     try {
         const data = await response.clone().json();
-        return data?.mensaje || data?.error || "No se pudo procesar la solicitud";
+        const mensaje = resolverMensajePayload(data);
+        return mensaje || "No se pudo procesar la solicitud";
     } catch {
         try {
             const text = await response.clone().text();
-            return text || "No se pudo procesar la solicitud";
+            const mensaje = resolverMensajePayload(text);
+            return mensaje || "No se pudo procesar la solicitud";
         } catch {
             return "No se pudo procesar la solicitud";
         }
+    }
+}
+
+// ===============================
+// MENSAJE LIMPIO PARA UI
+// ===============================
+function getPlainErrorMessage(error) {
+    const base = (error?.message || error || "").toString().trim();
+    if (!base) return "No se pudo completar la operación.";
+
+    try {
+        const parsed = JSON.parse(base);
+        return (
+            parsed?.mensaje ||
+            parsed?.message ||
+            parsed?.error ||
+            parsed?.detail ||
+            parsed?.title ||
+            "No se pudo completar la operación."
+        );
+    } catch {
+        return base
+            .replace(/^❌\s*/u, "")
+            .replace(/^error\s*:\s*/i, "")
+            .replace(/^"|"$/g, "");
     }
 }
 
@@ -284,4 +356,78 @@ function addEnterListener(elementId, callback) {
             }
         });
     }
+}
+
+// ===============================
+// ENTER => SIGUIENTE CAMPO (GLOBAL)
+// ===============================
+function habilitarEnterComoTab() {
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        if (e.defaultPrevented) return;
+
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const tag = target.tagName.toLowerCase();
+        const type = (target.getAttribute("type") || "").toLowerCase();
+
+        if (tag === "textarea") return;
+        if (tag === "button") return;
+        if (type === "submit" || type === "button" || type === "checkbox" || type === "radio") return;
+
+        const formScope = target.closest("form, .form-card, .container") || document.body;
+        const focusables = Array.from(formScope.querySelectorAll("input, select, textarea, button"))
+            .filter((el) => {
+                if (!(el instanceof HTMLElement)) return false;
+                if (el.hasAttribute("disabled")) return false;
+                if (el.getAttribute("type") === "hidden") return false;
+                if (el.getAttribute("readonly") !== null) return false;
+                if (el.offsetParent === null) return false;
+                return true;
+            });
+
+        const idx = focusables.indexOf(target);
+        if (idx < 0) return;
+
+        const next = focusables[idx + 1];
+        if (next && next instanceof HTMLElement) {
+            e.preventDefault();
+            next.focus();
+            if (next instanceof HTMLInputElement && ["text", "number", "time", "date", "email", "search", "tel", "url", "password"].includes((next.type || "").toLowerCase())) {
+                next.select();
+            }
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    habilitarEnterComoTab();
+});
+
+// ===============================
+// FECHA/HORA LOCAL SIN DESFASE UTC
+// ===============================
+function fechaLocalIso(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function construirDateTimeLocal(fechaIso, horaTexto) {
+    if (!fechaIso || !horaTexto) return null;
+    const hora = String(horaTexto).trim();
+    if (!hora) return null;
+    return /^\d{2}:\d{2}$/.test(hora)
+        ? `${fechaIso}T${hora}:00`
+        : `${fechaIso}T${hora}`;
+}
+
+function ahoraLocalDateTime() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    return `${fechaLocalIso(now)}T${hh}:${mm}:${ss}`;
 }

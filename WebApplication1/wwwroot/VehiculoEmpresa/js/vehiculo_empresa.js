@@ -13,7 +13,7 @@ function actualizarFormularioPorTipoInicial() {
     const tipoInicial = tipoInicialSelect.value;
     const esSalida = tipoInicial === "Salida";
 
-    document.getElementById("label-km").textContent = esSalida ? "Kilometraje de Salida *" : "Kilometraje de Ingreso *";
+    document.getElementById("label-km").textContent = esSalida ? "Kilometraje de Salida (opcional)" : "Kilometraje de Ingreso (opcional)";
     document.getElementById("label-origen").textContent = esSalida ? "Origen de Salida *" : "Origen de Ingreso *";
     document.getElementById("label-destino").textContent = esSalida ? "Destino de Salida *" : "Destino de Ingreso *";
     document.getElementById("label-hora").textContent = esSalida ? "Hora de Salida (opcional)" : "Hora de Ingreso (opcional)";
@@ -97,6 +97,7 @@ async function registrarMovimientoInicial() {
     const origenMovimiento = document.getElementById("origenMovimiento").value.trim();
     const destinoMovimiento = document.getElementById("destinoMovimiento").value.trim();
     const horaMovimientoInput = document.getElementById("horaMovimiento").value;
+    const fechaMovimientoInput = document.getElementById("fechaMovimiento")?.value || obtenerFechaLocalISO();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -104,7 +105,7 @@ async function registrarMovimientoInicial() {
     mensaje.className = "";
 
     // Validaciones
-    if (!dni || !placa || !kmMovimiento || !origenMovimiento || !destinoMovimiento) {
+    if (!dni || !placa || !origenMovimiento || !destinoMovimiento) {
         mensaje.className = "error";
         mensaje.innerText = "Complete todos los campos obligatorios (*)";
         return;
@@ -124,7 +125,7 @@ async function registrarMovimientoInicial() {
     }
 
     // Validar kilometraje
-    if (isNaN(kmMovimiento) || parseInt(kmMovimiento) < 0) {
+    if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento, 10) < 0)) {
         mensaje.className = "error";
         mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
@@ -139,28 +140,28 @@ async function registrarMovimientoInicial() {
         };
 
         if (esSalidaInicial) {
-            body.kmSalida = parseInt(kmMovimiento);
+            if (kmMovimiento) {
+                body.kmSalida = parseInt(kmMovimiento, 10);
+            }
             body.origenSalida = origenMovimiento;
             body.destinoSalida = destinoMovimiento;
             // Enviar horaSalida solo si se especifica
             if (horaMovimientoInput) {
-                // Combinar con la fecha actual para crear un datetime completo
-                const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-                body.horaSalida = new Date(`${today}T${horaMovimientoInput}`).toISOString();
+                body.horaSalida = construirDateTimeLocal(fechaMovimientoInput, horaMovimientoInput);
             } else {
-                body.horaSalida = new Date().toISOString();
+                body.horaSalida = ahoraLocalDateTime();
             }
         } else {
-            body.kmIngreso = parseInt(kmMovimiento);
+            if (kmMovimiento) {
+                body.kmIngreso = parseInt(kmMovimiento, 10);
+            }
             body.origenIngreso = origenMovimiento;
             body.destinoIngreso = destinoMovimiento;
             // Enviar horaIngreso solo si se especifica
             if (horaMovimientoInput) {
-                // Combinar con la fecha actual para crear un datetime completo
-                const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-                body.horaIngreso = new Date(`${today}T${horaMovimientoInput}`).toISOString();
+                body.horaIngreso = construirDateTimeLocal(fechaMovimientoInput, horaMovimientoInput);
             } else {
-                body.horaIngreso = new Date().toISOString();
+                body.horaIngreso = ahoraLocalDateTime();
             }
         }
 
@@ -191,6 +192,9 @@ async function registrarMovimientoInicial() {
         document.getElementById("kmMovimiento").value = "";
         document.getElementById("origenMovimiento").value = "";
         document.getElementById("destinoMovimiento").value = "";
+        document.getElementById("horaMovimiento").value = "";
+        const fechaMovimiento = document.getElementById("fechaMovimiento");
+        if (fechaMovimiento) fechaMovimiento.value = obtenerFechaLocalISO();
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("conductor").disabled = false;
@@ -204,7 +208,7 @@ async function registrarMovimientoInicial() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -274,7 +278,7 @@ async function cargarActivos() {
         html += '<th>Km</th>';
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
-        html += '<th>Hora</th>';
+        html += '<th>Fecha / Hora</th>';
         html += '<th>Acción</th>';
         html += '</tr></thead><tbody>';
 
@@ -287,6 +291,8 @@ async function cargarActivos() {
 
             const horaSalidaValue = s.horaSalida || datos.horaSalida;
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
+            const fechaSalidaValue = s.fechaSalida || datos.fechaSalida;
+            const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
             const tieneSalida = horaSalidaValue !== null && horaSalidaValue !== undefined && String(horaSalidaValue).trim() !== "";
 
             const pendienteDe = tieneSalida ? "Ingreso" : "Salida";
@@ -301,8 +307,11 @@ async function cargarActivos() {
                 ? (datos.destinoSalida || datos.destino || "N/A")
                 : (datos.destinoIngreso || datos.destino || "N/A");
             const hora = tieneSalida
-                ? (horaSalidaValue ? new Date(horaSalidaValue).toLocaleTimeString('es-PE') : "N/A")
-                : (horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A");
+                ? (horaSalidaValue ? new Date(horaSalidaValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : "N/A")
+                : (horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : "N/A");
+            const fecha = tieneSalida
+                ? (fechaSalidaValue ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A")
+                : (fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A");
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
@@ -313,7 +322,7 @@ async function cargarActivos() {
             html += `<td>${km}</td>`;
             html += `<td>${origen}</td>`;
             html += `<td>${destino}</td>`;
-            html += `<td>${hora}</td>`;
+            html += `<td>${construirFechaHoraCelda(fecha, hora)}</td>`;
             html += `<td><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button></td>`;
             html += '</tr>';
         });
@@ -322,8 +331,12 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {

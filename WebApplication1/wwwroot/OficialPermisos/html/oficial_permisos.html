@@ -48,6 +48,7 @@
         <input type="text" id="quienAutoriza" placeholder="Nombre de quien autoriza">
 
         <label>Hora de Salida</label>
+        <input type="date" id="fechaSalida" placeholder="Fecha de salida">
         <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
         <label>Observación</label>
@@ -85,6 +86,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaSalida = document.getElementById("fechaSalida");
+    if (fechaSalida) fechaSalida.value = hoy;
     cargarActivos();
 
     // Auto-actualizar lista cada 15 segundos

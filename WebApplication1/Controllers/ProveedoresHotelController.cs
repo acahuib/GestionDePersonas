@@ -70,13 +70,46 @@ namespace WebApplication1.Controllers
 
         private async Task<Models.OperacionDetalle?> ObtenerProveedorActivo(string dni)
         {
-            return await _context.OperacionDetalle
+            var candidatos = await _context.OperacionDetalle
                 .Where(o => o.TipoOperacion == "Proveedor" &&
                             o.Dni == dni &&
                             o.HoraIngreso != null &&
                             o.HoraSalida == null)
                 .OrderByDescending(o => o.FechaCreacion)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
+
+            return candidatos.FirstOrDefault(ProveedorDisponibleParaDerivacion);
+        }
+
+        private static string? LeerString(JsonElement root, string propiedad)
+        {
+            return root.TryGetProperty(propiedad, out var valor) && valor.ValueKind == JsonValueKind.String
+                ? valor.GetString()
+                : null;
+        }
+
+        private static string LeerEstadoProveedor(JsonElement root)
+        {
+            var estado = LeerString(root, "estadoActual");
+            return string.IsNullOrWhiteSpace(estado) ? "EnMina" : estado;
+        }
+
+        private static bool ProveedorDisponibleParaDerivacion(Models.OperacionDetalle proveedor)
+        {
+            if (string.IsNullOrWhiteSpace(proveedor.DatosJSON)) return true;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(proveedor.DatosJSON);
+                var estado = LeerEstadoProveedor(doc.RootElement);
+                return !string.Equals(estado, "FueraTemporal", StringComparison.OrdinalIgnoreCase) &&
+                       !string.Equals(estado, "Fuera Temporal", StringComparison.OrdinalIgnoreCase) &&
+                       !string.Equals(estado, "SalidaDefinitiva", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         private async Task<Models.OperacionDetalle?> ObtenerHabitacionActiva(string dni)
@@ -125,19 +158,23 @@ namespace WebApplication1.Controllers
         {
             return new
             {
-                procedencia = root.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String
-                    ? proc.GetString()
-                    : null,
-                destino = root.TryGetProperty("destino", out var dest) && dest.ValueKind == JsonValueKind.String
-                    ? dest.GetString()
-                    : null,
-                guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
-                    ? gi.GetString()
-                    : null,
+                procedencia = LeerString(root, "procedencia"),
+                destino = LeerString(root, "destino"),
+                guardiaIngreso = LeerString(root, "guardiaIngreso"),
                 guardiaSalida = guardiaSalida,
-                observacion = root.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String
-                    ? obs.GetString()
-                    : null
+                observacion = LeerString(root, "observacion"),
+                estadoActual = "SalidaDefinitiva",
+                ultimaSalidaTemporal = root.TryGetProperty("ultimaSalidaTemporal", out var ultimaSalidaTemporal)
+                    ? ultimaSalidaTemporal
+                    : (JsonElement?)null,
+                ultimoIngresoRetorno = root.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoRetorno)
+                    ? ultimoIngresoRetorno
+                    : (JsonElement?)null,
+                guardiaUltimaSalidaTemporal = LeerString(root, "guardiaUltimaSalidaTemporal"),
+                guardiaUltimoIngresoRetorno = LeerString(root, "guardiaUltimoIngresoRetorno"),
+                movimientosInternos = root.TryGetProperty("movimientosInternos", out var movimientosInternos)
+                    ? movimientosInternos
+                    : (JsonElement?)null
             };
         }
 
@@ -368,7 +405,13 @@ namespace WebApplication1.Controllers
                             guardiaSalida = (string?)null,
                             observacion = string.IsNullOrWhiteSpace(dto.Observacion)
                                 ? "Retorno desde HotelProveedor"
-                                : dto.Observacion.Trim()
+                                : dto.Observacion.Trim(),
+                            estadoActual = "EnMina",
+                            ultimaSalidaTemporal = (DateTime?)null,
+                            ultimoIngresoRetorno = (DateTime?)null,
+                            guardiaUltimaSalidaTemporal = (string?)null,
+                            guardiaUltimoIngresoRetorno = (string?)null,
+                            movimientosInternos = Array.Empty<object>()
                         },
                         usuarioId,
                         ahoraLocal,

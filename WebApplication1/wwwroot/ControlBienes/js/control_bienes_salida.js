@@ -14,7 +14,7 @@ window.addEventListener("DOMContentLoaded", () => {
     salidaId = params.get("salidaId");
 
     if (!salidaId) {
-        alert("❌ Datos incompletos. Redirigiendo...");
+        alert("Datos incompletos. Redirigiendo...");
         window.location.href = "control_bienes.html";
         return;
     }
@@ -26,7 +26,7 @@ async function cargarDetalleSalida() {
     try {
         const response = await fetchAuth(`${API_BASE}/control-bienes/${salidaId}`);
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "No se pudo cargar el detalle");
         }
 
@@ -52,7 +52,7 @@ async function cargarDetalleSalida() {
 
         renderBienesActivos();
     } catch (error) {
-        alert(`❌ ${error.message}`);
+        alert(getPlainErrorMessage(error));
         window.location.href = "control_bienes.html";
     }
 }
@@ -94,6 +94,7 @@ function marcarTodosBienes(marcar) {
 async function registrarSalida() {
     const observacionSalida = document.getElementById("observacion-salida").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
+    const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
     const checks = Array.from(document.querySelectorAll(".bien-check:checked"));
     const bienIds = checks.map(ch => ch.value);
@@ -111,7 +112,7 @@ async function registrarSalida() {
         const body = {
             bienIds,
             horaSalida: horaSalidaInput
-                ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+                ? construirDateTimeLocal(fechaSalidaInput, horaSalidaInput)
                 : null,
             observacion: observacionSalida || null
         };
@@ -122,7 +123,7 @@ async function registrarSalida() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -137,7 +138,7 @@ async function registrarSalida() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

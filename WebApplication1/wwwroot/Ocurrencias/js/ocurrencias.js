@@ -21,6 +21,19 @@ function fechaIsoLocal(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+function obtenerClaveFecha(valor) {
+    if (!valor) return null;
+
+    if (typeof valor === "string") {
+        const match = valor.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+    }
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+    return fechaIsoLocal(fecha);
+}
+
 function turnoTexto(turno) {
     if (turno === "7am-7pm") return "7am-7pm (Turno dia)";
     if (turno === "7pm-7am") return "7pm-7am (Turno noche)";
@@ -108,9 +121,11 @@ async function cargarInfoGuardiasTurno() {
         const candidatos = (Array.isArray(registros) ? registros : [])
             .filter((r) => {
                 const datos = r?.datos || {};
-                if (!datos.turno) return false;
-                const fechaDato = datos.fecha ? fechaIsoLocal(new Date(datos.fecha)) : null;
-                return fechaDato === hoy && datos.turno === turno;
+                const turnoDato = String(datos.turno || "").trim().toLowerCase();
+                if (!turnoDato) return false;
+
+                const fechaDato = obtenerClaveFecha(datos.fecha || r?.fechaIngreso || r?.fechaCreacion);
+                return fechaDato === hoy && turnoDato === turno.toLowerCase();
             })
             .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
 
@@ -126,7 +141,7 @@ async function cargarInfoGuardiasTurno() {
 
         renderInfoGuardias(container, registro.datos || {}, turno, fechaTexto);
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
 
@@ -196,6 +211,7 @@ async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombre = document.getElementById("nombre").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const ocurrencia = document.getElementById("ocurrencia").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -222,10 +238,9 @@ async function registrarIngreso() {
         };
 
         if (horaIngresoInput) {
-            const today = obtenerFechaLocalISO();
-            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         } else {
-            body.horaIngreso = new Date().toISOString();
+            body.horaIngreso = ahoraLocalDateTime();
         }
 
         // Agregar DNI y nombre solo si se proporcionaron
@@ -255,6 +270,8 @@ async function registrarIngreso() {
         document.getElementById("dni").value = "";
         document.getElementById("nombre").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("ocurrencia").value = "";
         
         // Reset persona encontrada
@@ -269,7 +286,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -323,7 +340,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>Hora Ingreso</th>';
+        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Guardia Ingreso</th>';
         html += '<th>Ocurrencia</th>';
         html += '<th>Acciones</th>';
@@ -332,7 +349,8 @@ async function cargarActivos() {
         activas.forEach(o => {
             const datos = o.datos || {};
             
-            const horaIngreso = o.horaIngreso ? new Date(o.horaIngreso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-';
+            const horaIngreso = o.horaIngreso ? new Date(o.horaIngreso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            const fechaIngreso = o.fechaIngreso ? new Date(o.fechaIngreso).toLocaleDateString('es-PE') : 'N/A';
             const guardiaIngreso = datos.guardiaIngreso || '-';
             
             // Identificar DNI ficticio (empieza con 99)
@@ -349,7 +367,7 @@ async function cargarActivos() {
             html += '<tr>';
             html += `<td>${dniDisplay}</td>`;
             html += `<td>${nombreCompleto}</td>`;
-            html += `<td>${horaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td>${guardiaIngreso}</td>`;
             html += `<td class="cell-wrap" style="max-width: 200px;">${ocurrencia}</td>`;
             html += '<td>';
@@ -361,8 +379,12 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 

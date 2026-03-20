@@ -58,6 +58,7 @@
         <h3>Registrar SALIDA</h3>
 
         <label>Hora de Salida <span class="muted">(Opcional)</span></label>
+        <input type="date" id="fechaSalida" placeholder="Fecha de salida">
         <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
         <label>Observación de Salida (opcional)</label>
@@ -83,6 +84,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaSalida = document.getElementById("fechaSalida");
+    if (fechaSalida) fechaSalida.value = hoy;
 });
 </script>
 

@@ -12,6 +12,42 @@ const DESTINOS_PROVEEDOR = [
     "TRANSERV.",
     "EN ESPERA"
 ];
+const CAMPOS_NUMERICOS = new Set([
+    "kmSalida",
+    "kmIngreso",
+    "frazadas",
+    "numeroPersonas",
+    "cantidad"
+]);
+const CAMPOS_TEXTO_LARGO = new Set([
+    "observacion",
+    "observacionSalida",
+    "cierreDefinitivoMotivo"
+]);
+
+function formatoEsperadoPorCampo(key) {
+    if (CAMPOS_NUMERICOS.has(key)) return "Formato esperado: numero entero (sin letras).";
+    if (key.toLowerCase().includes("fecha")) return "Formato esperado: fecha (AAAA-MM-DD).";
+    if (key.toLowerCase().includes("hora")) return "Formato esperado: hora (HH:mm).";
+    if (key === "destino") return "Seleccione un destino valido de la lista.";
+    if (CAMPOS_TEXTO_LARGO.has(key)) return "Texto libre. Se guardara tal como lo escriba.";
+    return "Texto libre. Mantenga el formato operativo que usa el cuaderno.";
+}
+
+function construirGuiaEdicion() {
+    const guia = document.getElementById("guia-edicion");
+    if (!guia) return;
+
+    const notas = [
+        "Revise campos marcados como solo lectura: no se guardan cambios en esos datos.",
+        "Campos numericos aceptan solo enteros.",
+        "En horas de columna use HH:mm y en fechas use AAAA-MM-DD.",
+        "Los campos modificados se resaltan en amarillo antes de guardar."
+    ];
+
+    guia.innerHTML = `<strong>Guia rapida de edicion (${escaparHtml(tipoOperacion || "Registro")})</strong><ul style="margin:6px 0 0 18px;">${notas.map(n => `<li>${escaparHtml(n)}</li>`).join("")}</ul>`;
+    guia.style.display = "block";
+}
 
 function escaparHtml(texto) {
     return String(texto ?? "")
@@ -71,6 +107,7 @@ function volverOrigen() {
 function construirCampo(key, value) {
     const readonly = CAMPOS_BLOQUEADOS.has(key) ? "readonly" : "";
     const safeKey = escaparHtml(key);
+    const ayuda = escaparHtml(formatoEsperadoPorCampo(key));
 
     if (tipoOperacion === "Proveedor" && key === "destino") {
         const valorActual = String(value ?? "").trim();
@@ -88,6 +125,39 @@ function construirCampo(key, value) {
             <select data-dato-key="${safeKey}" data-dato-tipo="text" ${readonly ? "disabled" : ""}>
                 ${opciones}
             </select>
+            <small class="muted formato-ayuda">${ayuda}</small>
+        `;
+    }
+
+    if (CAMPOS_NUMERICOS.has(key)) {
+        return `
+            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <input type="number" step="1" min="0" data-dato-key="${safeKey}" data-dato-tipo="number" value="${escaparHtml(value ?? "")}" ${readonly}>
+            <small class="muted formato-ayuda">${ayuda}</small>
+        `;
+    }
+
+    if (CAMPOS_TEXTO_LARGO.has(key)) {
+        return `
+            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <textarea data-dato-key="${safeKey}" data-dato-tipo="text" rows="3" ${readonly}>${escaparHtml(value ?? "")}</textarea>
+            <small class="muted formato-ayuda">${ayuda}</small>
+        `;
+    }
+
+    if (key.toLowerCase().includes("fecha")) {
+        return `
+            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <input type="date" data-dato-key="${safeKey}" data-dato-tipo="date" value="${toDateLocal(value)}" ${readonly}>
+            <small class="muted formato-ayuda">${ayuda}</small>
+        `;
+    }
+
+    if (key.toLowerCase().includes("hora")) {
+        return `
+            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <input type="time" data-dato-key="${safeKey}" data-dato-tipo="time" value="${toTimeLocal(value) || String(value ?? "")}" ${readonly}>
+            <small class="muted formato-ayuda">${ayuda}</small>
         `;
     }
 
@@ -96,12 +166,14 @@ function construirCampo(key, value) {
         return `
             <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
             <textarea data-dato-key="${safeKey}" data-dato-tipo="json" rows="4" ${readonly}>${contenido}</textarea>
+            <small class="muted formato-ayuda">${ayuda}</small>
         `;
     }
 
     return `
         <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
         <input type="text" data-dato-key="${safeKey}" data-dato-tipo="text" value="${escaparHtml(value ?? "")}" ${readonly}>
+        <small class="muted formato-ayuda">${ayuda}</small>
     `;
 }
 
@@ -118,8 +190,46 @@ function valorDesdeCampo(el) {
         }
     }
 
+    if (tipo === "number") {
+        if (raw === "") return null;
+        const num = Number(raw);
+        if (!Number.isFinite(num)) {
+            throw new Error(`Numero invalido en campo ${el.getAttribute("data-dato-key")}`);
+        }
+        return Math.trunc(num);
+    }
+
+    if (tipo === "date") {
+        return raw || "";
+    }
+
+    if (tipo === "time") {
+        return raw || "";
+    }
+
     if (raw === "") return "";
     return raw;
+}
+
+function normalizarComparacion(valor) {
+    if (valor === null || valor === undefined) return "";
+    if (typeof valor === "object") return JSON.stringify(valor);
+    return String(valor).trim();
+}
+
+function resaltarCamposEditados() {
+    const campos = document.querySelectorAll("[data-dato-key]");
+    campos.forEach((el) => {
+        const key = el.getAttribute("data-dato-key");
+        if (!key || CAMPOS_BLOQUEADOS.has(key)) return;
+
+        const actual = normalizarComparacion(el.value);
+        const original = normalizarComparacion(datosOriginales[key]);
+        const cambiado = actual !== original;
+
+        el.style.outline = cambiado ? "2px solid #f59e0b" : "";
+        el.style.backgroundColor = cambiado ? "#fff8e7" : "";
+    });
 }
 
 async function cargarRegistro() {
@@ -147,6 +257,7 @@ async function cargarRegistro() {
         tipoOperacion = data.tipoOperacion || tipoOperacion;
 
         titulo.textContent = `Registro #${registroId} - ${tipoOperacion}`;
+        construirGuiaEdicion();
 
         let html = "";
 
@@ -172,8 +283,14 @@ async function cargarRegistro() {
         `;
 
         form.innerHTML = html;
+
+        document.querySelectorAll("[data-dato-key]").forEach((el) => {
+            el.addEventListener("input", resaltarCamposEditados);
+            el.addEventListener("change", resaltarCamposEditados);
+        });
+        resaltarCamposEditados();
     } catch (error) {
-        form.innerHTML = `<p class="text-center error">Error: ${escaparHtml(error.message)}</p>`;
+        form.innerHTML = `<p class="text-center error">${escaparHtml(getPlainErrorMessage(error))}</p>`;
     }
 }
 
@@ -215,13 +332,21 @@ async function guardarCambios() {
             fechaSalida: fechaInputToIso(fechaSalidaEdit)
         };
 
+        if (horaIngresoEdit && !fechaIngresoEdit) {
+            throw new Error("Si completa Hora Ingreso, debe completar tambien Fecha Ingreso.");
+        }
+
+        if (horaSalidaEdit && !fechaSalidaEdit) {
+            throw new Error("Si completa Hora Salida, debe completar tambien Fecha Salida.");
+        }
+
         const response = await fetchAuth(`${API_BASE}/salidas/${registroId}/edicion-activo`, {
             method: "PUT",
             body: JSON.stringify(body)
         });
 
         if (!response || !response.ok) {
-            const err = response ? await response.text() : "No autorizado";
+            const err = response ? await readApiError(response) : "No autorizado";
             throw new Error(err || "No se pudo guardar");
         }
 
@@ -229,7 +354,7 @@ async function guardarCambios() {
         mensaje.innerText = "Registro actualizado correctamente";
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 

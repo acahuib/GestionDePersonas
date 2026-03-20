@@ -208,7 +208,7 @@ async function cargarPersonasDentro() {
         console.error('❌ Error al cargar personas dentro:', error);
         setErrorCell('totalDentro', error?.message || "Error al cargar personas dentro");
         document.getElementById('tablaPersonasDentro').innerHTML = 
-            `<tr><td colspan="6" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
+            `<tr><td colspan="5" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
 }
 
@@ -259,7 +259,7 @@ function renderizarTablaPersonasDentro() {
     const tbody = document.getElementById('tablaPersonasDentro');
 
     if (!personasDentroActuales || personasDentroActuales.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay personas dentro actualmente</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay personas dentro actualmente</td></tr>';
         const paginaTexto = document.getElementById('paginaPersonasActual');
         if (paginaTexto) paginaTexto.textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionPersonasDentro();
@@ -278,8 +278,7 @@ function renderizarTablaPersonasDentro() {
             <td><strong>${p.dni}</strong></td>
             <td>${p.nombre}</td>
             <td>${p.tipoRegistro}</td>
-            <td>${p.fechaIngreso}</td>
-            <td>${p.horaIngreso}</td>
+            <td>${construirFechaHoraCelda(p.fechaIngreso, p.horaIngreso)}</td>
             <td>${p.tiempoDentro}</td>
         </tr>
     `).join('');
@@ -354,7 +353,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
 
     try {
         if (!registrosEnseres.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="loading">Cargando registros...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="loading">Cargando registros...</td></tr>';
         }
 
         const token = localStorage.getItem('token');
@@ -385,7 +384,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
         renderizarTablaEnseresTurnoAdmin();
     } catch (error) {
         console.error('Error al cargar enseres por turno:', error);
-        tbody.innerHTML = `<tr><td colspan="6" class="error">Error al cargar registros: ${error?.message || "-"}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="error">Error al cargar registros: ${error?.message || "-"}</td></tr>`;
         document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
     }
@@ -399,7 +398,7 @@ function renderizarTablaEnseresTurnoAdmin() {
     const registrosPagina = registrosEnseres.slice(inicio, fin);
 
     if (!registrosEnseres || registrosEnseres.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No hay registros informativos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay registros informativos</td></tr>';
         document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
         return;
@@ -421,12 +420,11 @@ function renderizarTablaEnseresTurnoAdmin() {
 
         return `
             <tr>
-                <td>${fechaTurno}</td>
+                <td>${construirFechaHoraCelda(fechaTurno, horaRegistro)}</td>
                 <td>${datos.turno || '-'}</td>
                 <td>${datos.agenteNombre || r.nombreCompleto || '-'}</td>
                 <td>${datos.agenteDni || r.dni || '-'}</td>
                 <td>${objetos}</td>
-                <td>${horaRegistro}</td>
             </tr>
         `;
     }).join('');
@@ -504,6 +502,10 @@ function formatearFechaHora(fechaHora) {
         day: '2-digit', 
         month: '2-digit' 
     })} ${horaStr}`;
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || '-'}</span><span class="hora-linea">${horaTexto || '-'}</span></div>`;
 }
 
 // Obtener clase de badge según tipo

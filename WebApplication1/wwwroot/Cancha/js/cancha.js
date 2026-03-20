@@ -66,7 +66,7 @@ async function buscarPersonaPorDni() {
         personaInfo.style.display = "none";
         nombreInput.value = "";
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -212,7 +212,7 @@ async function registrarCancha() {
         await cargarRegistrosActivos();
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -240,7 +240,7 @@ async function cargarRegistrosActivos() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>Fecha</th><th>Hora</th><th>Categoria</th><th>DNI</th><th>Nombre</th><th>Estado</th><th>Observacion</th><th>Accion</th>';
+        html += '<th>Fecha / Hora</th><th>Categoria</th><th>DNI</th><th>Nombre</th><th>Estado</th><th>Observacion</th><th>Accion</th>';
         html += '</tr></thead><tbody>';
 
         registrosActivos.forEach((r) => {
@@ -255,8 +255,7 @@ async function cargarRegistrosActivos() {
             const btnLabel = cerrado ? "Terminado" : "Marcar terminado";
 
             html += '<tr>';
-            html += `<td>${fecha}</td>`;
-            html += `<td>${hora}</td>`;
+            html += `<td>${construirFechaHoraCelda(fecha, hora)}</td>`;
             html += `<td>${datos.categoria || "-"}</td>`;
             html += `<td>${r.dni || "-"}</td>`;
             html += `<td>${r.nombreCompleto || datos.nombre || "-"}</td>`;
@@ -278,8 +277,12 @@ async function cargarRegistrosActivos() {
             });
         });
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 async function completarRegistro(id, observacion) {
@@ -301,7 +304,7 @@ async function completarRegistro(id, observacion) {
         const mensaje = document.getElementById("mensaje");
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = `Error: ${error.message}`;
+            mensaje.innerText = `${getPlainErrorMessage(error)}`;
         }
     }
 }

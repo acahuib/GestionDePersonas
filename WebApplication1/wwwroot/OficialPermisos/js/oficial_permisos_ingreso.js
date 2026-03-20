@@ -20,7 +20,7 @@ function cargarDatosDesdeUrl() {
 
     if (!salidaId) {
         document.getElementById("mensaje").className = "error";
-        document.getElementById("mensaje").innerText = "❌ Error: No se recibió ID de salida";
+        document.getElementById("mensaje").innerText = "No se recibió ID de salida";
         return;
     }
 
@@ -37,6 +37,7 @@ function cargarDatosDesdeUrl() {
 async function registrarIngreso() {
     const observacion = document.getElementById("observacion").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -44,14 +45,14 @@ async function registrarIngreso() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ Error: ID de salida no encontrado";
+        mensaje.innerText = "ID de salida no encontrado";
         return;
     }
 
     try {
         const body = {
             horaIngreso: horaIngresoInput
-                ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
+                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
                 : null,
             observacion: observacion || null
         };
@@ -62,7 +63,7 @@ async function registrarIngreso() {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error);
         }
 
@@ -76,7 +77,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = getPlainErrorMessage(error);
     }
 }
 

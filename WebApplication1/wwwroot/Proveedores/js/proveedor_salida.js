@@ -25,6 +25,7 @@ async function registrarSalida(endpoint, mensajeOk) {
     const salidaId = dniElement.dataset.salidaId;
     const observacion = document.getElementById("observacion").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
+    const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -32,7 +33,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "Error: No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 
@@ -43,9 +44,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
         // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaSalida = new Date(`${today}T${horaSalidaInput}`).toISOString();
+            body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
         // Usar PUT para actualizar el registro existente
@@ -55,8 +54,8 @@ async function registrarSalida(endpoint, mensajeOk) {
         });
 
         if (!responseSalida.ok) {
-            const error = await responseSalida.text();
-            throw new Error(error);
+            const error = await readApiError(responseSalida);
+            throw new Error(error || "No se pudo registrar la salida");
         }
 
         mensaje.className = "success";
@@ -69,7 +68,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `❌ Error: ${error.message}`;
+        mensaje.innerText = obtenerMensajeUsuario(error);
     }
 }
 
@@ -91,4 +90,19 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+function obtenerMensajeUsuario(error) {
+    const mensajeBase = (error?.message || error || "").toString().trim();
+    if (!mensajeBase) return "No se pudo completar la operación.";
+
+    try {
+        const json = JSON.parse(mensajeBase);
+        if (json?.mensaje) return String(json.mensaje);
+        if (json?.error) return String(json.error);
+    } catch {
+        // Ignorar: no era JSON.
+    }
+
+    return mensajeBase.replace(/^error\s*:\s*/i, "");
 }

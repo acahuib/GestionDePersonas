@@ -23,7 +23,7 @@ async function login() {
         });
 
         if (!response.ok) {
-            throw new Error(await response.text());
+            throw new Error(await readApiError(response));
         }
 
         const data = await response.json();

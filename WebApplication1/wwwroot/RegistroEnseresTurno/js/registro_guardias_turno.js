@@ -23,6 +23,20 @@ const CONFIG_TURNOS_GUARDIAS = {
     }
 };
 
+let guardiasYaRegistrados = false;
+
+function obtenerMensajePlanoRGT(error) {
+    if (!error) return "No se pudo completar la operación.";
+    const base = String(error?.message || error || "").trim();
+    if (!base) return "No se pudo completar la operación.";
+    try {
+        const json = JSON.parse(base);
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+    } catch {
+        return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
+    }
+}
+
 // ---- Helpers ----
 
 function turnoTextoRGT(turno) {
@@ -36,6 +50,41 @@ function fechaIsoLocalRGT(date = new Date()) {
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
+}
+
+function obtenerClaveFechaRGT(valor) {
+    if (!valor) return null;
+
+    if (typeof valor === "string") {
+        const match = valor.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+    }
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+    return fechaIsoLocalRGT(fecha);
+}
+
+function obtenerAyerIsoRGT(baseIso) {
+    const base = new Date(`${baseIso}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return baseIso;
+    base.setDate(base.getDate() - 1);
+    return fechaIsoLocalRGT(base);
+}
+
+function obtenerFechaOperativaTurnoRGT(turno, fechaIso) {
+    if (!turno || !fechaIso) return fechaIso;
+    if (turno !== "7pm-7am") return fechaIso;
+
+    const ahora = new Date();
+    const hoyIso = fechaIsoLocalRGT(ahora);
+    const hora = ahora.getHours();
+
+    if (fechaIso === hoyIso && hora < 7) {
+        return obtenerAyerIsoRGT(fechaIso);
+    }
+
+    return fechaIso;
 }
 
 // ---- Renderizar slots según turno ----
@@ -58,6 +107,104 @@ function renderizarSlots() {
             </div>
         </div>
     `).join("");
+
+    actualizarEstadoBotonGuardar();
+}
+
+function actualizarEstadoBotonGuardar() {
+    const btn = document.querySelector("button[onclick='guardarGuardias()']");
+    if (!btn) return;
+
+    btn.disabled = guardiasYaRegistrados;
+    btn.style.opacity = guardiasYaRegistrados ? "0.6" : "1";
+    btn.style.cursor = guardiasYaRegistrados ? "not-allowed" : "pointer";
+}
+
+function obtenerRegistroGuardiasPorTurnoFecha(registros, turno, fechaIso) {
+    if (!turno || !fechaIso) return null;
+
+    const tieneGuardiasReales = (datos) => {
+        const guardiasGarita = Array.isArray(datos?.guardiasGarita) ? datos.guardiasGarita : [];
+        const guardiasOtrasZonas = Array.isArray(datos?.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+
+        const hayGarita = guardiasGarita.some(g => String(g || "").trim() && String(g || "").trim() !== "-");
+        const hayZonas = guardiasOtrasZonas.some(g => String(g?.guardia || "").trim() && String(g?.guardia || "").trim() !== "-");
+        return hayGarita || hayZonas;
+    };
+
+    return (Array.isArray(registros) ? registros : [])
+        .filter(r => {
+            const datos = r?.datos || {};
+            const turnoDato = String(datos.turno || "").trim().toLowerCase();
+            const fechaDato = obtenerClaveFechaRGT(datos.fecha || r?.fechaIngreso || r?.fechaCreacion);
+            return turnoDato === turno.toLowerCase() && fechaDato === fechaIso && tieneGuardiasReales(datos);
+        })
+        .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0))[0] || null;
+}
+
+function precargarGuardiasDesdeRegistro(turno, datos) {
+    const config = CONFIG_TURNOS_GUARDIAS[turno];
+    if (!config) return;
+
+    const inputs = Array.from(document.querySelectorAll("[data-slot] .slot-nombre"));
+    const guardiasGarita = Array.isArray(datos?.guardiasGarita) ? datos.guardiasGarita : [];
+    const guardiasZonas = Array.isArray(datos?.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+
+    const porZona = new Map();
+    guardiasZonas.forEach(g => {
+        const zona = String(g?.zona || "").trim().toUpperCase();
+        const guardia = String(g?.guardia || "").trim();
+        if (zona && guardia) porZona.set(zona, guardia);
+    });
+
+    inputs.forEach((input, idx) => {
+        const slot = config.slots[idx];
+        if (!slot) return;
+
+        if (slot.rol === "garita") {
+            input.value = guardiasGarita[0] || "";
+            return;
+        }
+
+        input.value = porZona.get(String(slot.zona || "").trim().toUpperCase()) || "";
+    });
+}
+
+async function verificarEstadoGuardiasTurno() {
+    const turno = document.getElementById("turno")?.value;
+    const fecha = document.getElementById("fecha")?.value;
+    const fechaOperativa = obtenerFechaOperativaTurnoRGT(turno, fecha);
+    const mensaje = document.getElementById("mensaje");
+
+    guardiasYaRegistrados = false;
+    actualizarEstadoBotonGuardar();
+
+    if (!turno || !fechaOperativa) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/RegistroInformativoEnseresTurno`);
+        if (!response || !response.ok) return;
+
+        const registros = await response.json();
+        const registro = obtenerRegistroGuardiasPorTurnoFecha(registros, turno, fechaOperativa);
+        if (!registro) {
+            if (mensaje) {
+                mensaje.className = "";
+                mensaje.innerText = "";
+            }
+            return;
+        }
+
+        guardiasYaRegistrados = true;
+        actualizarEstadoBotonGuardar();
+        precargarGuardiasDesdeRegistro(turno, registro.datos || {});
+
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = `Ya se registraron guardias para ${turnoTextoRGT(turno)} en fecha operativa ${fechaOperativa}.`;
+        }
+    } catch {
+    }
 }
 
 // ---- Guardar ----
@@ -65,14 +212,21 @@ function renderizarSlots() {
 async function guardarGuardias() {
     const turno  = document.getElementById("turno").value;
     const fecha  = document.getElementById("fecha").value;
+    const fechaOperativa = obtenerFechaOperativaTurnoRGT(turno, fecha);
     const horaRegistroInput = document.getElementById("horaRegistro").value;
     const mensaje = document.getElementById("mensaje");
     mensaje.className = "";
     mensaje.innerText = "";
 
-    if (!turno || !fecha) {
+    if (!turno || !fechaOperativa) {
         mensaje.className = "error";
         mensaje.innerText = "Seleccione turno y fecha";
+        return;
+    }
+
+    if (guardiasYaRegistrados) {
+        mensaje.className = "error";
+        mensaje.innerText = "Ya se registraron los guardias para este turno y fecha.";
         return;
     }
 
@@ -110,12 +264,11 @@ async function guardarGuardias() {
             method: "POST",
             body: JSON.stringify({
                 turno,
-                fecha: new Date(`${fecha}T00:00:00`).toISOString(),
+                fecha: construirDateTimeLocal(fechaOperativa, "00:00"),
                 horaRegistro: horaRegistroInput
-                    ? new Date(`${obtenerFechaLocalISO()}T${horaRegistroInput}`).toISOString()
+                    ? construirDateTimeLocal(obtenerFechaLocalISO(), horaRegistroInput)
                     : null,
-                // El backend requiere al menos un objeto; se envía placeholder interno
-                objetos: [{ nombre: "—", cantidad: 1 }],
+                objetos: [],
                 guardiasGarita,
                 guardiasOtrasZonas,
                 observaciones: null
@@ -123,7 +276,7 @@ async function guardarGuardias() {
         });
 
         if (!response || !response.ok) {
-            const error = response ? await response.text() : "No autorizado";
+            const error = response ? await readApiError(response) : "No autorizado";
             throw new Error(error || "No se pudo guardar");
         }
 
@@ -138,7 +291,7 @@ async function guardarGuardias() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = obtenerMensajePlanoRGT(error);
     }
 }
 
@@ -157,7 +310,7 @@ async function cargarRegistrosDia() {
 
         const hoyRegistros = (Array.isArray(data) ? data : [])
             .filter(r => {
-                const fechaDato = r?.datos?.fecha ? fechaIsoLocalRGT(new Date(r.datos.fecha)) : null;
+                const fechaDato = obtenerClaveFechaRGT(r?.datos?.fecha || r?.fechaIngreso || r?.fechaCreacion);
                 return fechaDato === hoy;
             })
             .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
@@ -201,7 +354,7 @@ async function cargarRegistrosDia() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${obtenerMensajePlanoRGT(error)}</p>`;
     }
 }
 

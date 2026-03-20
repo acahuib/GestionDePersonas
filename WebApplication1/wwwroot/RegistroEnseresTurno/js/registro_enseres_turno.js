@@ -18,6 +18,36 @@ const CONFIG_GUARDIAS_POR_TURNO = {
     }
 };
 
+const PLANTILLA_ENSERES_BASE = [
+    { nombre: "LLAVES DE G1", cantidad: 5 },
+    { nombre: "LLAVES DE SSHH PROVEEDORES", cantidad: 4 },
+    { nombre: "VENTILADOR USADO", cantidad: 1 },
+    { nombre: "CAJA DE GRIFERIA", cantidad: 1 },
+    { nombre: "CAJA DE METAL", cantidad: 1 },
+    { nombre: "TICKETS DE PROVEEDORES", cantidad: 1 },
+    { nombre: "MONITOR", cantidad: 1 },
+    { nombre: "CPU", cantidad: 1 },
+    { nombre: "TECLADO", cantidad: 1 },
+    { nombre: "MOUSE", cantidad: 1 },
+    { nombre: "CASCOS PARA VISITA", cantidad: 6 },
+    { nombre: "FRAZADAS EN SACOS", cantidad: 17 },
+    { nombre: "TICKETS PARA HOTEL", cantidad: 7 }
+];
+
+let enseresItems = [];
+
+function obtenerMensajePlano(error) {
+    if (!error) return "No se pudo completar la operación.";
+    const base = String(error?.message || error || "").trim();
+    if (!base) return "No se pudo completar la operación.";
+    try {
+        const json = JSON.parse(base);
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+    } catch {
+        return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
+    }
+}
+
 function obtenerTextoTurno(turno) {
     if (turno === "7am-7pm") return "7am-7pm (Turno dia)";
     if (turno === "7pm-7am") return "7pm-7am (Turno noche)";
@@ -31,6 +61,41 @@ function _fechaIsoLocalE(date = new Date()) {
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
+}
+
+function _obtenerClaveFechaE(valor) {
+    if (!valor) return null;
+
+    if (typeof valor === "string") {
+        const match = valor.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+    }
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+    return _fechaIsoLocalE(fecha);
+}
+
+function _obtenerAyerIsoE(baseIso) {
+    const base = new Date(`${baseIso}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return baseIso;
+    base.setDate(base.getDate() - 1);
+    return _fechaIsoLocalE(base);
+}
+
+function _obtenerFechaOperativaTurnoE(turno, fechaIso) {
+    if (!turno || !fechaIso) return fechaIso;
+    if (turno !== "7pm-7am") return fechaIso;
+
+    const ahora = new Date();
+    const hoyIso = _fechaIsoLocalE(ahora);
+    const hora = ahora.getHours();
+
+    if (fechaIso === hoyIso && hora < 7) {
+        return _obtenerAyerIsoE(fechaIso);
+    }
+
+    return fechaIso;
 }
 
 function _extraerPvE(zona) {
@@ -93,22 +158,46 @@ async function cargarInfoGuardiasTurno() {
         if (!response || !response.ok) throw new Error("No se pudo cargar guardias");
 
         const registros = await response.json();
-        const hoy = _fechaIsoLocalE();
-        const hora = new Date().getHours();
-        const turno = (hora >= 7 && hora < 19) ? "7am-7pm" : "7pm-7am";
+        const fechaSeleccionada = document.getElementById("fecha")?.value || _fechaIsoLocalE();
+        const turnoSeleccionado = document.getElementById("turno")?.value;
+        const horaActual = new Date().getHours();
+        const turnoActual = (horaActual >= 7 && horaActual < 19) ? "7am-7pm" : "7pm-7am";
+        const turnoObjetivo = turnoSeleccionado || turnoActual;
+        const fechaOperativa = _obtenerFechaOperativaTurnoE(turnoObjetivo, fechaSeleccionada);
+
+        const tieneGuardiasReales = (datos) => {
+            const guardiasGarita = Array.isArray(datos?.guardiasGarita) ? datos.guardiasGarita : [];
+            const guardiasOtrasZonas = Array.isArray(datos?.guardiasOtrasZonas) ? datos.guardiasOtrasZonas : [];
+
+            const hayGarita = guardiasGarita.some(g => {
+                const valor = String(g || "").trim();
+                return valor && valor !== "-";
+            });
+
+            const hayZonas = guardiasOtrasZonas.some(g => {
+                const valor = String(g?.guardia || "").trim();
+                return valor && valor !== "-";
+            });
+
+            return hayGarita || hayZonas;
+        };
 
         const candidatos = (Array.isArray(registros) ? registros : [])
             .filter(r => {
                 const datos = r?.datos || {};
-                if (!datos.turno) return false;
-                const fechaDato = datos.fecha ? _fechaIsoLocalE(new Date(datos.fecha)) : null;
-                return fechaDato === hoy && datos.turno === turno;
+                const turnoDato = String(datos.turno || "").trim().toLowerCase();
+                if (!turnoDato) return false;
+
+                const fechaDato = _obtenerClaveFechaE(datos.fecha || r?.fechaIngreso || r?.fechaCreacion);
+                if (fechaDato !== fechaOperativa) return false;
+                if (turnoDato !== turnoObjetivo.toLowerCase()) return false;
+                return tieneGuardiasReales(datos);
             })
             .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
 
         const registro = candidatos[0];
         if (!registro) {
-            container.innerHTML = '<p class="text-center muted">No hay registro de guardias para hoy en el turno actual. <a href="registro_guardias_turno.html">Registrar ahora</a></p>';
+            container.innerHTML = `<p class="text-center muted">No hay registro de guardias para ${fechaOperativa} en ${obtenerTextoTurno(turnoObjetivo)}. <a href="registro_guardias_turno.html">Registrar ahora</a></p>`;
             return;
         }
 
@@ -116,31 +205,52 @@ async function cargarInfoGuardiasTurno() {
             ? new Date(registro.datos.fecha).toLocaleDateString("es-PE")
             : new Date().toLocaleDateString("es-PE");
 
-        _renderPanelGuardias(container, registro.datos || {}, turno, fechaTexto);
+        _renderPanelGuardias(container, registro.datos || {}, turnoObjetivo, fechaTexto);
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${obtenerMensajePlano(error)}</p>`;
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     verificarAutenticacion();
     const fechaInput = document.getElementById("fecha");
     const turnoInput = document.getElementById("turno");
 
-    fechaInput.value = new Date().toISOString().split("T")[0];
-    turnoInput.addEventListener("change", renderizarGuardiasTurno);
+    const ahora = new Date();
+    let fechaInicial = _fechaIsoLocalE(ahora);
+    if (ahora.getHours() < 7) {
+        fechaInicial = _obtenerAyerIsoE(fechaInicial);
+    }
+    fechaInput.value = fechaInicial;
+    turnoInput.addEventListener("change", async () => {
+        await cargarInfoGuardiasTurno();
+        await cargarItemsInicialesSegunContexto();
+    });
+    fechaInput.addEventListener("change", async () => {
+        await cargarInfoGuardiasTurno();
+        await cargarItemsInicialesSegunContexto();
+    });
 
-    renderizarGuardiasTurno();
-    agregarItem();
-    cargarRegistrosDelDia();
-    cargarInfoGuardiasTurno();
+    await cargarRegistrosDelDia();
+    await cargarInfoGuardiasTurno();
+    await cargarItemsInicialesSegunContexto();
+
+    window.addEventListener("focus", cargarInfoGuardiasTurno);
+    window.addEventListener("pageshow", cargarInfoGuardiasTurno);
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            cargarInfoGuardiasTurno();
+        }
+    });
+
     setInterval(cargarInfoGuardiasTurno, 60000);
 });
 
 function renderizarGuardiasTurno() {
     const turno = document.getElementById("turno").value;
     const container = document.getElementById("guardias-turno-container");
+    if (!container) return;
     const config = CONFIG_GUARDIAS_POR_TURNO[turno];
 
     if (!config) {
@@ -160,58 +270,214 @@ function renderizarGuardiasTurno() {
     }).join("");
 }
 
-function crearItemHtml(index) {
-    return `
-        <div class="form-row" data-item-index="${index}" style="margin-bottom: 10px;">
-            <div class="form-group" style="flex: 3;">
-                <label>Objeto *</label>
-                <input type="text" class="item-nombre" placeholder="Ejemplo: Llaves SSHH" required>
-            </div>
-            <div class="form-group" style="flex: 2;">
-                <label>Cantidad *</label>
-                <input type="number" class="item-cantidad" min="1" value="1" required>
-            </div>
-            <div class="form-group" style="display:flex;align-items:flex-end;">
-                <button type="button" class="btn-danger btn-small" onclick="eliminarItem(${index})">Quitar</button>
-            </div>
-        </div>
-    `;
+function _normalizarNombreEnser(nombre) {
+    return String(nombre || "").trim().toUpperCase();
 }
 
-function agregarItem() {
-    const container = document.getElementById("items-container");
-    const index = Date.now();
-    container.insertAdjacentHTML("beforeend", crearItemHtml(index));
+function _crearEnser(nombre = "", cantidad = 0) {
+    return {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        nombre: _normalizarNombreEnser(nombre),
+        cantidad: Number.isFinite(Number(cantidad)) ? Math.max(0, Number(cantidad)) : 0
+    };
 }
 
-function eliminarItem(index) {
-    const container = document.getElementById("items-container");
-    const filas = container.querySelectorAll("[data-item-index]");
-
-    if (filas.length <= 1) {
-        alert("Debe mantener al menos un ítem");
-        return;
+function _setEnseresItems(items) {
+    enseresItems = (items || []).map(i => _crearEnser(i.nombre, i.cantidad));
+    if (!enseresItems.length) {
+        enseresItems = [_crearEnser("", 0)];
     }
+    _renderTablaEnseres();
+}
 
-    const fila = container.querySelector(`[data-item-index='${index}']`);
-    if (fila) fila.remove();
+function _actualizarResumenEnseres() {
+    const resumen = document.getElementById("resumen-ensere-items");
+    if (!resumen) return;
+
+    const totalItems = enseresItems.length;
+    const totalUnidades = enseresItems.reduce((acc, i) => acc + (Number(i.cantidad) || 0), 0);
+    resumen.textContent = `${totalItems} items | ${totalUnidades} unidades totales`;
+}
+
+function _renderTablaEnseres() {
+    const container = document.getElementById("items-container");
+    if (!container) return;
+
+    container.innerHTML = enseresItems.map(item => `
+        <tr data-item-id="${item.id}">
+            <td>
+                <input type="text" class="enser-nombre" value="${item.nombre.replace(/"/g, "&quot;")}" placeholder="Nombre del enser" style="width:100%;" oninput="actualizarNombreEnser('${item.id}', this.value)">
+            </td>
+            <td>
+                <input type="number" class="enser-cantidad" min="0" step="1" value="${item.cantidad}" style="width:100px;" oninput="actualizarCantidadEnser('${item.id}', this.value)">
+            </td>
+            <td>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="btn-inline btn-small" onclick="ajustarCantidadEnser('${item.id}', -1)">-1</button>
+                    <button type="button" class="btn-inline btn-small" onclick="ajustarCantidadEnser('${item.id}', 1)">+1</button>
+                    <button type="button" class="btn-danger btn-small" onclick="quitarFilaEnser('${item.id}')">Quitar</button>
+                </div>
+            </td>
+        </tr>
+    `).join("");
+
+    _actualizarResumenEnseres();
+}
+
+function actualizarNombreEnser(id, valor) {
+    const item = enseresItems.find(i => i.id === id);
+    if (!item) return;
+    item.nombre = _normalizarNombreEnser(valor);
+}
+
+function actualizarCantidadEnser(id, valor) {
+    const item = enseresItems.find(i => i.id === id);
+    if (!item) return;
+    const numero = Number(valor);
+    item.cantidad = Number.isFinite(numero) ? Math.max(0, Math.trunc(numero)) : 0;
+    _actualizarResumenEnseres();
+}
+
+function ajustarCantidadEnser(id, delta) {
+    const item = enseresItems.find(i => i.id === id);
+    if (!item) return;
+    item.cantidad = Math.max(0, (Number(item.cantidad) || 0) + delta);
+    _renderTablaEnseres();
+}
+
+function agregarFilaEnser() {
+    enseresItems.push(_crearEnser("", 0));
+    _renderTablaEnseres();
+}
+
+function quitarFilaEnser(id) {
+    enseresItems = enseresItems.filter(i => i.id !== id);
+    if (!enseresItems.length) {
+        enseresItems = [_crearEnser("", 0)];
+    }
+    _renderTablaEnseres();
 }
 
 function obtenerItems() {
-    const filas = document.querySelectorAll("#items-container [data-item-index]");
-    const items = [];
+    return enseresItems
+        .map(i => ({
+            nombre: _normalizarNombreEnser(i.nombre),
+            cantidad: Number.isFinite(Number(i.cantidad)) ? Math.max(0, Math.trunc(Number(i.cantidad))) : 0
+        }))
+        .filter(i => i.nombre);
+}
 
-    filas.forEach((fila) => {
-        const nombre = fila.querySelector(".item-nombre")?.value.trim();
-        const cantidadRaw = fila.querySelector(".item-cantidad")?.value;
-        const cantidad = Number(cantidadRaw || 0);
+function cargarPlantillaBaseEnseres() {
+    _setEnseresItems(PLANTILLA_ENSERES_BASE);
+}
 
-        if (nombre || cantidadRaw) {
-            items.push({ nombre, cantidad });
+async function _obtenerRegistrosEnseres() {
+    const response = await fetchAuth(`${API_BASE}/salidas/tipo/${TIPO_OPERACION_ENSERES}`);
+    if (!response || !response.ok) {
+        const error = response ? await readApiError(response) : "No autorizado";
+        throw new Error(error || "No se pudo cargar registros de enseres");
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+}
+
+function _extraerObjetosDeRegistro(registro) {
+    const objetos = Array.isArray(registro?.datos?.objetos) ? registro.datos.objetos : [];
+    return objetos
+        .map(o => ({
+            nombre: _normalizarNombreEnser(o?.nombre || ""),
+            cantidad: Number.isFinite(Number(o?.cantidad)) ? Math.max(0, Math.trunc(Number(o.cantidad))) : 0
+        }))
+        .filter(o => o.nombre);
+}
+
+async function cargarUltimoRegistroEnseres() {
+    const turno = document.getElementById("turno")?.value;
+    const fecha = document.getElementById("fecha")?.value || _fechaIsoLocalE();
+    const fechaOperativa = _obtenerFechaOperativaTurnoE(turno, fecha);
+    const mensaje = document.getElementById("mensaje");
+
+    if (!turno) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Seleccione turno para cargar el ultimo registro";
         }
-    });
+        return;
+    }
 
-    return items;
+    try {
+        const registros = await _obtenerRegistrosEnseres();
+        const registrosTurno = registros
+            .filter(r => String(r?.datos?.turno || "").trim().toLowerCase() === turno.toLowerCase())
+            .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
+
+        const ultimo = registrosTurno.find(r => _extraerObjetosDeRegistro(r).length > 0);
+        if (!ultimo) {
+            cargarPlantillaBaseEnseres();
+            if (mensaje) {
+                mensaje.className = "";
+                mensaje.innerText = "No hay registro previo con enseres. Se cargó la plantilla base.";
+            }
+            return;
+        }
+
+        _setEnseresItems(_extraerObjetosDeRegistro(ultimo));
+        if (mensaje) {
+            mensaje.className = "";
+            const fechaUltimo = _obtenerClaveFechaE(ultimo?.datos?.fecha || ultimo?.fechaCreacion) || fechaOperativa;
+            mensaje.innerText = `Se cargaron enseres del ultimo registro (${fechaUltimo}, ${obtenerTextoTurno(turno)}).`;
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = obtenerMensajePlano(error);
+        }
+    }
+}
+
+async function cargarItemsInicialesSegunContexto() {
+    const turno = document.getElementById("turno")?.value;
+    const fecha = document.getElementById("fecha")?.value || _fechaIsoLocalE();
+    const fechaOperativa = _obtenerFechaOperativaTurnoE(turno, fecha);
+
+    if (!turno) {
+        cargarPlantillaBaseEnseres();
+        return;
+    }
+
+    try {
+        const registros = await _obtenerRegistrosEnseres();
+        const registrosTurno = registros
+            .filter(r => String(r?.datos?.turno || "").trim().toLowerCase() === turno.toLowerCase())
+            .sort((a, b) => new Date(b.fechaCreacion || 0) - new Date(a.fechaCreacion || 0));
+
+        const exacto = registrosTurno.find(r => _obtenerClaveFechaE(r?.datos?.fecha || r?.fechaCreacion) === fechaOperativa && _extraerObjetosDeRegistro(r).length > 0);
+        if (exacto) {
+            _setEnseresItems(_extraerObjetosDeRegistro(exacto));
+            return;
+        }
+
+        const previo = registrosTurno.find(r => {
+            const fechaDato = _obtenerClaveFechaE(r?.datos?.fecha || r?.fechaCreacion);
+            return fechaDato && fechaDato < fechaOperativa && _extraerObjetosDeRegistro(r).length > 0;
+        });
+
+        if (previo) {
+            _setEnseresItems(_extraerObjetosDeRegistro(previo));
+            return;
+        }
+
+        const ultimo = registrosTurno.find(r => _extraerObjetosDeRegistro(r).length > 0);
+        if (ultimo) {
+            _setEnseresItems(_extraerObjetosDeRegistro(ultimo));
+            return;
+        }
+
+        cargarPlantillaBaseEnseres();
+    } catch {
+        cargarPlantillaBaseEnseres();
+    }
 }
 
 function obtenerGuardiasTurno() {
@@ -256,6 +522,7 @@ function obtenerGuardiasTurno() {
 async function registrarEnseres() {
     const turno = document.getElementById("turno").value;
     const fecha = document.getElementById("fecha").value;
+    const fechaOperativa = _obtenerFechaOperativaTurnoE(turno, fecha);
     const horaRegistroInput = document.getElementById("horaRegistro").value;
     const observaciones = document.getElementById("observaciones").value.trim();
     const mensaje = document.getElementById("mensaje");
@@ -264,7 +531,7 @@ async function registrarEnseres() {
     mensaje.className = "";
     mensaje.innerText = "";
 
-    if (!turno || !fecha) {
+    if (!turno || !fechaOperativa) {
         mensaje.className = "error";
         mensaje.innerText = "Complete turno y fecha";
         return;
@@ -277,12 +544,12 @@ async function registrarEnseres() {
     }
 
     const tieneErroresItems = objetos.some(
-        (o) => !o.nombre || Number.isNaN(o.cantidad) || o.cantidad <= 0
+        (o) => !o.nombre || Number.isNaN(o.cantidad) || o.cantidad < 0
     );
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "Revise los ítems: nombre y cantidad > 0 son obligatorios";
+        mensaje.innerText = "Revise los ítems: nombre obligatorio y cantidad no negativa";
         return;
     }
 
@@ -291,19 +558,19 @@ async function registrarEnseres() {
             method: "POST",
             body: JSON.stringify({
                 turno,
-                fecha: new Date(`${fecha}T00:00:00`).toISOString(),
+                fecha: construirDateTimeLocal(fechaOperativa, "00:00"),
                 horaRegistro: horaRegistroInput
-                    ? new Date(`${obtenerFechaLocalISO()}T${horaRegistroInput}`).toISOString()
+                    ? construirDateTimeLocal(obtenerFechaLocalISO(), horaRegistroInput)
                     : null,
                 objetos,
-                guardiasGarita: ["-"],
+                guardiasGarita: [],
                 guardiasOtrasZonas: [],
                 observaciones: observaciones || null
             })
         });
 
         if (!response || !response.ok) {
-            const error = response ? await response.text() : "No autorizado";
+            const error = response ? await readApiError(response) : "No autorizado";
             throw new Error(error || "No se pudo guardar el registro");
         }
 
@@ -312,13 +579,13 @@ async function registrarEnseres() {
 
         document.getElementById("observaciones").value = "";
         document.getElementById("horaRegistro").value = "";
-        document.getElementById("items-container").innerHTML = "";
-        agregarItem();
+        await cargarItemsInicialesSegunContexto();
 
         await cargarRegistrosDelDia();
+        await cargarInfoGuardiasTurno();
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = obtenerMensajePlano(error);
     }
 }
 
@@ -345,7 +612,7 @@ async function cargarRegistrosDelDia() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>Fecha</th><th>Turno</th><th>Agente</th><th>Guardias Turno</th><th>Objetos</th><th>Hora Registro</th>';
+        html += '<th>Fecha / Hora Registro</th><th>Turno</th><th>Agente</th><th>Guardias Turno</th><th>Objetos</th>';
         html += '</tr></thead><tbody>';
 
         registrosHoy.forEach((r) => {
@@ -366,24 +633,28 @@ async function cargarRegistrosDelDia() {
             const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE") : "-";
             const horaRegistro = r.fechaCreacion
                 ? new Date(r.fechaCreacion).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
-                : "-";
+                : "N/A";
 
             html += "<tr>";
-            html += `<td>${fecha}</td>`;
+            html += `<td>${construirFechaHoraCelda(fecha, horaRegistro)}</td>`;
             html += `<td>${obtenerTextoTurno(datos.turno)}</td>`;
             html += `<td>${datos.agenteNombre || r.nombreCompleto || "-"}</td>`;
             html += `<td class="cell-wrap" style="max-width: 300px;">${resumenGuardias}</td>`;
             html += `<td class="cell-wrap" style="max-width: 260px;">${resumenObjetos}</td>`;
-            html += `<td>${horaRegistro}</td>`;
             html += "</tr>";
         });
 
         html += "</tbody></table></div>";
         container.innerHTML = html;
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${obtenerMensajePlano(error)}</p>`;
     }
 }
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
+}
+
 function obtenerFechaLocalISO() {
     const now = new Date();
     const y = now.getFullYear();

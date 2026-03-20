@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using System.Security.Claims;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
@@ -53,18 +54,10 @@ namespace WebApplication1.Controllers
             if (string.IsNullOrWhiteSpace(dto.Turno))
                 return BadRequest("Turno es requerido");
 
-            if (dto.Objetos == null || dto.Objetos.Count == 0)
-                return BadRequest("Debe registrar al menos un objeto");
-
-            if (dto.Objetos.Any(o => string.IsNullOrWhiteSpace(o.Nombre)))
-                return BadRequest("Todos los objetos deben tener nombre");
-
-            if (dto.Objetos.Any(o => o.Cantidad <= 0))
-                return BadRequest("La cantidad debe ser mayor a cero");
-
             var guardiasGarita = (dto.GuardiasGarita ?? new List<string>())
                 .Where(g => !string.IsNullOrWhiteSpace(g))
                 .Select(g => g.Trim())
+                .Where(g => g != "-")
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -78,8 +71,26 @@ namespace WebApplication1.Controllers
                 .Where(g => !string.IsNullOrWhiteSpace(g.guardia) && !string.IsNullOrWhiteSpace(g.zona))
                 .ToList();
 
-            if (!guardiasGarita.Any())
-                return BadRequest("Debe registrar al menos un guardia en garita");
+            var objetosNormalizados = (dto.Objetos ?? new List<RegistroInformativoEnserItemDto>())
+                .Where(o => o != null)
+                .Select(o => new
+                {
+                    nombre = (o.Nombre ?? string.Empty).Trim(),
+                    cantidad = o.Cantidad
+                })
+                .Where(o => !string.IsNullOrWhiteSpace(o.nombre))
+                .Where(o => o.nombre != "-")
+                .Where(o => o.nombre != "—")
+                .ToList();
+
+            if (objetosNormalizados.Any(o => o.cantidad < 0))
+                return BadRequest("La cantidad de cada enser no puede ser negativa");
+
+            var tieneGuardias = guardiasGarita.Any() || guardiasOtrasZonas.Any();
+            var tieneObjetos = objetosNormalizados.Any();
+
+            if (!tieneGuardias && !tieneObjetos)
+                return BadRequest("Debe registrar guardias o enseres para el turno.");
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(usuarioIdString, out var usuarioId))
@@ -127,26 +138,173 @@ namespace WebApplication1.Controllers
                 : ResolverHoraPeru(null);
 
             var fechaRegistro = dto.Fecha == default
-                ? DateTime.Now.Date
+                ? horaRegistro.Date
                 : dto.Fecha.Date;
+
+            var turnoNormalizado = (dto.Turno ?? string.Empty).Trim();
+            if (string.Equals(turnoNormalizado, "7pm-7am", StringComparison.OrdinalIgnoreCase)
+                && fechaRegistro == horaRegistro.Date
+                && horaRegistro.TimeOfDay < TimeSpan.FromHours(7))
+            {
+                // Regla operativa: entre 00:00 y 06:59, el turno noche pertenece al dia anterior.
+                fechaRegistro = fechaRegistro.AddDays(-1);
+            }
+
+            var registrosMismoTipo = await _context.OperacionDetalle
+                .Where(o => o.TipoOperacion == TipoOperacion)
+                .OrderByDescending(o => o.FechaCreacion)
+                .ToListAsync();
+
+            OperacionDetalle? registroExistente = null;
+            JsonElement datosExistentes = default;
+
+            foreach (var registro in registrosMismoTipo)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(registro.DatosJSON);
+                    var root = doc.RootElement;
+
+                    var turnoDato = root.TryGetProperty("turno", out var turnoElement) && turnoElement.ValueKind == JsonValueKind.String
+                        ? (turnoElement.GetString() ?? string.Empty).Trim()
+                        : string.Empty;
+
+                    var fechaDato = root.TryGetProperty("fecha", out var fechaElement) && fechaElement.ValueKind != JsonValueKind.Null
+                        ? fechaElement.GetDateTime().Date
+                        : (DateTime?)null;
+
+                    if (string.Equals(turnoDato, turnoNormalizado, StringComparison.OrdinalIgnoreCase) && fechaDato == fechaRegistro)
+                    {
+                        registroExistente = registro;
+                        datosExistentes = root.Clone();
+                        break;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            List<string> guardiasGaritaFinal;
+            List<object> guardiasOtrasZonasFinal;
+            List<object> objetosFinal;
+
+            if (registroExistente != null)
+            {
+                var guardiasGaritaActuales = new List<string>();
+                if (datosExistentes.TryGetProperty("guardiasGarita", out var ggActuales) && ggActuales.ValueKind == JsonValueKind.Array)
+                {
+                    guardiasGaritaActuales = ggActuales.EnumerateArray()
+                        .Where(x => x.ValueKind == JsonValueKind.String)
+                        .Select(x => (x.GetString() ?? string.Empty).Trim())
+                        .Where(x => !string.IsNullOrWhiteSpace(x) && x != "-")
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+
+                var guardiasOtrasZonasActuales = new List<object>();
+                if (datosExistentes.TryGetProperty("guardiasOtrasZonas", out var gozActuales) && gozActuales.ValueKind == JsonValueKind.Array)
+                {
+                    guardiasOtrasZonasActuales = gozActuales.EnumerateArray()
+                        .Where(x => x.ValueKind == JsonValueKind.Object)
+                        .Select(x => new
+                        {
+                            guardia = x.TryGetProperty("guardia", out var guardia) && guardia.ValueKind == JsonValueKind.String ? (guardia.GetString() ?? string.Empty).Trim() : string.Empty,
+                            zona = x.TryGetProperty("zona", out var zona) && zona.ValueKind == JsonValueKind.String ? (zona.GetString() ?? string.Empty).Trim() : string.Empty
+                        })
+                        .Where(x => !string.IsNullOrWhiteSpace(x.guardia) && !string.IsNullOrWhiteSpace(x.zona))
+                        .Select(x => (object)new { x.guardia, x.zona })
+                        .ToList();
+                }
+
+                var objetosActuales = new List<object>();
+                if (datosExistentes.TryGetProperty("objetos", out var objetosAct) && objetosAct.ValueKind == JsonValueKind.Array)
+                {
+                    objetosActuales = objetosAct.EnumerateArray()
+                        .Where(x => x.ValueKind == JsonValueKind.Object)
+                        .Select(x => new
+                        {
+                            nombre = x.TryGetProperty("nombre", out var nombre) && nombre.ValueKind == JsonValueKind.String ? (nombre.GetString() ?? string.Empty).Trim() : string.Empty,
+                            cantidad = x.TryGetProperty("cantidad", out var cantidad) && cantidad.ValueKind == JsonValueKind.Number ? cantidad.GetInt32() : 0
+                        })
+                        .Where(x => !string.IsNullOrWhiteSpace(x.nombre) && x.cantidad >= 0)
+                        .Select(x => (object)new { x.nombre, x.cantidad })
+                        .ToList();
+                }
+
+                var guardiasExistentes = guardiasGaritaActuales.Any() || guardiasOtrasZonasActuales.Any();
+
+                // Regla operativa: guardias se registran una sola vez por fecha+turno.
+                // Si intentan guardar solo guardias nuevamente para el mismo turno/fecha, se bloquea.
+                if (tieneGuardias && !tieneObjetos && guardiasExistentes)
+                    return BadRequest("Ya se registraron los guardias para este turno y fecha.");
+
+                if (!tieneGuardias && !guardiasExistentes)
+                    return BadRequest("Registre primero los guardias del turno.");
+
+                guardiasGaritaFinal = tieneGuardias
+                    ? guardiasGarita
+                    : guardiasGaritaActuales;
+
+                guardiasOtrasZonasFinal = tieneGuardias
+                    ? guardiasOtrasZonas.Select(g => (object)new { g.guardia, g.zona }).ToList()
+                    : guardiasOtrasZonasActuales;
+
+                objetosFinal = tieneObjetos
+                    ? objetosNormalizados.Select(o => (object)new { o.nombre, o.cantidad }).ToList()
+                    : objetosActuales;
+
+                var datosActualizados = new
+                {
+                    turno = turnoNormalizado,
+                    fecha = fechaRegistro,
+                    guardiaResponsable = usuario.NombreCompleto,
+                    agenteNombre = usuario.NombreCompleto,
+                    agenteDni = dniGuardia,
+                    guardiasGarita = guardiasGaritaFinal,
+                    guardiasOtrasZonas = guardiasOtrasZonasFinal,
+                    objetos = objetosFinal,
+                    observaciones = string.IsNullOrWhiteSpace(dto.Observaciones)
+                        ? (datosExistentes.TryGetProperty("observaciones", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
+                        : dto.Observaciones.Trim()
+                };
+
+                await _salidasService.ActualizarSalidaDetalle(
+                    registroExistente.Id,
+                    datosActualizados,
+                    usuarioId);
+
+                registroExistente.MovimientoId = movimiento.Id;
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    mensaje = "Registro informativo actualizado",
+                    id = registroExistente.Id,
+                    tipoOperacion = TipoOperacion
+                });
+            }
+
+            if (!tieneGuardias)
+                return BadRequest("Registre primero los guardias del turno.");
+
+            guardiasGaritaFinal = guardiasGarita;
+            guardiasOtrasZonasFinal = guardiasOtrasZonas.Select(g => (object)new { g.guardia, g.zona }).ToList();
+            objetosFinal = objetosNormalizados.Select(o => (object)new { o.nombre, o.cantidad }).ToList();
 
             var operacion = await _salidasService.CrearSalidaDetalle(
                 movimiento.Id,
                 TipoOperacion,
                 new
                 {
-                    turno = dto.Turno.Trim(),
+                    turno = turnoNormalizado,
                     fecha = fechaRegistro,
                     guardiaResponsable = usuario.NombreCompleto,
                     agenteNombre = usuario.NombreCompleto,
                     agenteDni = dniGuardia,
-                    guardiasGarita,
-                    guardiasOtrasZonas,
-                    objetos = dto.Objetos.Select(o => new
-                    {
-                        nombre = o.Nombre.Trim(),
-                        cantidad = o.Cantidad
-                    }),
+                    guardiasGarita = guardiasGaritaFinal,
+                    guardiasOtrasZonas = guardiasOtrasZonasFinal,
+                    objetos = objetosFinal,
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim()
                 },
                 usuarioId,

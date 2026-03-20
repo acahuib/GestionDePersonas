@@ -69,9 +69,42 @@ namespace WebApplication1.Controllers
                 query = query.Where(o => o.Id == proveedorSalidaId.Value);
             }
 
-            return await query
+            var candidatos = await query
                 .OrderByDescending(o => o.FechaCreacion)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
+
+            return candidatos.FirstOrDefault(ProveedorDisponibleParaDerivacion);
+        }
+
+        private static string? LeerString(JsonElement root, string propiedad)
+        {
+            return root.TryGetProperty(propiedad, out var valor) && valor.ValueKind == JsonValueKind.String
+                ? valor.GetString()
+                : null;
+        }
+
+        private static string LeerEstadoProveedor(JsonElement root)
+        {
+            var estado = LeerString(root, "estadoActual");
+            return string.IsNullOrWhiteSpace(estado) ? "EnMina" : estado;
+        }
+
+        private static bool ProveedorDisponibleParaDerivacion(Models.OperacionDetalle proveedor)
+        {
+            if (string.IsNullOrWhiteSpace(proveedor.DatosJSON)) return true;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(proveedor.DatosJSON);
+                var estado = LeerEstadoProveedor(doc.RootElement);
+                return !string.Equals(estado, "FueraTemporal", StringComparison.OrdinalIgnoreCase) &&
+                       !string.Equals(estado, "Fuera Temporal", StringComparison.OrdinalIgnoreCase) &&
+                       !string.Equals(estado, "SalidaDefinitiva", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         private async Task<bool> TieneHabitacionActiva(string dni)

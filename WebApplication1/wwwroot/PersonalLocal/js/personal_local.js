@@ -78,6 +78,7 @@ async function registrarIngreso() {
     const observaciones = document.getElementById("observaciones").value.trim();
     const tipoPersonaLocal = document.getElementById("tipoPersonaLocal")?.value || "Normal";
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -112,9 +113,7 @@ async function registrarIngreso() {
 
         // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
         // Solo enviar nombre si DNI no existe en tabla Personas
@@ -141,6 +140,8 @@ async function registrarIngreso() {
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("observaciones").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         const tipoSelect = document.getElementById("tipoPersonaLocal");
         if (tipoSelect) tipoSelect.value = "Normal";
         actualizarHintRetornando();
@@ -154,7 +155,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -282,7 +283,7 @@ async function cargarActivos() {
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
         html += '<th>Tipo</th>';
-        html += '<th>Hora Ingreso</th>';
+        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Salida Almuerzo</th>';
         html += '<th>Ingreso Almuerzo</th>';
         html += '<th>Acciones</th>';
@@ -295,7 +296,9 @@ async function cargarActivos() {
             
             // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
-            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A";
+            const horaIngreso = horaIngresoValue
+                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
             const tipoPersonaLocal = datos.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
@@ -313,11 +316,15 @@ async function cargarActivos() {
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
             html += `<td>${tipoPersonaLocal}</td>`;
-            html += `<td>${horaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
 
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
+}
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
 
             if (tipoPersonaLocal === "Retornando") {
@@ -348,12 +355,14 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     const tipoSelect = document.getElementById("tipoPersonaLocal");
+    const fechaIngreso = document.getElementById("fechaIngreso");
+    if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
     if (tipoSelect) {
         tipoSelect.addEventListener("change", actualizarHintRetornando);
         actualizarHintRetornando();

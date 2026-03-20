@@ -16,7 +16,7 @@ async function buscarPermisos() {
     // Validar DNI
     if (!dni || dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "❌ DNI debe tener 8 dígitos numéricos";
+        mensaje.innerText = "DNI debe tener 8 dígitos numéricos";
         resultadoBusqueda.style.display = "none";
         return;
     }
@@ -42,7 +42,7 @@ async function buscarPermisos() {
         renderizarPermisos(permisos);
 
     } catch (error) {
-        permisosContainer.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        permisosContainer.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
 
@@ -166,7 +166,7 @@ async function registrarSalida(permisoId) {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "Error al registrar salida");
         }
 
@@ -176,7 +176,7 @@ async function registrarSalida(permisoId) {
         buscarPermisos();
 
     } catch (error) {
-        alert(`❌ Error: ${error.message}`);
+        alert(getPlainErrorMessage(error));
     }
 }
 
@@ -192,7 +192,7 @@ async function registrarIngreso(permisoId) {
         });
 
         if (!response.ok) {
-            const error = await response.text();
+            const error = await readApiError(response);
             throw new Error(error || "Error al registrar ingreso");
         }
 
@@ -202,7 +202,7 @@ async function registrarIngreso(permisoId) {
         buscarPermisos();
 
     } catch (error) {
-        alert(`❌ Error: ${error.message}`);
+        alert(getPlainErrorMessage(error));
     }
 }
 */

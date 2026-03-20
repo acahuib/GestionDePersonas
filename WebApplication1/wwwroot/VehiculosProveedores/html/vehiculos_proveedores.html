@@ -60,6 +60,7 @@
         <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
 
         <label>Hora de Ingreso</label>
+        <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
         <input type="time" id="horaIngreso" placeholder="Dejar vacio para usar hora actual">
 
         <div>
@@ -94,6 +95,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaIngreso = document.getElementById("fechaIngreso");
+    if (fechaIngreso) fechaIngreso.value = hoy;
     cargarActivos();
 
     // Auto-actualizar lista cada 15 segundos

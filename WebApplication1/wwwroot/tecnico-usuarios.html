@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Tecnico - Gestion de Usuarios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tecnico-usuarios.css">
+</head>
+<body>
+    <div class="tech-shell">
+        <header class="tech-header">
+            <div>
+                <p class="eyebrow">MODO TECNICO</p>
+                <h1>Gestion de Usuarios</h1>
+                <p class="subtitle">Crear cuentas, editar datos, cambiar password y activar/desactivar sin borrado fisico.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn ghost" id="btnVolver">Volver a Registro Manual</button>
+                <button type="button" class="btn danger" id="btnCerrarSesion">Cerrar sesion</button>
+            </div>
+        </header>
+
+        <main class="tech-grid">
+            <section class="card card-form">
+                <h2>Crear Usuario</h2>
+                <form id="formCrearUsuario" class="form-grid">
+                    <label>
+                        Usuario login
+                        <input id="crearUsuarioLogin" maxlength="100" required>
+                    </label>
+                    <label>
+                        Nombre completo
+                        <input id="crearNombreCompleto" maxlength="200" required>
+                    </label>
+                    <label>
+                        DNI (opcional)
+                        <input id="crearDni" maxlength="20">
+                    </label>
+                    <label>
+                        Rol
+                        <input id="crearRol" list="rolesSugeridos" placeholder="Ej: Guardia, Admin, Tecnico" required>
+                    </label>
+                    <label>
+                        Password
+                        <input id="crearPassword" type="password" minlength="6" required>
+                    </label>
+                    <label class="switch-row">
+                        <input id="crearActivo" type="checkbox" checked>
+                        Cuenta activa
+                    </label>
+                    <button type="submit" class="btn primary">Crear cuenta</button>
+                </form>
+                <p class="help-text">No existe eliminacion real: para “borrar”, usa Simular borrado (desactiva la cuenta).</p>
+            </section>
+
+            <section class="card card-table">
+                <div class="table-head">
+                    <h2>Usuarios Registrados</h2>
+                    <button type="button" class="btn secondary" id="btnRecargar">Recargar</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuario</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaUsuariosBody">
+                            <tr><td colspan="7">Cargando usuarios...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="modalEditar" class="modal">
+        <form method="dialog" class="modal-content" id="formEditarUsuario">
+            <h3>Editar usuario</h3>
+            <input type="hidden" id="editarId">
+            <label>
+                Usuario login
+                <input id="editarUsuarioLogin" maxlength="100" required>
+            </label>
+            <label>
+                Nombre completo
+                <input id="editarNombreCompleto" maxlength="200" required>
+            </label>
+            <label>
+                DNI (opcional)
+                <input id="editarDni" maxlength="20">
+            </label>
+            <label>
+                Rol
+                <input id="editarRol" list="rolesSugeridos" placeholder="Rol" required>
+            </label>
+            <label>
+                Nueva password (opcional)
+                <input id="editarPassword" type="password" minlength="6" placeholder="Dejar vacio para no cambiar">
+            </label>
+
+            <div class="modal-actions">
+                <button type="button" class="btn ghost" id="btnCancelarEditar">Cancelar</button>
+                <button type="submit" class="btn primary">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <datalist id="rolesSugeridos"></datalist>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/tecnico-usuarios.js"></script>
+</body>
+</html>

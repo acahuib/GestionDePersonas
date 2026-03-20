@@ -40,6 +40,7 @@
         <textarea id="observacion" placeholder="Observacion (opcional)" rows="4"></textarea>
 
         <label>Hora de Salida</label>
+        <input type="date" id="fechaSalida" placeholder="Fecha de salida">
         <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
         <div>
@@ -64,6 +65,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaSalida = document.getElementById("fechaSalida");
+    if (fechaSalida) fechaSalida.value = hoy;
     cargarDatosDesdeUrl();
 });
 </script>

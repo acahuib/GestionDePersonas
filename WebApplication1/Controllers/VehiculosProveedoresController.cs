@@ -238,8 +238,7 @@ namespace WebApplication1.Controllers
             guardiaNombre ??= "S/N";
 
             // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
-            var zonaHorariaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
-            var ahoraLocal = dto.HoraSalida;
+            var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
             var fechaActual = ahoraLocal.Date;
 
             object ConstruirDatosActualizados(JsonElement datos, string? observacionNueva)

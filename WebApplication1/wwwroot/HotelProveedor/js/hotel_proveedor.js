@@ -1,4 +1,28 @@
 let personaEncontrada = null;
+const DESTINOS_PROVEEDOR = [
+    "RECEPCION",
+    "BALANZA",
+    "AREA COMERCIAL",
+    "LAB. QUIMICO",
+    "TRANSERV.",
+    "EN ESPERA"
+];
+
+function construirOpcionesDestinoHotel(destinoSeleccionado) {
+    const destinoNormalizado = (destinoSeleccionado || "EN ESPERA").trim().toUpperCase();
+    const opciones = [...DESTINOS_PROVEEDOR];
+
+    if (destinoNormalizado && !opciones.includes(destinoNormalizado)) {
+        opciones.unshift(destinoNormalizado);
+    }
+
+    return opciones
+        .map(opcion => {
+            const selected = opcion === destinoNormalizado ? " selected" : "";
+            return `<option value="${opcion}"${selected}>${opcion}</option>`;
+        })
+        .join("");
+}
 
 function cargarPrefillDesdeProveedor() {
     const params = new URLSearchParams(window.location.search);
@@ -78,6 +102,7 @@ async function registrarSalidaHotel() {
     const ticket = document.getElementById("ticket").value.trim();
     const fecha = document.getElementById("fecha").value;
     const horaSalidaInput = document.getElementById("horaSalida").value;
+    const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const tipoHabitacion = document.getElementById("tipoHabitacion").value.trim();
     const numeroPersonas = Number(document.getElementById("numeroPersonas").value);
     const observacion = document.getElementById("observacion").value.trim();
@@ -110,7 +135,7 @@ async function registrarSalidaHotel() {
             ticket,
             fecha: new Date(`${fecha}T00:00:00`).toISOString(),
             horaSalida: horaSalidaInput
-                ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
+                ? construirDateTimeLocal(fechaSalidaInput, horaSalidaInput)
                 : null,
             tipoHabitacion,
             numeroPersonas,
@@ -140,7 +165,9 @@ async function registrarSalidaHotel() {
         document.getElementById("nombre").disabled = false;
         document.getElementById("nombre").placeholder = "Nombre completo";
         document.getElementById("ticket").value = "";
-        document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+        document.getElementById("fecha").value = fechaLocalIso();
+        const fechaSalida = document.getElementById("fechaSalida");
+        if (fechaSalida) fechaSalida.value = fechaLocalIso();
         document.getElementById("horaSalida").value = "";
         document.getElementById("tipoHabitacion").value = "";
         document.getElementById("numeroPersonas").value = "1";
@@ -152,34 +179,21 @@ async function registrarSalidaHotel() {
         await cargarPendientesIngreso();
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
 async function registrarIngresoHotel(id) {
     if (!id) return;
 
-    const confirmar = await window.appDialog.confirm("¿Registrar ingreso desde hotel para este proveedor?", "Confirmar ingreso");
+    const confirmar = await window.appDialog.confirm("¿Registrar ingreso (retorno) desde hotel para este proveedor?", "Confirmar ingreso");
     if (!confirmar) return;
 
     try {
         const horaIngresoInput = document.getElementById("horaIngresoPendiente")?.value || "";
-        const destinoSugerido = "EN ESPERA";
-
-        const destino = await window.appDialog.prompt(
-            "Destino al que queda el proveedor al regresar del hotel:",
-            {
-                title: "Destino de regreso",
-                placeholder: "Ejemplo: EN ESPERA, BALANZA, RECEPCION",
-                defaultValue: destinoSugerido,
-                required: true,
-                requiredMessage: "Debe ingresar el destino al regreso."
-            }
-        );
-
-        if (destino === null) return;
-
-        const destinoLimpio = destino.trim();
+        const fechaIngresoInput = document.getElementById("fechaIngresoPendiente")?.value || obtenerFechaLocalISO();
+        const destinoLimpio = document.getElementById(`hotel-destino-${id}`)?.value?.trim() || "";
+        const observacionLimpia = document.getElementById(`hotel-observacion-${id}`)?.value?.trim() || "";
         if (!destinoLimpio) {
             window.appDialog.alert("Debe ingresar el destino al regreso.", "Dato requerido");
             return;
@@ -189,9 +203,10 @@ async function registrarIngresoHotel(id) {
             method: "PUT",
             body: JSON.stringify({
                 horaIngreso: horaIngresoInput
-                    ? new Date(`${obtenerFechaLocalISO()}T${horaIngresoInput}`).toISOString()
+                    ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
                     : null,
-                destino: destinoLimpio
+                destino: destinoLimpio,
+                observacion: observacionLimpia || null
             })
         });
 
@@ -202,7 +217,7 @@ async function registrarIngresoHotel(id) {
 
         await cargarPendientesIngreso();
     } catch (error) {
-        window.appDialog.alert(`Error: ${error.message}`, "Error");
+        window.appDialog.alert(`${getPlainErrorMessage(error)}`, "Error");
     }
 }
 
@@ -242,11 +257,12 @@ async function cerrarDefinitivoHotel(id) {
 
         await cargarPendientesIngreso();
     } catch (error) {
-        window.appDialog.alert(`Error: ${error.message}`, "Error");
+        window.appDialog.alert(`${getPlainErrorMessage(error)}`, "Error");
     }
 }
 
 async function cargarPendientesIngreso() {
+    asegurarEstilosRetornoHotel();
     const container = document.getElementById("lista-pendientes");
 
     try {
@@ -273,7 +289,7 @@ async function cargarPendientesIngreso() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo Habitación</th><th>Número Personas</th><th>Hora Salida</th><th>Guardia Salida</th><th>Acción</th>';
+        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo Habitación</th><th>Número Personas</th><th>Fecha / Hora Salida</th><th>Guardia Salida</th><th>Retorno</th>';
         html += '</tr></thead><tbody>';
 
         pendientes
@@ -282,7 +298,10 @@ async function cargarPendientesIngreso() {
                 const datos = item.datos || {};
                 const horaSalida = item.horaSalida
                     ? new Date(item.horaSalida).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
-                    : "-";
+                    : "N/A";
+                const fechaSalida = item.fechaSalida || datos.fechaSalida
+                    ? new Date(item.fechaSalida || datos.fechaSalida).toLocaleDateString("es-PE")
+                    : "N/A";
 
                 html += "<tr>";
                 html += `<td>${item.dni || "-"}</td>`;
@@ -290,10 +309,12 @@ async function cargarPendientesIngreso() {
                 html += `<td>${datos.ticket || "-"}</td>`;
                 html += `<td>${datos.tipoHabitacion || "-"}</td>`;
                 html += `<td>${datos.numeroPersonas || "-"}</td>`;
-                html += `<td>${horaSalida}</td>`;
+                html += `<td>${construirFechaHoraCelda(fechaSalida, horaSalida)}</td>`;
                 html += `<td>${datos.guardiaSalida || "-"}</td>`;
                 html += '<td style="display:flex; gap:6px; flex-wrap:wrap;">';
-                html += `<button class="btn-success btn-small" onclick="registrarIngresoHotel(${item.id})">Registrar Ingreso</button>`;
+                html += `<select id="hotel-destino-${item.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoHotel("EN ESPERA")}</select>`;
+                html += `<input type="text" id="hotel-observacion-${item.id}" class="retorno-input retorno-input-observacion" placeholder="Observación (opcional)">`;
+                html += `<button class="btn-success btn-small" onclick="registrarIngresoHotel(${item.id})">Ingreso (retorno)</button>`;
                 html += `<button class="btn-danger btn-small" onclick="cerrarDefinitivoHotel(${item.id})">Cerrar sin retorno</button>`;
                 html += '</td>';
                 html += "</tr>";
@@ -302,8 +323,12 @@ async function cargarPendientesIngreso() {
         html += "</tbody></table></div>";
         container.innerHTML = html;
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {
@@ -312,4 +337,26 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+function asegurarEstilosRetornoHotel() {
+    if (document.getElementById("hotel-retorno-ui-estilos")) return;
+
+    const style = document.createElement("style");
+    style.id = "hotel-retorno-ui-estilos";
+    style.textContent = `
+        .retorno-input {
+            height: 30px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        .retorno-input-destino {
+            min-width: 140px;
+        }
+        .retorno-input-observacion {
+            min-width: 180px;
+        }
+    `;
+
+    document.head.appendChild(style);
 }

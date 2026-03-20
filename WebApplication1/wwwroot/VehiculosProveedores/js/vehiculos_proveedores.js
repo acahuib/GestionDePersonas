@@ -94,6 +94,7 @@ async function registrarEntrada() {
     const cantidad = document.getElementById("cantidad").value.trim();
     const procedencia = document.getElementById("procedencia").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -134,9 +135,7 @@ async function registrarEntrada() {
 
         // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
-            // Combinar con la fecha actual para crear un datetime completo
-            const today = obtenerFechaLocalISO(); // YYYY-MM-DD
-            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+            body.horaIngreso = combinarFechaHoraLocal(fechaIngresoInput, horaIngresoInput);
         }
 
         // Solo enviar nombre completo si DNI no existe en tabla Personas
@@ -168,6 +167,8 @@ async function registrarEntrada() {
         document.getElementById("cantidad").value = "";
         document.getElementById("procedencia").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreCompleto").disabled = false;
@@ -180,7 +181,7 @@ async function registrarEntrada() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -255,7 +256,7 @@ async function cargarActivos() {
         html += '<th>Lote</th>';
         html += '<th>Cantidad</th>';
         html += '<th>Procedencia</th>';
-        html += '<th>Hora Ingreso</th>';
+        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Accion</th>';
         html += '</tr></thead><tbody>';
 
@@ -274,7 +275,9 @@ async function cargarActivos() {
             // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
             const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
-            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : "N/A";
+            const horaIngreso = horaIngresoValue
+                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                : "N/A";
             const fechaIngreso = fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
 
@@ -287,7 +290,7 @@ async function cargarActivos() {
             html += `<td>${lote}</td>`;
             html += `<td>${cantidad}</td>`;
             html += `<td>${procedencia}</td>`;
-            html += `<td>${horaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td><button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button></td>`;
             html += '</tr>';
         });
@@ -296,8 +299,12 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {
@@ -306,5 +313,19 @@ function obtenerFechaLocalISO() {
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+function combinarFechaHoraLocal(fechaIso, horaTexto) {
+    if (!fechaIso || !horaTexto) return null;
+    const horaLimpia = String(horaTexto).trim();
+    if (!horaLimpia) return null;
+
+    if (typeof construirDateTimeLocal === "function") {
+        return construirDateTimeLocal(fechaIso, horaLimpia);
+    }
+
+    return /^\d{2}:\d{2}$/.test(horaLimpia)
+        ? `${fechaIso}T${horaLimpia}:00`
+        : `${fechaIso}T${horaLimpia}`;
 }
 

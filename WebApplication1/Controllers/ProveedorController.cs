@@ -92,6 +92,45 @@ namespace WebApplication1.Controllers
             return string.IsNullOrWhiteSpace(estado) ? "EnMina" : estado;
         }
 
+        private static DateTime? LeerDateTime(JsonElement root, string propiedad)
+        {
+            if (!root.TryGetProperty(propiedad, out var valor) || valor.ValueKind == JsonValueKind.Null)
+                return null;
+
+            try
+            {
+                return valor.GetDateTime();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static bool EstaFueraTemporal(JsonElement datosActuales)
+        {
+            var estadoActual = LeerEstadoActual(datosActuales);
+            if (string.Equals(estadoActual, "FueraTemporal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(estadoActual, "Fuera Temporal", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(estadoActual, "EnMina", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(estadoActual, "SalidaDefinitiva", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var ultimaSalidaTemporal = LeerDateTime(datosActuales, "ultimaSalidaTemporal");
+            var ultimoIngresoRetorno = LeerDateTime(datosActuales, "ultimoIngresoRetorno");
+
+            if (!ultimaSalidaTemporal.HasValue) return false;
+            if (!ultimoIngresoRetorno.HasValue) return true;
+
+            return ultimaSalidaTemporal.Value > ultimoIngresoRetorno.Value;
+        }
+
         private static List<object> LeerMovimientosInternos(JsonElement root)
         {
             var lista = new List<object>();
@@ -316,9 +355,7 @@ namespace WebApplication1.Controllers
                 destinoActualizado,
                 movimientosInternos,
                 horaSalidaTemporal,
-                LeerString(datosActuales, "ultimoIngresoRetorno") is not null && datosActuales.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoEl) && ultimoIngresoEl.ValueKind != JsonValueKind.Null
-                    ? ultimoIngresoEl.GetDateTime()
-                    : (DateTime?)null);
+                LeerDateTime(datosActuales, "ultimoIngresoRetorno"));
 
             await _salidasService.ActualizarSalidaDetalle(
                 id,
@@ -371,8 +408,7 @@ namespace WebApplication1.Controllers
                 return BadRequest("Este proveedor ya tiene salida definitiva");
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
-            var estadoActual = LeerEstadoActual(datosActuales);
-            if (estadoActual != "FueraTemporal")
+            if (!EstaFueraTemporal(datosActuales))
                 return BadRequest("Solo se puede registrar ingreso si el proveedor está fuera temporalmente.");
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -403,10 +439,10 @@ namespace WebApplication1.Controllers
             var destinoActual = LeerString(datosActuales, "destino");
             var destinoActualizado = string.IsNullOrWhiteSpace(dto.Destino) ? destinoActual : dto.Destino.Trim();
 
-            var datosActualizados = ConstruirDatosProveedorConEstado(
+            var datosHistoricoActualizados = ConstruirDatosProveedorConEstado(
                 datosActuales,
                 guardiaNombre,
-                "EnMina",
+                "RetornoCompletado",
                 observacionActualizada,
                 destinoActualizado,
                 movimientosInternos,
@@ -415,12 +451,12 @@ namespace WebApplication1.Controllers
 
             await _salidasService.ActualizarSalidaDetalle(
                 id,
-                datosActualizados,
+                datosHistoricoActualizados,
                 usuarioId,
                 null,
                 null,
-                null,
-                null
+                horaIngresoRetorno,
+                horaIngresoRetorno.Date
             );
 
             var dniMovimiento = salida.Dni;
@@ -432,8 +468,30 @@ namespace WebApplication1.Controllers
                     "Entrada",
                     usuarioId);
 
-                salida.MovimientoId = movimientoEntrada.Id;
-                await _context.SaveChangesAsync();
+                await _salidasService.CrearSalidaDetalle(
+                    movimientoEntrada.Id,
+                    "Proveedor",
+                    new
+                    {
+                        procedencia = LeerString(datosActuales, "procedencia"),
+                        destino = destinoActualizado,
+                        guardiaIngreso = guardiaNombre,
+                        guardiaSalida = (string?)null,
+                        observacion = observacionActualizada,
+                        estadoActual = "EnMina",
+                        ultimaSalidaTemporal = (DateTime?)null,
+                        ultimoIngresoRetorno = (DateTime?)null,
+                        guardiaUltimaSalidaTemporal = (string?)null,
+                        guardiaUltimoIngresoRetorno = (string?)null,
+                        movimientosInternos = Array.Empty<object>()
+                    },
+                    usuarioId,
+                    horaIngresoRetorno,
+                    horaIngresoRetorno.Date,
+                    null,
+                    null,
+                    dniMovimiento
+                );
             }
 
             return Ok(new
@@ -442,6 +500,86 @@ namespace WebApplication1.Controllers
                 salidaId = id,
                 tipoOperacion = "Proveedor",
                 estado = "En mina"
+            });
+        }
+
+        // ======================================================
+        // PUT: /api/proveedor/{id}/cancelar-retorno
+        // Cierra una salida temporal sin registrar reingreso
+        // ======================================================
+        [HttpPut("{id}/cancelar-retorno")]
+        [Authorize(Roles = "Admin,Guardia")]
+        public async Task<IActionResult> CancelarRetorno(int id, ActualizarSalidaProveedorDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("OperacionDetalle no encontrada");
+
+            if (salida.TipoOperacion != "Proveedor")
+                return BadRequest("Este endpoint es solo para proveedores");
+
+            if (salida.HoraSalida.HasValue)
+                return BadRequest("Este proveedor ya tiene salida definitiva");
+
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+            if (!EstaFueraTemporal(datosActuales))
+                return BadRequest("Solo se puede cancelar retorno si el proveedor está fuera temporalmente.");
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            guardiaNombre ??= "S/N";
+
+            var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
+            var fechaActual = ahoraLocal.Date;
+
+            var movimientosInternos = LeerMovimientosInternos(datosActuales);
+            movimientosInternos.Add(new
+            {
+                tipo = "CancelacionRetorno",
+                hora = ahoraLocal,
+                guardia = guardiaNombre,
+                observacion = dto.Observacion
+            });
+
+            var ultimaSalidaTemporal = LeerDateTime(datosActuales, "ultimaSalidaTemporal");
+            var ultimoIngresoRetorno = LeerDateTime(datosActuales, "ultimoIngresoRetorno");
+            var observacionActualizada = string.IsNullOrWhiteSpace(dto.Observacion)
+                ? LeerString(datosActuales, "observacion")
+                : dto.Observacion.Trim();
+            var destinoActualizado = LeerString(datosActuales, "destino");
+
+            var datosActualizados = ConstruirDatosProveedorConEstado(
+                datosActuales,
+                guardiaNombre,
+                "SalidaDefinitiva",
+                observacionActualizada,
+                destinoActualizado,
+                movimientosInternos,
+                ultimaSalidaTemporal,
+                ultimoIngresoRetorno);
+
+            await _salidasService.ActualizarSalidaDetalle(
+                id,
+                datosActualizados,
+                usuarioId,
+                null,
+                null,
+                ahoraLocal,
+                fechaActual
+            );
+
+            return Ok(new
+            {
+                mensaje = "Retorno cancelado. Registro cerrado sin reingreso.",
+                salidaId = id,
+                tipoOperacion = "Proveedor",
+                estado = "Salida completada"
             });
         }
 

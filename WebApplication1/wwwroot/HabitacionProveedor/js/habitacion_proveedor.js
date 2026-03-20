@@ -104,6 +104,7 @@ async function registrarIngreso() {
     const cuarto = document.getElementById("cuarto").value.trim();
     const frazadas = document.getElementById("frazadas").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -139,8 +140,7 @@ async function registrarIngreso() {
         };
 
         if (horaIngresoInput) {
-            const today = obtenerFechaLocalISO();
-            body.horaIngreso = new Date(`${today}T${horaIngresoInput}`).toISOString();
+            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
         // Solo enviar nombreApellidos si DNI no existe en tabla Personas
@@ -173,6 +173,8 @@ async function registrarIngreso() {
         document.getElementById("cuarto").value = "";
         document.getElementById("frazadas").value = "";
         document.getElementById("horaIngreso").value = "";
+        const fechaIngreso = document.getElementById("fechaIngreso");
+        if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("persona-info").style.display = "none";
         const infoProveedor = document.getElementById("registro-desde-proveedor");
         if (infoProveedor) infoProveedor.style.display = "none";
@@ -185,7 +187,7 @@ async function registrarIngreso() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -275,7 +277,7 @@ async function cargarActivos() {
         html += '<th>Origen</th>';
         html += '<th>Cuarto</th>';
         html += '<th>Frazadas</th>';
-        html += '<th>Hora Ingreso</th>';
+        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -283,7 +285,12 @@ async function cargarActivos() {
             const datos = p.datos || {};
             
             const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
-            const horaIngreso = horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE') : 'N/A';
+            const horaIngreso = horaIngresoValue
+                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                : 'N/A';
+            const fechaIngreso = p.fechaIngreso || datos.fechaIngreso
+                ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE')
+                : 'N/A';
             
             const nombreCompleto = p.nombreCompleto || 'N/A';
             
@@ -297,7 +304,7 @@ async function cargarActivos() {
             html += `<td>${datos.origen || 'N/A'}</td>`;
             html += `<td>${datos.cuarto || '-'}</td>`;
             html += `<td>${datos.frazadas || '-'}</td>`;
-            html += `<td>${horaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
             html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${datos.origen || ''}', '${datos.cuarto || ''}', '${datos.frazadas || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
             html += '</td></tr>';
@@ -307,8 +314,12 @@ async function cargarActivos() {
         container.innerHTML = html;
 
     } catch (error) {
-        container.innerHTML = `<p class="text-center error">Error: ${error.message}</p>`;
+        container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {

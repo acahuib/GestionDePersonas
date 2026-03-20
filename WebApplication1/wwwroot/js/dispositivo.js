@@ -33,6 +33,6 @@ async function registrarAutomatico() {
         document.getElementById("dni").focus();
     } else {
         mensaje.className = "error";
-        mensaje.innerText = await response.text();
+        mensaje.innerText = await readApiError(response);
     }
 }

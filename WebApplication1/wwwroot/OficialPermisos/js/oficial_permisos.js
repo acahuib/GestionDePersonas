@@ -72,6 +72,7 @@ async function registrarSalida() {
     const tipo = document.getElementById("tipo").value;
     const quienAutoriza = document.getElementById("quienAutoriza").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
+    const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
 
@@ -104,8 +105,8 @@ async function registrarSalida() {
             tipo,
             quienAutoriza,
             horaSalida: horaSalidaInput
-                ? new Date(`${obtenerFechaLocalISO()}T${horaSalidaInput}`).toISOString()
-                : new Date().toISOString(),
+                ? construirDateTimeLocal(fechaSalidaInput, horaSalidaInput)
+                : ahoraLocalDateTime(),
             observacion: observacion || null
         };
 
@@ -135,6 +136,8 @@ async function registrarSalida() {
         document.getElementById("tipo").value = "";
         document.getElementById("quienAutoriza").value = "";
         document.getElementById("horaSalida").value = "";
+        const fechaSalida = document.getElementById("fechaSalida");
+        if (fechaSalida) fechaSalida.value = obtenerFechaLocalISO();
         document.getElementById("observacion").value = "";
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreCompleto").disabled = false;
@@ -147,7 +150,7 @@ async function registrarSalida() {
 
     } catch (error) {
         mensaje.className = "error";
-        mensaje.innerText = `Error: ${error.message}`;
+        mensaje.innerText = `${getPlainErrorMessage(error)}`;
     }
 }
 
@@ -239,7 +242,7 @@ async function cargarActivos() {
         html += '<th>De Dónde</th>';
         html += '<th>Tipo</th>';
         html += '<th>Autorizado por</th>';
-        html += '<th>Hora Salida</th>';
+        html += '<th>Fecha / Hora Salida</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -264,7 +267,7 @@ async function cargarActivos() {
             html += `<td>${deDonde}</td>`;
             html += `<td><span class="badge badge-info">${tipo}</span></td>`;
             html += `<td>${quienAutoriza}</td>`;
-            html += `<td>${fechaSalida} ${horaSalida}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaSalida, horaSalida)}</td>`;
             html += '<td>';
             html += `<button onclick="irAIngreso(${s.id}, '${s.dni}', '${nombreCompleto.replace(/'/g, "\\'")}', '${deDonde.replace(/'/g, "\\'")}', '${tipo.replace(/'/g, "\\'")}', '${quienAutoriza.replace(/'/g, "\\'")}', '${observacion.replace(/'/g, "\\'")}', '${fechaSalidaParam}', '${horaSalidaParam}', '${guardiaSalida.replace(/'/g, "\\'")}')" class="btn-success btn-small btn-inline">Registrar Ingreso</button>`;
             html += '</td></tr>';
@@ -276,6 +279,10 @@ async function cargarActivos() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">Error al cargar datos: ${error.message}</p>`;
     }
+}
+
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
 }
 
 function obtenerFechaLocalISO() {

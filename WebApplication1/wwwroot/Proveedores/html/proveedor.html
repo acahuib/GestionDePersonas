@@ -57,6 +57,7 @@
         <textarea id="observacion" placeholder="Observacion (opcional)" rows="4"></textarea>
 
         <label>Hora de Ingreso</label>
+        <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
         <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
         <div>
@@ -71,25 +72,11 @@
     <!-- LISTA DE PROVEEDORES ACTIVOS -->
     <div>
         <div class="toolbar">
-            <h3>Proveedores Activos (Sin salida)</h3>
+            <h3>Proveedores Activos y Retornos</h3>
             <button onclick="cargarActivos()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
         </div>
         
         <div id="lista-activos">
-            <p class="text-center muted">Cargando...</p>
-        </div>
-    </div>
-
-    <div>
-        <div class="toolbar">
-            <h3>Proveedores Fuera (Pendientes de retorno)</h3>
-            <button onclick="cargarActivos()" class="btn-inline btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
-        </div>
-
-        <label>Hora de Retorno</label>
-        <input type="time" id="horaRetornoPendiente" placeholder="Dejar vacio para usar hora actual">
-
-        <div id="lista-retornos">
             <p class="text-center muted">Cargando...</p>
         </div>
     </div>
@@ -105,6 +92,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
+    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+    const fechaIngreso = document.getElementById("fechaIngreso");
+    if (fechaIngreso) fechaIngreso.value = hoy;
     cargarActivos();
 
     // Auto-actualizar lista cada 15 segundos
