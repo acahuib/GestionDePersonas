@@ -35,10 +35,14 @@ async function login() {
         localStorage.setItem("nombreCompleto", data.nombreCompleto || usuario);
 
         // Redirigir según rol
-        if (data.rol === "Admin") {
+        const rolNormalizado = String(data.rol || "").toLowerCase();
+
+        if (rolNormalizado === "admin") {
             window.location.href = "/admin.html";
-        } else if (data.rol === "Tecnico") {
+        } else if (rolNormalizado === "tecnico") {
             window.location.href = "/proveedor-manual.html";
+        } else if (rolNormalizado === "torre") {
+            window.location.href = "/torre.html";
         } else {
             window.location.href = "/index.html";
         }

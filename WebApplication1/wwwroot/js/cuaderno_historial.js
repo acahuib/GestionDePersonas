@@ -67,6 +67,10 @@ async function initCuadernoHistorial() {
         return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || "-"}</span><span class="hora-linea">${horaTexto || "-"}</span></div>`;
     };
 
+    const construirKmCelda = (kmSalida, kmIngreso) => {
+        return `<div class="fecha-hora-celda"><span class="fecha-linea">Sal: ${kmSalida || "-"}</span><span class="hora-linea">Ing: ${kmIngreso || "-"}</span></div>`;
+    };
+
     const formatearFechaHoraDetalle = (valor) => {
         if (!valor) return "-";
         const fecha = new Date(valor);
@@ -163,6 +167,9 @@ async function initCuadernoHistorial() {
             const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
                 ? "<th>Movimientos internos</th>"
                 : "";
+            const columnaKmVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
+                ? "<th>Km (Sal/Ing)</th>"
+                : "";
 
             thead.innerHTML = `
                 <tr>
@@ -173,6 +180,7 @@ async function initCuadernoHistorial() {
                     <th>Salida</th>
                     <th>Guardia Salida</th>
                     ${columnaMovimientosProveedor}
+                    ${columnaKmVehiculoEmpresa}
                     <th>Detalle</th>
                 </tr>
             `;
@@ -242,6 +250,8 @@ async function initCuadernoHistorial() {
             movimiento: obtenerMovimiento(item, datos),
             guardia,
             detalle: detalle.html,
+            kmSalida: (datos.kmSalida ?? "-").toString(),
+            kmIngreso: (datos.kmIngreso ?? "-").toString(),
             datos,
             fechaFiltro: fechaBase ? new Date(fechaBase) : null,
             timestamp,
@@ -325,7 +335,7 @@ async function initCuadernoHistorial() {
         if (!tbody) return;
 
         const totalColumnas = vistaHistorial === "entradas-salidas"
-            ? (tipoOperacion === "Proveedor" ? 8 : 7)
+            ? (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7)
             : 6;
 
         if (!items.length) {
@@ -351,6 +361,9 @@ async function initCuadernoHistorial() {
                     const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
                         ? `<td>${construirMovimientosProveedorHtml(item.datos || {})}</td>`
                         : "";
+                    const columnaKmVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
+                        ? `<td>${construirKmCelda(item.kmSalida, item.kmIngreso)}</td>`
+                        : "";
 
                     return `
                         <tr>
@@ -361,6 +374,7 @@ async function initCuadernoHistorial() {
                             <td>${construirFechaHoraCelda(item.fechaSalida, item.horaSalida)}</td>
                             <td>${item.guardiaSalida || "-"}</td>
                             ${columnaMovimientosProveedor}
+                            ${columnaKmVehiculoEmpresa}
                             <td>${item.detalle}</td>
                         </tr>
                     `;
@@ -411,7 +425,7 @@ async function initCuadernoHistorial() {
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
                 const totalColumnas = vistaHistorial === "entradas-salidas"
-                    ? (tipoOperacion === "Proveedor" ? 8 : 7)
+                    ? (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7)
                     : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }

@@ -1,39 +1,98 @@
-// =========================================
-// CUADERNO DE HABITACIÓN PROVEEDOR
+﻿// =========================================
+// CUADERNO DE HABITACION PROVEEDOR
 // =========================================
 
 let personaEncontrada = null;
 
-function cargarPrefillDesdeProveedor() {
+function tieneValor(v) {
+    return v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
+}
+
+function obtenerFechaLocalISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function fechaLocalIso() {
+    return obtenerFechaLocalISO();
+}
+
+function construirDateTimeLocal(fecha, hora) {
+    if (!fecha || !hora) return null;
+    return `${fecha}T${hora}:00`;
+}
+
+function asegurarEstilosTablaHabitacionesCompacta() {
+    if (document.getElementById("habitacion-proveedor-activos-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "habitacion-proveedor-activos-style";
+    style.textContent = `
+        .hp-vacio { color: #6c757d; font-style: italic; }
+        .hp-persona-lista { display: grid; gap: 6px; }
+        .hp-persona-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 6px 8px;
+        }
+        .hp-persona-meta { color: #6c757d; font-size: 12px; }
+        .hp-acciones-lista { display: grid; gap: 6px; }
+        .hp-acciones-item { display: flex; gap: 6px; flex-wrap: wrap; }
+    `;
+    document.head.appendChild(style);
+}
+
+function actualizarUIByTipoIngreso() {
+    const tipo = document.getElementById("tipoIngresoHabitacion")?.value || "Proveedor";
+    const infoProveedor = document.getElementById("registro-desde-proveedor");
+    const ayuda = document.getElementById("ayudaTipoIngreso");
+
+    if (tipo === "InformativoPersonalMina") {
+        if (infoProveedor) infoProveedor.style.display = "none";
+        if (ayuda) ayuda.innerText = "Modo informativo: no requiere proveedor activo y no cierra proveedor al liberar habitacion.";
+    } else {
+        if (ayuda) ayuda.innerText = "Modo sincronizado: requiere proveedor activo y al salir puede cerrar Proveedor.";
+    }
+}
+
+async function cargarPrefillDesdeProveedor() {
     const params = new URLSearchParams(window.location.search);
     const proveedorSalidaId = params.get("proveedorSalidaId");
-    if (!proveedorSalidaId) return;
+    const dni = params.get("dni");
+    const nombreCompleto = params.get("nombreCompleto");
+    const origen = params.get("origen");
+
+    if (!proveedorSalidaId && !dni && !nombreCompleto && !origen) return;
 
     const dniInput = document.getElementById("dni");
-    const nombreApellidosInput = document.getElementById("nombreApellidos");
+    const nombreInput = document.getElementById("nombreApellidos");
     const origenInput = document.getElementById("origen");
-    const personaInfo = document.getElementById("persona-info");
-    const personaNombre = document.getElementById("persona-nombre");
+    const tipoSelect = document.getElementById("tipoIngresoHabitacion");
     const infoProveedor = document.getElementById("registro-desde-proveedor");
 
-    const dni = params.get("dni") || "";
-    const nombreCompleto = params.get("nombreCompleto") || "";
-    const origen = params.get("origen") || "";
+    if (dniInput && dni) {
+        dniInput.value = dni;
+        dniInput.readOnly = true;
+        dniInput.dataset.proveedorSalidaId = proveedorSalidaId || "";
+    }
 
-    dniInput.value = dni;
-    dniInput.readOnly = true;
-    dniInput.dataset.proveedorSalidaId = proveedorSalidaId;
+    if (nombreInput && nombreCompleto) {
+        nombreInput.value = nombreCompleto;
+        nombreInput.disabled = true;
+        personaEncontrada = { nombresApellidos: nombreCompleto };
+    }
 
-    nombreApellidosInput.value = "";
-    nombreApellidosInput.disabled = true;
-    nombreApellidosInput.placeholder = "(Tomado del proveedor activo)";
+    if (origenInput && origen) {
+        origenInput.value = origen;
+    }
 
-    origenInput.value = origen;
-
-    if (nombreCompleto) {
-        personaEncontrada = { nombre: nombreCompleto };
-        personaNombre.textContent = nombreCompleto;
-        personaInfo.style.display = "block";
+    if (tipoSelect) {
+        tipoSelect.value = "Proveedor";
+        tipoSelect.disabled = true;
     }
 
     if (infoProveedor) {
@@ -41,109 +100,105 @@ function cargarPrefillDesdeProveedor() {
     }
 }
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+    const dni = document.getElementById("dni")?.value?.trim() || "";
+    const nombreInput = document.getElementById("nombreApellidos");
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
-    const nombreApellidosInput = document.getElementById("nombreApellidos");
 
-    // Reset si DNI inválido
-    if (dni.length !== 8 || isNaN(dni)) {
-        personaInfo.style.display = "none";
+    if (!dni || dni.length < 8) {
         personaEncontrada = null;
-        nombreApellidosInput.disabled = false;
-        nombreApellidosInput.value = "";
+        if (personaInfo) personaInfo.style.display = "none";
+        if (nombreInput) {
+            nombreInput.disabled = false;
+            nombreInput.placeholder = "Solo si DNI no registrado";
+            nombreInput.value = "";
+        }
         return;
     }
 
     try {
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            
-            // Mostrar info de persona registrada
-            personaNombre.textContent = personaEncontrada.nombre;
-            personaInfo.style.display = "block";
-            
-            // Limpiar y deshabilitar campo de nombre
-            nombreApellidosInput.value = "";
-            nombreApellidosInput.disabled = true;
-            nombreApellidosInput.placeholder = "(Ya registrado)";
-            
-            // Saltar a origen
-            document.getElementById("origen").focus();
-        } else if (response.status === 404) {
-            // DNI no existe, habilitar campo para registro
+        const response = await fetchAuth(`${API_BASE}/personas/dni/${encodeURIComponent(dni)}`);
+        if (!response.ok) {
             personaEncontrada = null;
-            personaInfo.style.display = "none";
-            nombreApellidosInput.disabled = false;
-            nombreApellidosInput.placeholder = "Nombres y apellidos del proveedor";
-            nombreApellidosInput.focus();
-        } else {
-            const error = await readApiError(response);
-            throw new Error(error || `Error del servidor: ${response.status}`);
+            if (personaInfo) personaInfo.style.display = "none";
+            if (nombreInput) {
+                nombreInput.disabled = false;
+                nombreInput.placeholder = "Solo si DNI no registrado";
+            }
+            return;
         }
-    } catch (error) {
-        console.error("Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+
+        const persona = await response.json();
+        personaEncontrada = persona;
+
+        if (nombreInput) {
+            nombreInput.value = persona.nombresApellidos || "";
+            nombreInput.disabled = true;
+            nombreInput.placeholder = "Autocompletado desde Personas";
+        }
+
+        if (personaInfo && personaNombre) {
+            personaNombre.innerText = persona.nombresApellidos || "";
+            personaInfo.style.display = "block";
+        }
+    } catch {
         personaEncontrada = null;
-        personaInfo.style.display = "none";
-        nombreApellidosInput.disabled = false;
-        nombreApellidosInput.placeholder = "Nombres y apellidos del proveedor";
+        if (personaInfo) personaInfo.style.display = "none";
+        if (nombreInput) {
+            nombreInput.disabled = false;
+            nombreInput.placeholder = "Solo si DNI no registrado";
+        }
     }
 }
 
-// Registrar INGRESO a habitación
 async function registrarIngreso() {
-    const dni = document.getElementById("dni").value.trim();
-    const proveedorSalidaId = document.getElementById("dni").dataset.proveedorSalidaId;
-    const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
-    const origen = document.getElementById("origen").value.trim();
-    const cuarto = document.getElementById("cuarto").value.trim();
-    const frazadas = document.getElementById("frazadas").value.trim();
-    const horaIngresoInput = document.getElementById("horaIngreso").value;
-    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
+    if (mensaje) {
+        mensaje.className = "";
+        mensaje.innerText = "";
+    }
 
-    mensaje.innerText = "";
-    mensaje.className = "";
+    const tipoIngreso = document.getElementById("tipoIngresoHabitacion")?.value || "Proveedor";
+    const dni = document.getElementById("dni")?.value?.trim() || "";
+    const nombreApellidos = document.getElementById("nombreApellidos")?.value?.trim() || "";
+    const origen = document.getElementById("origen")?.value?.trim() || "";
+    const cuarto = document.getElementById("cuarto")?.value?.trim() || "";
+    const frazadas = document.getElementById("frazadas")?.value?.trim() || "";
+    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || "";
+    const horaIngresoInput = document.getElementById("horaIngreso")?.value || "";
+    const proveedorSalidaId = document.getElementById("dni")?.dataset?.proveedorSalidaId || "";
 
-    // Validaciones
     if (!dni || !origen) {
-        mensaje.className = "error";
-        mensaje.innerText = "Complete DNI y Origen";
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Complete los campos obligatorios (DNI y Origen).";
+        }
         return;
     }
 
-    if (dni.length !== 8 || isNaN(dni)) {
-        mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
-        return;
-    }
-
-    // Si no hay persona encontrada, validar nombre
     if (!personaEncontrada && !nombreApellidos) {
-        mensaje.className = "error";
-        mensaje.innerText = "DNI no registrado. Complete Nombres y Apellidos para registrar la persona.";
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Ingrese nombres y apellidos si el DNI no existe en Personas.";
+        }
         return;
     }
 
     try {
         const body = {
             dni,
-            proveedorSalidaId: proveedorSalidaId ? parseInt(proveedorSalidaId) : null,
+            tipoIngreso,
+            proveedorSalidaId: proveedorSalidaId ? parseInt(proveedorSalidaId, 10) : null,
             origen,
             cuarto: cuarto || null,
-            frazadas: frazadas ? parseInt(frazadas) : null
+            frazadas: frazadas ? parseInt(frazadas, 10) : null
         };
 
-        if (horaIngresoInput) {
+        if (horaIngresoInput && fechaIngresoInput) {
             body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
-        // Solo enviar nombreApellidos si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombresApellidos = nombreApellidos;
         }
@@ -159,13 +214,21 @@ async function registrarIngreso() {
         }
 
         const data = await response.json();
-        mensaje.className = "success";
-        mensaje.innerText = `Ingreso registrado: ${data.nombreCompleto} - ${data.dni}`;
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = `Ingreso registrado: ${data.nombreCompleto} - ${data.dni}`;
+        }
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("dni").readOnly = false;
         document.getElementById("dni").dataset.proveedorSalidaId = "";
+
+        const tipoIngresoSelect = document.getElementById("tipoIngresoHabitacion");
+        if (tipoIngresoSelect) {
+            tipoIngresoSelect.value = "Proveedor";
+            tipoIngresoSelect.disabled = false;
+        }
+
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("nombreApellidos").disabled = false;
         document.getElementById("nombreApellidos").placeholder = "Solo si DNI no registrado";
@@ -173,38 +236,48 @@ async function registrarIngreso() {
         document.getElementById("cuarto").value = "";
         document.getElementById("frazadas").value = "";
         document.getElementById("horaIngreso").value = "";
+
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
-        document.getElementById("persona-info").style.display = "none";
+
+        const personaInfo = document.getElementById("persona-info");
+        if (personaInfo) personaInfo.style.display = "none";
+
         const infoProveedor = document.getElementById("registro-desde-proveedor");
         if (infoProveedor) infoProveedor.style.display = "none";
+
         window.history.replaceState({}, document.title, "habitacion_proveedor.html");
+        actualizarUIByTipoIngreso();
         personaEncontrada = null;
 
-        // Actualizar lista
-        cargarActivos();
+        await cargarActivos();
         document.getElementById("dni").focus();
-
     } catch (error) {
-        mensaje.className = "error";
-        mensaje.innerText = `${getPlainErrorMessage(error)}`;
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
     }
 }
 
-// Navegar a la pantalla de salida con datos precargados
 function irASalida(salidaId, dni, nombreCompleto, origen, cuarto, frazadas, fechaIngreso, horaIngreso, guardiaIngreso) {
     const params = new URLSearchParams({
         salidaId,
         dni,
         nombreCompleto,
         origen,
-        cuarto: cuarto || '',
-        frazadas: frazadas || '',
+        cuarto: cuarto || "",
+        frazadas: frazadas || "",
         fechaIngreso,
         horaIngreso,
         guardiaIngreso
     });
     window.location.href = `habitacion_proveedor_salida.html?${params.toString()}`;
+}
+
+function irAEditarActivo(salidaId) {
+    const origen = "HabitacionProveedor/html/habitacion_proveedor.html";
+    window.location.href = `/edicion_activo.html?id=${encodeURIComponent(salidaId)}&tipo=HabitacionProveedor&origen=${encodeURIComponent(origen)}`;
 }
 
 function irAHabitacionDesdeProveedor(proveedorSalidaId, dni, nombreCompleto, origen) {
@@ -214,118 +287,275 @@ function irAHabitacionDesdeProveedor(proveedorSalidaId, dni, nombreCompleto, ori
         nombreCompleto,
         origen
     });
-
     window.location.href = `../../HabitacionProveedor/html/habitacion_proveedor.html?${params.toString()}`;
 }
 
-// Cargar proveedores en habitación (sin ingreso)
-async function cargarActivos() {
-    const container = document.getElementById("lista-activos");
+function esProveedorFueraTemporal(datos) {
+    const estado = String(datos?.estadoActual || "").trim().toLowerCase();
+    if (estado === "fueratemporal" || estado === "fuera temporal") return true;
+
+    const ultimaSalidaTemporal = datos?.ultimaSalidaTemporal ? new Date(datos.ultimaSalidaTemporal) : null;
+    const ultimoIngresoRetorno = datos?.ultimoIngresoRetorno ? new Date(datos.ultimoIngresoRetorno) : null;
+
+    if (!ultimaSalidaTemporal || Number.isNaN(ultimaSalidaTemporal.getTime())) return false;
+    if (!ultimoIngresoRetorno || Number.isNaN(ultimoIngresoRetorno.getTime())) return true;
+
+    return ultimaSalidaTemporal.getTime() > ultimoIngresoRetorno.getTime();
+}
+
+async function ingresarPersonaDesdeProveedor() {
+    const mensaje = document.getElementById("mensaje");
+    if (mensaje) {
+        mensaje.className = "";
+        mensaje.innerText = "";
+    }
 
     try {
-        const response = await fetchAuth(`${API_BASE}/salidas/tipo/HabitacionProveedor`);
+        const [responseProveedor, responseHabitacion] = await Promise.all([
+            fetchAuth(`${API_BASE}/salidas/tipo/Proveedor`),
+            fetchAuth(`${API_BASE}/salidas/tipo/HabitacionProveedor`)
+        ]);
 
-        if (!response.ok) {
-            const error = await readApiError(response);
-            throw new Error(error || "Error al cargar proveedores en habitación");
+        if (!responseProveedor || !responseProveedor.ok) {
+            throw new Error(responseProveedor ? await readApiError(responseProveedor) : "No se pudo consultar proveedores activos");
+        }
+        if (!responseHabitacion || !responseHabitacion.ok) {
+            throw new Error(responseHabitacion ? await readApiError(responseHabitacion) : "No se pudo consultar habitaciones activas");
         }
 
-        const salidas = await response.json();
+        const salidasProveedor = await responseProveedor.json();
+        const salidasHabitacion = await responseHabitacion.json();
 
-        if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay proveedores en habitación en este momento</p>';
-            return;
-        }
-
-        // Tomar el último registro por DNI y mostrar solo los que no tengan ingreso
-        const ultimosPorDni = new Map();
-
-        salidas.forEach(s => {
+        const activosProveedorPorDni = new Map();
+        (Array.isArray(salidasProveedor) ? salidasProveedor : []).forEach((s) => {
             const dni = (s.dni || "").trim();
             if (!dni) return;
 
-            const fecha = s.fechaCreacion ? new Date(s.fechaCreacion).getTime() : 0;
-            const actual = ultimosPorDni.get(dni);
+            const datos = s.datos || {};
+            if (esProveedorFueraTemporal(datos)) return;
 
+            const horaIngreso = s.horaIngreso || datos.horaIngreso;
+            const horaSalida = s.horaSalida || datos.horaSalida;
+            if (!tieneValor(horaIngreso) || tieneValor(horaSalida)) return;
+
+            const fecha = s.fechaCreacion ? new Date(s.fechaCreacion).getTime() : 0;
+            const actual = activosProveedorPorDni.get(dni);
             if (!actual || fecha >= actual._fecha) {
-                ultimosPorDni.set(dni, { ...s, _fecha: fecha });
+                activosProveedorPorDni.set(dni, { ...s, _fecha: fecha });
             }
         });
 
-        const proveedores = Array.from(ultimosPorDni.values()).filter(s => {
-            const datos = s.datos || {};
-            
-            const horaIngreso = s.horaIngreso || datos.horaIngreso;
-            const horaSalida = s.horaSalida || datos.horaSalida;
-
-            const tieneIngreso = horaIngreso !== null && horaIngreso !== undefined && String(horaIngreso).trim() !== "" && String(horaIngreso).toLowerCase() !== "null";
-            const tieneSalida = horaSalida !== null && horaSalida !== undefined && String(horaSalida).trim() !== "" && String(horaSalida).toLowerCase() !== "null";
-
-            return tieneIngreso && !tieneSalida;
+        const dniConHabitacionActiva = new Set();
+        (Array.isArray(salidasHabitacion) ? salidasHabitacion : []).forEach((h) => {
+            const datos = h.datos || {};
+            const horaIngreso = h.horaIngreso || datos.horaIngreso;
+            const horaSalida = h.horaSalida || datos.horaSalida;
+            if (tieneValor(horaIngreso) && !tieneValor(horaSalida)) {
+                const dni = (h.dni || "").trim();
+                if (dni) dniConHabitacionActiva.add(dni);
+            }
         });
 
-        if (proveedores.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay proveedores en habitación en este momento</p>';
+        const disponibles = Array.from(activosProveedorPorDni.values())
+            .filter((p) => !dniConHabitacionActiva.has((p.dni || "").trim()))
+            .sort((a, b) => {
+                const fechaA = a?.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
+                const fechaB = b?.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
+                return fechaB - fechaA;
+            });
+
+        if (!disponibles.length) {
+            if (mensaje) {
+                mensaje.className = "error";
+                mensaje.innerText = "No hay proveedores disponibles para ingresar a habitacion.";
+            }
             return;
         }
+
+        if (disponibles.length === 1) {
+            const unico = disponibles[0];
+            const origen = unico?.datos?.procedencia || unico?.datos?.destino || "";
+            irAHabitacionDesdeProveedor(unico.id, unico.dni || "", unico.nombreCompleto || "", origen);
+            return;
+        }
+
+        const lista = disponibles
+            .slice(0, 12)
+            .map((p) => `${p.dni} - ${p.nombreCompleto || "N/A"}`)
+            .join("\n");
+
+        const dniSeleccionado = window.prompt(
+            `Ingrese DNI para precargar ingreso a habitacion:\n\n${lista}${disponibles.length > 12 ? "\n..." : ""}`,
+            ""
+        );
+
+        if (dniSeleccionado === null) return;
+
+        const dniLimpio = String(dniSeleccionado).trim();
+        const seleccionado = disponibles.find((p) => String(p.dni || "").trim() === dniLimpio);
+        if (!seleccionado) {
+            if (mensaje) {
+                mensaje.className = "error";
+                mensaje.innerText = "DNI no encontrado en proveedores disponibles.";
+            }
+            return;
+        }
+
+        const origen = seleccionado?.datos?.procedencia || seleccionado?.datos?.destino || "";
+        irAHabitacionDesdeProveedor(seleccionado.id, seleccionado.dni || "", seleccionado.nombreCompleto || "", origen);
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function cargarActivos() {
+    asegurarEstilosTablaHabitacionesCompacta();
+    const container = document.getElementById("lista-activos");
+    if (!container) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/HabitacionProveedor`);
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "Error al cargar habitaciones";
+            throw new Error(error || "Error al cargar habitaciones");
+        }
+
+        const salidas = await response.json();
+        const activos = (Array.isArray(salidas) ? salidas : []).filter((s) => {
+            const datos = s.datos || {};
+            const horaIngreso = s.horaIngreso || datos.horaIngreso;
+            const horaSalida = s.horaSalida || datos.horaSalida;
+            return tieneValor(horaIngreso) && !tieneValor(horaSalida);
+        });
+
+        const habitaciones = new Map();
+        for (let i = 1; i <= 9; i += 1) {
+            habitaciones.set(`Cuarto ${i}`, []);
+        }
+
+        const normalizarCuarto = (valor) => {
+            const texto = String(valor || "").trim();
+            if (!texto) return null;
+            const soloNumero = texto.match(/\d+/);
+            if (!soloNumero) return null;
+            const nro = Number(soloNumero[0]);
+            if (!Number.isInteger(nro) || nro < 1 || nro > 9) return null;
+            return `Cuarto ${nro}`;
+        };
+
+        activos
+            .sort((a, b) => {
+                const tA = new Date(a.horaIngreso || a.datos?.horaIngreso || a.fechaCreacion || 0).getTime();
+                const tB = new Date(b.horaIngreso || b.datos?.horaIngreso || b.fechaCreacion || 0).getTime();
+                return tA - tB;
+            })
+            .forEach((p) => {
+                const datos = p.datos || {};
+                const cuartoNormalizado = normalizarCuarto(datos.cuarto);
+                if (!cuartoNormalizado || !habitaciones.has(cuartoNormalizado)) return;
+
+                const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
+                const fechaIngresoValue = p.fechaIngreso || datos.fechaIngreso;
+                habitaciones.get(cuartoNormalizado).push({
+                    id: p.id,
+                    dni: p.dni || "N/A",
+                    nombreCompleto: p.nombreCompleto || "N/A",
+                    tipoIngreso: datos.tipoIngreso || "Proveedor",
+                    origen: datos.origen || "N/A",
+                    cuarto: cuartoNormalizado,
+                    frazadas: datos.frazadas || "-",
+                    guardiaIngreso: datos.guardiaIngreso || "S/N",
+                    fechaIngresoParam: fechaIngresoValue || "",
+                    horaIngresoParam: horaIngresoValue || "",
+                    fechaIngreso: fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString("es-PE") : "N/A",
+                    horaIngreso: horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "N/A"
+                });
+            });
+
+        const escapar = (txt) => String(txt ?? "").replace(/'/g, "\\'").replace(/\"/g, "&quot;");
 
         let html = '<div class="table-wrapper">';
         html += '<table class="table">';
         html += '<thead><tr>';
-        html += '<th>DNI</th>';
-        html += '<th>Nombre</th>';
-        html += '<th>Origen</th>';
-        html += '<th>Cuarto</th>';
+        html += '<th>Habitacion</th>';
+        html += '<th>Persona</th>';
+        html += '<th>Fecha / Hora Registro</th>';
         html += '<th>Frazadas</th>';
-        html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
-        proveedores.forEach(p => {
-            const datos = p.datos || {};
-            
-            const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
-            const horaIngreso = horaIngresoValue
-                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
-                : 'N/A';
-            const fechaIngreso = p.fechaIngreso || datos.fechaIngreso
-                ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE')
-                : 'N/A';
-            
-            const nombreCompleto = p.nombreCompleto || 'N/A';
-            
-            const fechaIngresoParam = p.fechaIngreso || datos.fechaIngreso || '';
-            const horaIngresoParam = p.horaIngreso || datos.horaIngreso || '';
-            const guardiaIngresoParam = datos.guardiaIngreso || '';
-            
+        for (let i = 1; i <= 9; i += 1) {
+            const cuarto = `Cuarto ${i}`;
+            const ocupantes = habitaciones.get(cuarto) || [];
+
+            if (!ocupantes.length) {
+                html += '<tr>';
+                html += `<td><strong>${cuarto}</strong></td>`;
+                html += '<td class="hp-vacio">Habitacion vacia</td>';
+                html += '<td class="hp-vacio">-</td>';
+                html += '<td class="hp-vacio">-</td>';
+                html += '<td class="hp-vacio">Sin acciones</td>';
+                html += '</tr>';
+                continue;
+            }
+
+            const personasHtml = ocupantes.map((o) => {
+                const tipoIngresoTexto = o.tipoIngreso === "InformativoPersonalMina"
+                    ? "Informativo personal mina"
+                    : "Proveedor sincronizado";
+                return `
+                    <div class="hp-persona-item">
+                        <div><strong>${o.nombreCompleto}</strong> (${o.dni})</div>
+                        <div class="hp-persona-meta">${tipoIngresoTexto} | Origen: ${o.origen}</div>
+                    </div>
+                `;
+            }).join("");
+
+            const fechaHoraHtml = `<div class="hp-persona-lista">${ocupantes
+                .map((o) => `<div class="hp-persona-item"><strong>${o.fechaIngreso}</strong><div class="hp-persona-meta">${o.horaIngreso}</div></div>`)
+                .join("")}</div>`;
+
+            const frazadasHtml = `<div class="hp-persona-lista">${ocupantes
+                .map((o) => `<div class="hp-persona-item"><strong>${o.frazadas}</strong><div class="hp-persona-meta">${o.nombreCompleto}</div></div>`)
+                .join("")}</div>`;
+
+            const accionesHtml = `<div class="hp-acciones-lista">${ocupantes
+                .map((o) => {
+                    const textoSalida = o.tipoIngreso === "InformativoPersonalMina"
+                        ? "Liberar (informativo)"
+                        : "Salida proveedor";
+                    return `
+                        <div class="hp-acciones-item">
+                            <button class="btn-danger btn-small btn-inline" onclick="irASalida(${o.id}, '${escapar(o.dni)}', '${escapar(o.nombreCompleto)}', '${escapar(o.origen)}', '${escapar(o.cuarto)}', '${escapar(o.frazadas)}', '${escapar(o.fechaIngresoParam)}', '${escapar(o.horaIngresoParam)}', '${escapar(o.guardiaIngreso)}')">${textoSalida}</button>
+                            <button class="btn-warning btn-small btn-inline" onclick="irAEditarActivo(${o.id})">Editar</button>
+                        </div>
+                    `;
+                })
+                .join("")}</div>`;
+
             html += '<tr>';
-            html += `<td>${p.dni || 'N/A'}</td>`;
-            html += `<td>${nombreCompleto}</td>`;
-            html += `<td>${datos.origen || 'N/A'}</td>`;
-            html += `<td>${datos.cuarto || '-'}</td>`;
-            html += `<td>${datos.frazadas || '-'}</td>`;
-            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
-            html += '<td>';
-            html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${datos.origen || ''}', '${datos.cuarto || ''}', '${datos.frazadas || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
-            html += '</td></tr>';
-        });
+            html += `<td><strong>${cuarto}</strong></td>`;
+            html += `<td><div class="hp-persona-lista">${personasHtml}</div></td>`;
+            html += `<td>${fechaHoraHtml}</td>`;
+            html += `<td>${frazadasHtml}</td>`;
+            html += `<td>${accionesHtml}</td>`;
+            html += '</tr>';
+        }
 
         html += '</tbody></table></div>';
         container.innerHTML = html;
-
     } catch (error) {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
 
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
-}
-
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
+document.addEventListener("DOMContentLoaded", () => {
+    const tipoIngreso = document.getElementById("tipoIngresoHabitacion");
+    if (tipoIngreso) {
+        tipoIngreso.addEventListener("change", actualizarUIByTipoIngreso);
+    }
+    actualizarUIByTipoIngreso();
+});

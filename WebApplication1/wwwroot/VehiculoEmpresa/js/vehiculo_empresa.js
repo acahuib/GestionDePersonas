@@ -275,7 +275,7 @@ async function cargarActivos() {
         html += '<th>Placa</th>';
         html += '<th>Tipo</th>';
         html += '<th>Estado Pendiente</th>';
-        html += '<th>Km</th>';
+        html += '<th>Km (Sal/Ing)</th>';
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
         html += '<th>Fecha / Hora</th>';
@@ -297,9 +297,9 @@ async function cargarActivos() {
 
             const pendienteDe = tieneSalida ? "Ingreso" : "Salida";
             const modo = tieneSalida ? "ingreso" : "salida";
-            const km = tieneSalida
-                ? (datos.kmSalida ?? "N/A")
-                : (datos.kmIngreso ?? "N/A");
+            const kmSalida = (datos.kmSalida ?? "-");
+            const kmIngreso = (datos.kmIngreso ?? "-");
+            const km = `${kmSalida} / ${kmIngreso}`;
             const origen = tieneSalida
                 ? (datos.origenSalida || datos.origen || "N/A")
                 : (datos.origenIngreso || datos.origen || "N/A");

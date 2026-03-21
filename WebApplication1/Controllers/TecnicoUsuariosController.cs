@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using System.Security.Claims;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
@@ -18,6 +19,7 @@ namespace WebApplication1.Controllers
         {
             "Admin",
             "Guardia",
+            "Torre",
             "Tecnico"
         };
 
@@ -78,7 +80,7 @@ namespace WebApplication1.Controllers
             var nombreCompleto = (dto.NombreCompleto ?? string.Empty).Trim();
             var password = (dto.Password ?? string.Empty).Trim();
             var rol = (dto.Rol ?? string.Empty).Trim();
-            var dni = string.IsNullOrWhiteSpace(dto.Dni) ? null : dto.Dni.Trim();
+            var dni = string.IsNullOrWhiteSpace(dto.Dni) ? string.Empty : dto.Dni.Trim();
 
             if (string.IsNullOrWhiteSpace(usuarioLogin))
                 return BadRequest("UsuarioLogin es obligatorio.");
@@ -95,9 +97,25 @@ namespace WebApplication1.Controllers
             if (rol.Length > 100)
                 return BadRequest("Rol excede el máximo permitido.");
 
+            if (usuarioLogin.Length > 100)
+                return BadRequest("UsuarioLogin excede el máximo permitido.");
+
+            if (nombreCompleto.Length > 200)
+                return BadRequest("NombreCompleto excede el máximo permitido.");
+
+            if (dni.Length > 20)
+                return BadRequest("DNI excede el máximo permitido.");
+
             var existe = await _context.Usuarios.AnyAsync(u => u.UsuarioLogin.ToLower() == usuarioLogin.ToLower());
             if (existe)
                 return Conflict("Ya existe un usuario con ese login.");
+
+            if (!string.IsNullOrWhiteSpace(dni))
+            {
+                var dniExiste = await _context.Usuarios.AnyAsync(u => u.Dni != null && u.Dni.ToLower() == dni.ToLower());
+                if (dniExiste)
+                    return Conflict("Ya existe un usuario con ese DNI.");
+            }
 
             var nuevo = new Usuario
             {
@@ -110,7 +128,16 @@ namespace WebApplication1.Controllers
             };
 
             _context.Usuarios.Add(nuevo);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                var mensaje = ObtenerMensajeDb(ex);
+                return StatusCode(StatusCodes.Status409Conflict, new { mensaje });
+            }
 
             return Ok(new
             {
@@ -140,6 +167,9 @@ namespace WebApplication1.Controllers
             if (!string.IsNullOrWhiteSpace(dto.UsuarioLogin))
             {
                 var loginNuevo = dto.UsuarioLogin.Trim();
+                if (loginNuevo.Length > 100)
+                    return BadRequest("UsuarioLogin excede el máximo permitido.");
+
                 var duplicado = await _context.Usuarios.AnyAsync(u => u.Id != id && u.UsuarioLogin.ToLower() == loginNuevo.ToLower());
                 if (duplicado)
                     return Conflict("Ya existe un usuario con ese login.");
@@ -149,7 +179,11 @@ namespace WebApplication1.Controllers
 
             if (!string.IsNullOrWhiteSpace(dto.NombreCompleto))
             {
-                usuario.NombreCompleto = dto.NombreCompleto.Trim();
+                var nombreNuevo = dto.NombreCompleto.Trim();
+                if (nombreNuevo.Length > 200)
+                    return BadRequest("NombreCompleto excede el máximo permitido.");
+
+                usuario.NombreCompleto = nombreNuevo;
             }
 
             if (dto.Rol != null)
@@ -166,7 +200,18 @@ namespace WebApplication1.Controllers
 
             if (dto.Dni != null)
             {
-                usuario.Dni = string.IsNullOrWhiteSpace(dto.Dni) ? null : dto.Dni.Trim();
+                var dniNuevo = string.IsNullOrWhiteSpace(dto.Dni) ? string.Empty : dto.Dni.Trim();
+                if (dniNuevo.Length > 20)
+                    return BadRequest("DNI excede el máximo permitido.");
+
+                if (!string.IsNullOrWhiteSpace(dniNuevo))
+                {
+                    var dniDuplicado = await _context.Usuarios.AnyAsync(u => u.Id != id && u.Dni != null && u.Dni.ToLower() == dniNuevo.ToLower());
+                    if (dniDuplicado)
+                        return Conflict("Ya existe un usuario con ese DNI.");
+                }
+
+                usuario.Dni = dniNuevo;
             }
 
             if (!string.IsNullOrWhiteSpace(dto.Password))
@@ -174,7 +219,15 @@ namespace WebApplication1.Controllers
                 usuario.PasswordHash = PasswordSecurity.HashPassword(dto.Password.Trim());
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                var mensaje = ObtenerMensajeDb(ex);
+                return StatusCode(StatusCodes.Status409Conflict, new { mensaje });
+            }
 
             return Ok(new
             {
@@ -256,6 +309,23 @@ namespace WebApplication1.Controllers
                 return id;
 
             return null;
+        }
+
+        private static string ObtenerMensajeDb(DbUpdateException ex)
+        {
+            var sqlEx = ex.InnerException as SqlException;
+            if (sqlEx != null)
+            {
+                // 2601/2627: índice único duplicado en SQL Server
+                if (sqlEx.Number == 2601 || sqlEx.Number == 2627)
+                    return "Conflicto de datos: ya existe un usuario con los mismos datos únicos (usuario o DNI).";
+
+                // 8152/2628: datos exceden longitud de columna
+                if (sqlEx.Number == 8152 || sqlEx.Number == 2628)
+                    return "Uno o más campos exceden la longitud permitida por la base de datos.";
+            }
+
+            return "No se pudo guardar el usuario por una restricción de base de datos.";
         }
     }
 }

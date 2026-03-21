@@ -36,6 +36,13 @@
             <strong>Proveedor activo detectado:</strong> este registro solo abre Habitación Proveedor y no vuelve a registrar ingreso a mina.
         </div>
 
+        <label>Tipo de Registro de Habitación *</label>
+        <select id="tipoIngresoHabitacion">
+            <option value="Proveedor">Proveedor (sincronizado)</option>
+            <option value="InformativoPersonalMina">Informativo personal mina</option>
+        </select>
+        <p class="muted m-0" id="ayudaTipoIngreso">Modo sincronizado: requiere proveedor activo y al salir puede cerrar Proveedor.</p>
+
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
 
@@ -50,7 +57,18 @@
         <input type="text" id="origen" placeholder="Origen">
 
         <label>Cuarto</label>
-        <input type="text" id="cuarto" placeholder="Número de cuarto (opcional)">
+        <select id="cuarto">
+            <option value="">Seleccione cuarto (opcional)</option>
+            <option value="Cuarto 1">Cuarto 1</option>
+            <option value="Cuarto 2">Cuarto 2</option>
+            <option value="Cuarto 3">Cuarto 3</option>
+            <option value="Cuarto 4">Cuarto 4</option>
+            <option value="Cuarto 5">Cuarto 5</option>
+            <option value="Cuarto 6">Cuarto 6</option>
+            <option value="Cuarto 7">Cuarto 7</option>
+            <option value="Cuarto 8">Cuarto 8</option>
+            <option value="Cuarto 9">Cuarto 9</option>
+        </select>
 
         <label>Frazadas</label>
         <input type="number" id="frazadas" placeholder="Número de frazadas (opcional)" min="0">
@@ -68,12 +86,14 @@
         <p id="mensaje"></p>
     </div>
 
-    <!-- Lista de proveedores en habitación (sin salida) -->
+    <!-- Tabla de habitaciones (sin salida) -->
     <div>
         <div class="toolbar">
-            <h3>Proveedores en Habitación (Sin salida registrada)</h3>
-            <button onclick="cargarActivos()" class="btn-inline btn-small">
-                <img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            <h3>Estado de Habitaciones (Cuarto 1 al 9)</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="cargarActivos()" class="btn-inline btn-small">
+                    <img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+            </div>
         </div>
         
         <div id="lista-activos">
