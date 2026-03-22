@@ -20,6 +20,13 @@ function fechaLocalIso() {
     return obtenerFechaLocalISO();
 }
 
+function horaLocalHHmm() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+}
+
 function construirDateTimeLocal(fecha, hora) {
     if (!fecha || !hora) return null;
     return `${fecha}T${hora}:00`;
@@ -166,7 +173,7 @@ async function registrarIngreso() {
     const cuarto = document.getElementById("cuarto")?.value?.trim() || "";
     const frazadas = document.getElementById("frazadas")?.value?.trim() || "";
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || "";
-    const horaIngresoInput = document.getElementById("horaIngreso")?.value || "";
+    let horaIngresoInput = document.getElementById("horaIngreso")?.value || "";
     const proveedorSalidaId = document.getElementById("dni")?.dataset?.proveedorSalidaId || "";
 
     if (!dni || !origen) {
@@ -186,6 +193,19 @@ async function registrarIngreso() {
     }
 
     try {
+        if (!horaIngresoInput) {
+            horaIngresoInput = horaLocalHHmm();
+            const horaIngresoEl = document.getElementById("horaIngreso");
+            if (horaIngresoEl) horaIngresoEl.value = horaIngresoInput;
+        }
+
+        let fechaIngresoFinal = fechaIngresoInput;
+        if (!fechaIngresoFinal) {
+            fechaIngresoFinal = obtenerFechaLocalISO();
+            const fechaIngresoEl = document.getElementById("fechaIngreso");
+            if (fechaIngresoEl) fechaIngresoEl.value = fechaIngresoFinal;
+        }
+
         const body = {
             dni,
             tipoIngreso,
@@ -195,9 +215,7 @@ async function registrarIngreso() {
             frazadas: frazadas ? parseInt(frazadas, 10) : null
         };
 
-        if (horaIngresoInput && fechaIngresoInput) {
-            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
-        }
+        body.horaIngreso = construirDateTimeLocal(fechaIngresoFinal, horaIngresoInput);
 
         if (!personaEncontrada) {
             body.nombresApellidos = nombreApellidos;
@@ -235,7 +253,7 @@ async function registrarIngreso() {
         document.getElementById("origen").value = "";
         document.getElementById("cuarto").value = "";
         document.getElementById("frazadas").value = "";
-        document.getElementById("horaIngreso").value = "";
+        document.getElementById("horaIngreso").value = horaLocalHHmm();
 
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();

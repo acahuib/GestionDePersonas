@@ -75,7 +75,7 @@
 
         <label>Hora de Ingreso</label>
         <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
-        <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
+        <input type="time" id="horaIngreso" placeholder="Hora actual por defecto (editable)">
 
         <div>
             <button onclick="registrarIngreso()" class="btn-success btn-block">
@@ -116,6 +116,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = hoy;
+    const horaIngreso = document.getElementById("horaIngreso");
+    if (horaIngreso && typeof horaLocalHHmm === "function" && !horaIngreso.value) {
+        horaIngreso.value = horaLocalHHmm();
+    }
     crearSidebar();
     cargarPrefillDesdeProveedor();
     cargarActivos();

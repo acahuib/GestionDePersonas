@@ -93,12 +93,17 @@ namespace WebApplication1.Controllers
                     Encoding.UTF8.GetBytes(jwtKey));
 
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                var tokenDurationHours = _config.GetValue<int?>("Jwt:TokenDurationHours") ?? 12;
+                if (tokenDurationHours < 1)
+                {
+                    tokenDurationHours = 12;
+                }
 
                 var token = new JwtSecurityToken(
                     issuer: _config["Jwt:Issuer"],
                     audience: _config["Jwt:Audience"],
                     claims: claims,
-                    expires: DateTime.UtcNow.AddHours(4),
+                    expires: DateTime.UtcNow.AddHours(tokenDurationHours),
                     signingCredentials: creds
                 );
 

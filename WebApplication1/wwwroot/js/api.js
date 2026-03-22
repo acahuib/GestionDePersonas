@@ -358,6 +358,89 @@ function addEnterListener(elementId, callback) {
     }
 }
 
+function horaLocalHHmm(date = new Date()) {
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+}
+
+function completarHorasActualesVacias(scope = document) {
+    if (!scope || typeof scope.querySelectorAll !== "function") return;
+
+    const horaActual = horaLocalHHmm();
+    const inputsHora = scope.querySelectorAll('input[type="time"]');
+    inputsHora.forEach((input) => {
+        if (!(input instanceof HTMLInputElement)) return;
+        if (input.disabled || input.readOnly) return;
+        if ((input.dataset?.autoNow || "").toLowerCase() === "off") return;
+        if (!input.value) {
+            input.value = horaActual;
+        }
+    });
+}
+
+function resolverScopeEntrada(target) {
+    if (!(target instanceof Element)) return document;
+    return target.closest("form, .form-card, .container") || document;
+}
+
+function habilitarHoraActualPorDefectoGlobal() {
+    document.addEventListener("click", (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+
+        const accion = target.closest('button, input[type="submit"], input[type="button"]');
+        if (!accion) return;
+
+        completarHorasActualesVacias(resolverScopeEntrada(accion));
+    }, true);
+
+    document.addEventListener("submit", (e) => {
+        const form = e.target;
+        completarHorasActualesVacias(resolverScopeEntrada(form instanceof Element ? form : null));
+    }, true);
+}
+
+function intentarEjecutarAccionPrincipal(scope) {
+    if (!scope || typeof scope.querySelectorAll !== "function") return false;
+
+    const botones = Array.from(scope.querySelectorAll('button, input[type="submit"], input[type="button"]'))
+        .filter((el) => el instanceof HTMLElement)
+        .filter((el) => !el.hasAttribute("disabled"))
+        .filter((el) => el.offsetParent !== null);
+
+    const candidatos = botones.filter((el) => {
+        const texto = (el.textContent || "").toLowerCase();
+        const onclick = (el.getAttribute("onclick") || "").toLowerCase();
+        const id = (el.id || "").toLowerCase();
+
+        const esAccionRegistro =
+            texto.includes("registrar") ||
+            texto.includes("ingreso") ||
+            texto.includes("entrada") ||
+            texto.includes("salida") ||
+            texto.includes("guardar") ||
+            texto.includes("completar") ||
+            onclick.includes("registrar") ||
+            onclick.includes("ingreso") ||
+            onclick.includes("salida") ||
+            onclick.includes("guardar") ||
+            onclick.includes("completar") ||
+            id.includes("registrar") ||
+            id.includes("guardar") ||
+            id.includes("salida") ||
+            id.includes("ingreso");
+
+        return esAccionRegistro;
+    });
+
+    const botonObjetivo = candidatos[0] || botones[0];
+    if (!botonObjetivo) return false;
+
+    botonObjetivo.click();
+    return true;
+}
+
 // ===============================
 // ENTER => SIGUIENTE CAMPO (GLOBAL)
 // ===============================
@@ -397,12 +480,21 @@ function habilitarEnterComoTab() {
             if (next instanceof HTMLInputElement && ["text", "number", "time", "date", "email", "search", "tel", "url", "password"].includes((next.type || "").toLowerCase())) {
                 next.select();
             }
+            return;
+        }
+
+        // Si Enter se presiona en el ultimo campo editable, ejecutar la accion principal.
+        if (idx === focusables.length - 1) {
+            e.preventDefault();
+            intentarEjecutarAccionPrincipal(formScope);
         }
     });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     habilitarEnterComoTab();
+    completarHorasActualesVacias();
+    habilitarHoraActualPorDefectoGlobal();
 });
 
 // ===============================
