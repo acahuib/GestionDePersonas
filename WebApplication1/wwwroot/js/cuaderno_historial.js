@@ -160,10 +160,71 @@ async function initCuadernoHistorial() {
         };
     };
 
+    const parsearDetalleOcurrencia = (texto) => {
+        const raw = String(texto || "").trim();
+        const base = {
+            tipo: "Persona",
+            placa: "",
+            tractoPlaca: "",
+            plataformaPlaca: "",
+            chofer: "",
+            empresa: "",
+            procedencia: "",
+            destino: "",
+            observacion: raw
+        };
+
+        if (!raw.startsWith("[TIPO:")) return base;
+
+        const partes = raw.split("|").map((p) => p.trim()).filter(Boolean);
+        const tipoMatch = partes[0]?.match(/^\[TIPO:\s*([^\]]+)\]$/i);
+        const tipoRaw = (tipoMatch?.[1] || "").trim().toUpperCase();
+        if (tipoRaw === "VEHICULAR") base.tipo = "Vehicular";
+        if (tipoRaw === "ENCAPSULADO") base.tipo = "Encapsulado";
+
+        const extraer = (clave) => {
+            const prefijo = `${clave.toLowerCase()}:`;
+            const parte = partes.find((p) => p.toLowerCase().startsWith(prefijo));
+            return parte ? parte.substring(parte.indexOf(":") + 1).trim() : "";
+        };
+
+        base.placa = extraer("Placa");
+        base.tractoPlaca = extraer("Tracto Placa 1");
+        base.plataformaPlaca = extraer("Plataforma Placa 2");
+        base.chofer = extraer("Chofer");
+        base.empresa = extraer("Empresa/Proveedor");
+        base.procedencia = extraer("Procedencia");
+        base.destino = extraer("Destino");
+        base.observacion = extraer("Observacion") || raw;
+
+        return base;
+    };
+
     const renderHeaders = () => {
         if (!thead) return;
 
         if (vistaHistorial === "entradas-salidas") {
+            if (tipoOperacion === "Ocurrencias") {
+                thead.innerHTML = `
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Ingreso</th>
+                        <th>Guardia Ingreso</th>
+                        <th>Salida</th>
+                        <th>Guardia Salida</th>
+                        <th>Tipo</th>
+                        <th>Placa(s)</th>
+                        <th>Chofer</th>
+                        <th>Empresa/Proveedor</th>
+                        <th>Procedencia</th>
+                        <th>Destino</th>
+                        <th>Observacion</th>
+                    </tr>
+                `;
+                return;
+            }
+
             const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
                 ? "<th>Movimientos internos</th>"
                 : "";
@@ -228,6 +289,9 @@ async function initCuadernoHistorial() {
         const fechaSalida = item.fechaSalida || datos.fechaSalida || horaSalida;
         const fechaBase = fechaIngreso || fechaSalida || datos.fecha || item.fechaCreacion || null;
         const detalle = construirDetalle(datos);
+        const ocurrenciaDetalle = tipoOperacion === "Ocurrencias"
+            ? parsearDetalleOcurrencia(datos.ocurrencia)
+            : null;
 
         const guardia = datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.guardiaNombre || datos.guardiaResponsable || datos.agenteNombre || "-";
         const guardiaIngreso = datos.guardiaIngreso || datos.guardiaEntradaAlmuerzo || datos.agenteNombre || datos.guardiaResponsable || "-";
@@ -250,6 +314,7 @@ async function initCuadernoHistorial() {
             movimiento: obtenerMovimiento(item, datos),
             guardia,
             detalle: detalle.html,
+            ocurrenciaDetalle,
             kmSalida: (datos.kmSalida ?? "-").toString(),
             kmIngreso: (datos.kmIngreso ?? "-").toString(),
             datos,
@@ -335,7 +400,7 @@ async function initCuadernoHistorial() {
         if (!tbody) return;
 
         const totalColumnas = vistaHistorial === "entradas-salidas"
-            ? (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7)
+            ? (tipoOperacion === "Ocurrencias" ? 13 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7))
             : 6;
 
         if (!items.length) {
@@ -358,6 +423,31 @@ async function initCuadernoHistorial() {
         const rows = visibles
             .map((item) => {
                 if (vistaHistorial === "entradas-salidas") {
+                    if (tipoOperacion === "Ocurrencias") {
+                        const detalle = item.ocurrenciaDetalle || {};
+                        const placas = detalle.tipo === "Encapsulado"
+                            ? [detalle.tractoPlaca, detalle.plataformaPlaca].filter(Boolean).join(" / ")
+                            : (detalle.placa || "");
+
+                        return `
+                            <tr>
+                                <td>${item.dni}</td>
+                                <td>${item.nombre}</td>
+                                <td>${construirFechaHoraCelda(item.fechaIngreso, item.horaIngreso)}</td>
+                                <td>${item.guardiaIngreso || "-"}</td>
+                                <td>${construirFechaHoraCelda(item.fechaSalida, item.horaSalida)}</td>
+                                <td>${item.guardiaSalida || "-"}</td>
+                                <td>${detalle.tipo || "Persona"}</td>
+                                <td>${placas || "-"}</td>
+                                <td>${detalle.chofer || "-"}</td>
+                                <td>${detalle.empresa || "-"}</td>
+                                <td>${detalle.procedencia || "-"}</td>
+                                <td>${detalle.destino || "-"}</td>
+                                <td class="cell-wrap" style="max-width: 240px;">${detalle.observacion || "-"}</td>
+                            </tr>
+                        `;
+                    }
+
                     const columnaMovimientosProveedor = tipoOperacion === "Proveedor"
                         ? `<td>${construirMovimientosProveedorHtml(item.datos || {})}</td>`
                         : "";
@@ -425,7 +515,7 @@ async function initCuadernoHistorial() {
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
                 const totalColumnas = vistaHistorial === "entradas-salidas"
-                    ? (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7)
+                    ? (tipoOperacion === "Ocurrencias" ? 13 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7))
                     : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }

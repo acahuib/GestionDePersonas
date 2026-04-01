@@ -40,7 +40,7 @@ async function login() {
         if (rolNormalizado === "admin") {
             window.location.href = "/admin.html";
         } else if (rolNormalizado === "tecnico") {
-            window.location.href = "/proveedor-manual.html";
+            window.location.href = "/manual.html";
         } else if (rolNormalizado === "torre") {
             window.location.href = "/torre.html";
         } else {

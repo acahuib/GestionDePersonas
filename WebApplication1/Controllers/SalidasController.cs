@@ -141,9 +141,6 @@ namespace WebApplication1.Controllers
             var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
             if (persona == null)
             {
-                if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
-                    return BadRequest("Si el DNI no existe, debe ingresar Nombres y Apellidos.");
-
                 var tipoPersona = dto.TipoOperacion switch
                 {
                     "VehiculosProveedores" => "VehiculoProveedor",
@@ -152,14 +149,36 @@ namespace WebApplication1.Controllers
                     _ => dto.TipoOperacion
                 };
 
-                persona = new Models.Persona
+                // En modo técnico, salida puede registrarse aunque el DNI no exista en Personas.
+                if (string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
                 {
-                    Dni = dniNormalizado,
-                    Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}".Trim(),
-                    Tipo = tipoPersona
-                };
-                _context.Personas.Add(persona);
-                await _context.SaveChangesAsync();
+                    var nombreFallback = $"MODO TECNICO {dniNormalizado}";
+                    if (!string.IsNullOrWhiteSpace(dto.Nombres) || !string.IsNullOrWhiteSpace(dto.Apellidos))
+                        nombreFallback = $"{dto.Nombres?.Trim()} {dto.Apellidos?.Trim()}".Trim();
+
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = nombreFallback,
+                        Tipo = tipoPersona
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
+                        return BadRequest("Si el DNI no existe, debe ingresar Nombres y Apellidos.");
+
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}".Trim(),
+                        Tipo = tipoPersona
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
             }
 
             var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -194,6 +213,18 @@ namespace WebApplication1.Controllers
                     ? "Salida"
                     : "Info";
             var esControlBienes = string.Equals(dto.TipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase);
+
+            // Si se va a registrar una nueva entrada/info técnica para el DNI,
+            // cerrar previamente operaciones pendientes del mismo DNI para evitar doble abierto.
+            if (tipoMovimiento is "Entrada" or "Info")
+            {
+                await CerrarOperacionesPendientesModoTecnico(
+                    dniNormalizado,
+                    dto.FechaHoraManual,
+                    guardiaNombre,
+                    usuarioId,
+                    dto.Observacion);
+            }
 
             if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
             {
@@ -572,6 +603,60 @@ namespace WebApplication1.Controllers
             }
 
             return ids;
+        }
+
+        private async Task CerrarOperacionesPendientesModoTecnico(
+            string dni,
+            DateTime fechaCierre,
+            string guardiaNombre,
+            int? usuarioId,
+            string? observacion)
+        {
+            var pendientes = await _context.OperacionDetalle
+                .Where(o => o.Dni == dni)
+                .Where(o =>
+                    (o.HoraIngreso.HasValue && !o.HoraSalida.HasValue) ||
+                    (!o.HoraIngreso.HasValue && o.HoraSalida.HasValue))
+                .OrderByDescending(o => o.FechaCreacion)
+                .ToListAsync();
+
+            if (!pendientes.Any())
+                return;
+
+            foreach (var operacion in pendientes)
+            {
+                JsonObject datosJson;
+                try
+                {
+                    datosJson = JsonNode.Parse(operacion.DatosJSON)?.AsObject() ?? new JsonObject();
+                }
+                catch
+                {
+                    datosJson = new JsonObject();
+                }
+
+                if (operacion.HoraIngreso.HasValue && !operacion.HoraSalida.HasValue)
+                {
+                    operacion.HoraSalida = fechaCierre;
+                    operacion.FechaSalida = fechaCierre.Date;
+                    datosJson["guardiaSalida"] = guardiaNombre;
+                    if (!string.IsNullOrWhiteSpace(observacion))
+                        datosJson["observacionSalida"] = observacion;
+                }
+                else if (!operacion.HoraIngreso.HasValue && operacion.HoraSalida.HasValue)
+                {
+                    operacion.HoraIngreso = fechaCierre;
+                    operacion.FechaIngreso = fechaCierre.Date;
+                    datosJson["guardiaIngreso"] = guardiaNombre;
+                    if (!string.IsNullOrWhiteSpace(observacion))
+                        datosJson["observacionIngreso"] = observacion;
+                }
+
+                operacion.UsuarioId = usuarioId;
+                operacion.DatosJSON = datosJson.ToJsonString();
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private static List<BienControlEstado> LeerBienesDesdeJson(string datosJson)

@@ -440,8 +440,12 @@ async function fetchAuth(url, options = {}) {
         "Authorization": `Bearer ${token}`
     };
 
+    const method = String(options.method || "GET").toUpperCase();
+    const bodyNormalizado = normalizarBodyMayusculas(options.body, method, url);
+
     const response = await fetch(url, {
         ...options,
+        body: bodyNormalizado,
         headers
     });
 
@@ -459,12 +463,73 @@ async function fetchAuth(url, options = {}) {
         return response;
     }
 
-    const method = String(options.method || "GET").toUpperCase();
     if (window.unsavedChangesGuard && method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
         window.unsavedChangesGuard.markSaved();
     }
 
     return response;
+}
+
+function esPaginaCuadernoFormulario() {
+    const pathname = String(window.location.pathname || "").toLowerCase();
+    const esCuaderno = /\/[^/]+\/html\/[^/]+\.html$/.test(pathname);
+    const esHistorial = pathname.includes("_historial.html");
+    return esCuaderno && !esHistorial;
+}
+
+function campoDebeMantenerCasePorKey(key) {
+    const k = String(key || "").toLowerCase();
+    return k.includes("password") || k.includes("clave") || k.includes("token");
+}
+
+function normalizarStringMayus(valor) {
+    return String(valor ?? "").toUpperCase();
+}
+
+function normalizarObjetoMayusculas(obj, parentKey = "") {
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === "string") {
+        if (campoDebeMantenerCasePorKey(parentKey)) return obj;
+        return normalizarStringMayus(obj);
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map((item) => normalizarObjetoMayusculas(item, parentKey));
+    }
+
+    if (typeof obj === "object") {
+        const salida = {};
+        Object.keys(obj).forEach((key) => {
+            salida[key] = normalizarObjetoMayusculas(obj[key], key);
+        });
+        return salida;
+    }
+
+    return obj;
+}
+
+function normalizarBodyMayusculas(body, method, url) {
+    if (!body) return body;
+    if (!esPaginaCuadernoFormulario()) return body;
+    if (["GET", "HEAD", "OPTIONS"].includes(String(method || "").toUpperCase())) return body;
+    if (String(url || "").toLowerCase().includes("/auth/login")) return body;
+
+    try {
+        if (typeof body === "string") {
+            const parsed = JSON.parse(body);
+            const normalizado = normalizarObjetoMayusculas(parsed);
+            return JSON.stringify(normalizado);
+        }
+
+        if (typeof body === "object") {
+            return JSON.stringify(normalizarObjetoMayusculas(body));
+        }
+    } catch {
+        return body;
+    }
+
+    return body;
 }
 
 // ===============================
@@ -701,6 +766,57 @@ function habilitarHoraActualPorDefectoGlobal() {
     }, true);
 }
 
+function debeForzarMayusculaEnCampo(el) {
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
+    if (el.disabled || el.readOnly) return false;
+    if (el.dataset?.preserveCase === "true") return false;
+
+    const id = String(el.id || "").toLowerCase();
+    const name = String(el.name || "").toLowerCase();
+    const type = (el instanceof HTMLInputElement ? String(el.type || "").toLowerCase() : "textarea");
+
+    if (type === "password" || type === "email" || type === "date" || type === "time" || type === "number" || type === "hidden") return false;
+    if (id.includes("password") || id.includes("clave") || name.includes("password") || name.includes("clave")) return false;
+
+    return true;
+}
+
+function forzarMayusculasGlobal() {
+    if (!esPaginaCuadernoFormulario()) return;
+
+    const aplicar = (el) => {
+        if (!debeForzarMayusculaEnCampo(el)) return;
+
+        const valorActual = String(el.value || "");
+        const valorMayus = normalizarStringMayus(valorActual);
+        if (valorMayus === valorActual) return;
+
+        const inicio = el.selectionStart;
+        const fin = el.selectionEnd;
+        el.value = valorMayus;
+
+        if (typeof inicio === "number" && typeof fin === "number") {
+            try {
+                el.setSelectionRange(inicio, fin);
+            } catch {
+                // Algunos tipos de input no permiten setSelectionRange.
+            }
+        }
+    };
+
+    document.addEventListener("input", (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+        aplicar(target);
+    }, true);
+
+    document.addEventListener("blur", (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+        aplicar(target);
+    }, true);
+}
+
 function intentarEjecutarAccionPrincipal(scope) {
     if (!scope || typeof scope.querySelectorAll !== "function") return false;
 
@@ -792,6 +908,7 @@ function habilitarEnterComoTab() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    forzarMayusculasGlobal();
     habilitarEnterComoTab();
     completarFechasActualesVacias();
     completarHorasActualesVacias();

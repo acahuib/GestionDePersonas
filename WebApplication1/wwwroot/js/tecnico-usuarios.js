@@ -249,7 +249,7 @@
 
         if (btnVolver) {
             btnVolver.addEventListener("click", () => {
-                window.location.href = "/proveedor-manual.html";
+                window.location.href = "/manual.html";
             });
         }
 

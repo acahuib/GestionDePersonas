@@ -42,18 +42,76 @@
             <h3>Registrar Ocurrencia</h3>
             <p class="muted">Para casos especiales</p>
 
-            <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
-            <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
+            <label>Tipo de Ocurrencia *</label>
+            <select id="tipoOcurrencia" onchange="cambiarTipoOcurrencia()">
+                <option value="Persona">Persona</option>
+                <option value="Vehicular">Vehicular</option>
+                <option value="Encapsulado">Encapsulado</option>
+            </select>
 
-            <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
-                <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
+            <div id="bloquePersona">
+                <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
+                <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
+
+                <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                    <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
+                </div>
+
+                <label>Nombre <span class="muted">(Opcional)</span></label>
+                <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
+
+                <label>Descripción de Ocurrencia *</label>
+                <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4"></textarea>
             </div>
 
-            <label>Nombre <span class="muted">(Opcional)</span></label>
-            <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
+            <div id="bloqueVehicular" style="display:none;">
+                <label>DNI</label>
+                <input type="text" id="vehiculoDni" placeholder="DNI del chofer (opcional)" maxlength="8">
 
-            <label>Descripción de Ocurrencia *</label>
-            <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4" required></textarea>
+                <label>Placa *</label>
+                <input type="text" id="vehiculoPlaca" placeholder="Placa del vehículo">
+
+                <label>Nombre del Chofer *</label>
+                <input type="text" id="vehiculoChofer" placeholder="Nombre completo del chofer">
+
+                <label>Empresa / Proveedor *</label>
+                <input type="text" id="vehiculoEmpresa" placeholder="Empresa o proveedor">
+
+                <label>Procedencia *</label>
+                <input type="text" id="vehiculoProcedencia" placeholder="Lugar de procedencia">
+
+                <label>Destino *</label>
+                <input type="text" id="vehiculoDestino" placeholder="Lugar de destino">
+
+                <label>Observación *</label>
+                <textarea id="vehiculoObservacion" placeholder="Detalle de la ocurrencia vehicular" rows="4"></textarea>
+            </div>
+
+            <div id="bloqueEncapsulado" style="display:none;">
+                <label>DNI</label>
+                <input type="text" id="encapsuladoDni" placeholder="DNI del chofer (opcional)" maxlength="8">
+
+                <label>Tracto Placa 1 *</label>
+                <input type="text" id="encapsuladoTractoPlaca" placeholder="Placa del tracto">
+
+                <label>Plataforma Placa 2 *</label>
+                <input type="text" id="encapsuladoPlataformaPlaca" placeholder="Placa de la plataforma">
+
+                <label>Nombre del Chofer *</label>
+                <input type="text" id="encapsuladoChofer" placeholder="Nombre completo del chofer">
+
+                <label>Empresa / Proveedor *</label>
+                <input type="text" id="encapsuladoEmpresa" placeholder="Empresa o proveedor">
+
+                <label>Procedencia *</label>
+                <input type="text" id="encapsuladoProcedencia" placeholder="Lugar de procedencia">
+
+                <label>Destino *</label>
+                <input type="text" id="encapsuladoDestino" placeholder="Lugar de destino">
+
+                <label>Observación *</label>
+                <textarea id="encapsuladoObservacion" placeholder="Detalle de la ocurrencia encapsulada" rows="4"></textarea>
+            </div>
 
             <label>Hora de Ingreso</label>
             <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
@@ -104,12 +162,16 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(cargarActivos, 30000);
     setInterval(cargarInfoGuardiasTurno, 60000);
 
+    cambiarTipoOcurrencia();
+
     // Enter listeners
     const dniInput = document.getElementById("dni");
     dniInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            buscarPersonaPorDni();
+            if (obtenerTipoOcurrenciaSeleccionado() === "Persona") {
+                buscarPersonaPorDni();
+            }
         }
     });
     

@@ -4,6 +4,207 @@
 
 let personaEncontrada = null;
 
+function obtenerTipoOcurrenciaSeleccionado() {
+    const tipo = document.getElementById("tipoOcurrencia")?.value || "Persona";
+    return tipo;
+}
+
+function cambiarTipoOcurrencia() {
+    const tipo = obtenerTipoOcurrenciaSeleccionado();
+    const bloquePersona = document.getElementById("bloquePersona");
+    const bloqueVehicular = document.getElementById("bloqueVehicular");
+    const bloqueEncapsulado = document.getElementById("bloqueEncapsulado");
+
+    if (!bloquePersona || !bloqueVehicular || !bloqueEncapsulado) return;
+
+    bloquePersona.style.display = tipo === "Persona" ? "block" : "none";
+    bloqueVehicular.style.display = tipo === "Vehicular" ? "block" : "none";
+    bloqueEncapsulado.style.display = tipo === "Encapsulado" ? "block" : "none";
+
+    if (tipo !== "Persona") {
+        personaEncontrada = null;
+        const personaInfo = document.getElementById("persona-info");
+        const nombreInput = document.getElementById("nombre");
+        if (personaInfo) personaInfo.style.display = "none";
+        if (nombreInput) {
+            nombreInput.disabled = false;
+            nombreInput.placeholder = "Nombre o descripción de la persona";
+        }
+    }
+}
+
+function leerValor(id) {
+    return document.getElementById(id)?.value?.trim() || "";
+}
+
+function validarDniOpcional(dni) {
+    return !dni || (dni.length === 8 && !isNaN(dni));
+}
+
+function construirDescripcionPorTipo() {
+    const tipo = obtenerTipoOcurrenciaSeleccionado();
+
+    if (tipo === "Persona") {
+        const dni = leerValor("dni");
+        const nombre = leerValor("nombre");
+        const ocurrencia = leerValor("ocurrencia");
+
+        if (!ocurrencia) {
+            return { ok: false, error: "La descripción de ocurrencia es obligatoria" };
+        }
+
+        if (!validarDniOpcional(dni)) {
+            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        }
+
+        return {
+            ok: true,
+            tipo,
+            dni,
+            nombre,
+            ocurrencia
+        };
+    }
+
+    if (tipo === "Vehicular") {
+        const dni = leerValor("vehiculoDni");
+        const placa = leerValor("vehiculoPlaca");
+        const chofer = leerValor("vehiculoChofer");
+        const empresa = leerValor("vehiculoEmpresa");
+        const procedencia = leerValor("vehiculoProcedencia");
+        const destino = leerValor("vehiculoDestino");
+        const observacion = leerValor("vehiculoObservacion");
+
+        if (!validarDniOpcional(dni)) {
+            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        }
+
+        if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
+            return { ok: false, error: "Complete todos los campos obligatorios de Vehicular" };
+        }
+
+        const ocurrencia = [
+            "[TIPO: VEHICULAR]",
+            `DNI: ${dni || "S/N"}`,
+            `Placa: ${placa}`,
+            `Chofer: ${chofer}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(" | ");
+
+        return {
+            ok: true,
+            tipo,
+            dni,
+            nombre: chofer,
+            ocurrencia
+        };
+    }
+
+    const dni = leerValor("encapsuladoDni");
+    const tractoPlaca = leerValor("encapsuladoTractoPlaca");
+    const plataformaPlaca = leerValor("encapsuladoPlataformaPlaca");
+    const chofer = leerValor("encapsuladoChofer");
+    const empresa = leerValor("encapsuladoEmpresa");
+    const procedencia = leerValor("encapsuladoProcedencia");
+    const destino = leerValor("encapsuladoDestino");
+    const observacion = leerValor("encapsuladoObservacion");
+
+    if (!validarDniOpcional(dni)) {
+        return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+    }
+
+    if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
+        return { ok: false, error: "Complete todos los campos obligatorios de Encapsulado" };
+    }
+
+    const ocurrencia = [
+        "[TIPO: ENCAPSULADO]",
+        `DNI: ${dni || "S/N"}`,
+        `Tracto Placa 1: ${tractoPlaca}`,
+        `Plataforma Placa 2: ${plataformaPlaca}`,
+        `Chofer: ${chofer}`,
+        `Empresa/Proveedor: ${empresa}`,
+        `Procedencia: ${procedencia}`,
+        `Destino: ${destino}`,
+        `Observacion: ${observacion}`
+    ].join(" | ");
+
+    return {
+        ok: true,
+        tipo,
+        dni,
+        nombre: chofer,
+        ocurrencia
+    };
+}
+
+function limpiarFormularioPorTipo() {
+    const ids = [
+        "dni", "nombre", "ocurrencia",
+        "vehiculoDni", "vehiculoPlaca", "vehiculoChofer", "vehiculoEmpresa", "vehiculoProcedencia", "vehiculoDestino", "vehiculoObservacion",
+        "encapsuladoDni", "encapsuladoTractoPlaca", "encapsuladoPlataformaPlaca", "encapsuladoChofer", "encapsuladoEmpresa", "encapsuladoProcedencia", "encapsuladoDestino", "encapsuladoObservacion"
+    ];
+
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    personaEncontrada = null;
+    const personaInfo = document.getElementById("persona-info");
+    const nombreInput = document.getElementById("nombre");
+    if (personaInfo) personaInfo.style.display = "none";
+    if (nombreInput) {
+        nombreInput.disabled = false;
+        nombreInput.placeholder = "Nombre o descripción de la persona";
+    }
+}
+
+function parsearDetalleOcurrencia(ocurrenciaTexto) {
+    const raw = String(ocurrenciaTexto || "").trim();
+    const detalleBase = {
+        tipo: "Persona",
+        dni: "",
+        placa: "",
+        tractoPlaca: "",
+        plataformaPlaca: "",
+        chofer: "",
+        empresa: "",
+        procedencia: "",
+        destino: "",
+        observacion: raw
+    };
+
+    if (!raw.startsWith("[TIPO:")) return detalleBase;
+
+    const partes = raw.split("|").map((p) => p.trim()).filter(Boolean);
+    const tipoMatch = partes[0]?.match(/^\[TIPO:\s*([^\]]+)\]$/i);
+    const tipoRaw = (tipoMatch?.[1] || "Persona").trim().toUpperCase();
+    if (tipoRaw === "VEHICULAR") detalleBase.tipo = "Vehicular";
+    if (tipoRaw === "ENCAPSULADO") detalleBase.tipo = "Encapsulado";
+
+    const extraer = (clave) => {
+        const prefijo = `${clave.toLowerCase()}:`;
+        const parte = partes.find((p) => p.toLowerCase().startsWith(prefijo));
+        return parte ? parte.substring(parte.indexOf(":") + 1).trim() : "";
+    };
+
+    detalleBase.dni = extraer("DNI");
+    detalleBase.placa = extraer("Placa");
+    detalleBase.tractoPlaca = extraer("Tracto Placa 1");
+    detalleBase.plataformaPlaca = extraer("Plataforma Placa 2");
+    detalleBase.chofer = extraer("Chofer");
+    detalleBase.empresa = extraer("Empresa/Proveedor");
+    detalleBase.procedencia = extraer("Procedencia");
+    detalleBase.destino = extraer("Destino");
+    detalleBase.observacion = extraer("Observacion") || raw;
+
+    return detalleBase;
+}
+
 function obtenerTurnoActual() {
     const hora = new Date().getHours();
     return (hora >= 7 && hora < 19) ? "7am-7pm" : "7pm-7am";
@@ -52,29 +253,27 @@ function renderInfoGuardias(container, datos, turno, fecha) {
         }
     });
 
+    const cardStyle = "background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;";
+    const rowStyle = "display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #e5e7eb;font-size:0.92rem;";
+    const lastRowStyle = "display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:0.92rem;";
+    const labelStyle = "font-weight:700;color:#334155;";
+    const valueStyle = "color:#0f172a;text-align:right;word-break:break-word;";
+
     if (turno === "7pm-7am") {
         const pv5Nombre = guardiasGarita[0] || "-";
         container.innerHTML = `
-            <div class="form-row" style="gap: 16px; align-items: flex-start;">
-                <div class="form-group" style="flex: 1; min-width: 260px;">
-                    <label>PV5</label>
-                    <input type="text" readonly value="${pv5Nombre}">
-                    <label style="margin-top: 8px;">Puesto</label>
-                    <input type="text" readonly value="GARITA PRINCIPAL">
-                    <label style="margin-top: 8px;">Turno</label>
-                    <input type="text" readonly value="${turnoTexto(turno)}">
-                    <label style="margin-top: 8px;">Fecha</label>
-                    <input type="text" readonly value="${fecha}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;align-items:start;">
+                <div style="${cardStyle}">
+                    <div style="${rowStyle}"><span style="${labelStyle}">PV5</span><span style="${valueStyle}">${pv5Nombre}</span></div>
+                    <div style="${rowStyle}"><span style="${labelStyle}">Puesto</span><span style="${valueStyle}">GARITA PRINCIPAL</span></div>
+                    <div style="${rowStyle}"><span style="${labelStyle}">Turno</span><span style="${valueStyle}">${turnoTexto(turno)}</span></div>
+                    <div style="${lastRowStyle}"><span style="${labelStyle}">Fecha</span><span style="${valueStyle}">${fecha}</span></div>
                 </div>
-                <div class="form-group" style="flex: 1; min-width: 260px;">
-                    <label>PV1</label>
-                    <input type="text" readonly value="${mapaPv.PV1 || "-"}">
-                    <label style="margin-top: 8px;">PV2</label>
-                    <input type="text" readonly value="${mapaPv.PV2 || "-"}">
-                    <label style="margin-top: 8px;">PV3</label>
-                    <input type="text" readonly value="${mapaPv.PV3 || "-"}">
-                    <label style="margin-top: 8px;">PV4</label>
-                    <input type="text" readonly value="${mapaPv.PV4 || "-"}">
+                <div style="${cardStyle}">
+                    <div style="${rowStyle}"><span style="${labelStyle}">PV1</span><span style="${valueStyle}">${mapaPv.PV1 || "-"}</span></div>
+                    <div style="${rowStyle}"><span style="${labelStyle}">PV2</span><span style="${valueStyle}">${mapaPv.PV2 || "-"}</span></div>
+                    <div style="${rowStyle}"><span style="${labelStyle}">PV3</span><span style="${valueStyle}">${mapaPv.PV3 || "-"}</span></div>
+                    <div style="${lastRowStyle}"><span style="${labelStyle}">PV4</span><span style="${valueStyle}">${mapaPv.PV4 || "-"}</span></div>
                 </div>
             </div>
         `;
@@ -83,22 +282,16 @@ function renderInfoGuardias(container, datos, turno, fecha) {
 
     const pv1Nombre = guardiasGarita[0] || "-";
     container.innerHTML = `
-        <div class="form-row" style="gap: 16px; align-items: flex-start;">
-            <div class="form-group" style="flex: 1; min-width: 260px;">
-                <label>PV1</label>
-                <input type="text" readonly value="${pv1Nombre}">
-                <label style="margin-top: 8px;">Puesto</label>
-                <input type="text" readonly value="GARITA PRINCIPAL">
-                <label style="margin-top: 8px;">Turno</label>
-                <input type="text" readonly value="${turnoTexto(turno)}">
-                <label style="margin-top: 8px;">Fecha</label>
-                <input type="text" readonly value="${fecha}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;align-items:start;">
+            <div style="${cardStyle}">
+                <div style="${rowStyle}"><span style="${labelStyle}">PV1</span><span style="${valueStyle}">${pv1Nombre}</span></div>
+                <div style="${rowStyle}"><span style="${labelStyle}">Puesto</span><span style="${valueStyle}">GARITA PRINCIPAL</span></div>
+                <div style="${rowStyle}"><span style="${labelStyle}">Turno</span><span style="${valueStyle}">${turnoTexto(turno)}</span></div>
+                <div style="${lastRowStyle}"><span style="${labelStyle}">Fecha</span><span style="${valueStyle}">${fecha}</span></div>
             </div>
-            <div class="form-group" style="flex: 1; min-width: 260px;">
-                <label>PV2</label>
-                <input type="text" readonly value="${mapaPv.PV2 || "-"}">
-                <label style="margin-top: 8px;">PV3</label>
-                <input type="text" readonly value="${mapaPv.PV3 || "-"}">
+            <div style="${cardStyle}">
+                <div style="${rowStyle}"><span style="${labelStyle}">PV2</span><span style="${valueStyle}">${mapaPv.PV2 || "-"}</span></div>
+                <div style="${lastRowStyle}"><span style="${labelStyle}">PV3</span><span style="${valueStyle}">${mapaPv.PV3 || "-"}</span></div>
             </div>
         </div>
     `;
@@ -147,6 +340,8 @@ async function cargarInfoGuardiasTurno() {
 
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
+    if (obtenerTipoOcurrenciaSeleccionado() !== "Persona") return;
+
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
@@ -208,33 +403,23 @@ async function buscarPersonaPorDni() {
 
 // Registrar INGRESO
 async function registrarIngreso() {
-    const dni = document.getElementById("dni").value.trim();
-    const nombre = document.getElementById("nombre").value.trim();
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
-    const ocurrencia = document.getElementById("ocurrencia").value.trim();
     const mensaje = document.getElementById("mensaje");
+    const datos = construirDescripcionPorTipo();
 
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validación: Ocurrencia es obligatoria
-    if (!ocurrencia) {
+    if (!datos.ok) {
         mensaje.className = "error";
-        mensaje.innerText = "La descripción de ocurrencia es obligatoria";
-        return;
-    }
-
-    // Validar DNI si se proporcionó
-    if (dni && (dni.length !== 8 || isNaN(dni))) {
-        mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos numéricos";
+        mensaje.innerText = datos.error;
         return;
     }
 
     try {
         const body = {
-            ocurrencia
+            ocurrencia: datos.ocurrencia
         };
 
         if (horaIngresoInput) {
@@ -243,13 +428,16 @@ async function registrarIngreso() {
             body.horaIngreso = ahoraLocalDateTime();
         }
 
-        // Agregar DNI y nombre solo si se proporcionaron
-        if (dni) body.dni = dni;
-        
-        // Si hay persona encontrada, no enviar nombre (se usa el de la BD)
-        // Si no hay persona encontrada pero hay nombre ingresado, enviarlo
-        if (!personaEncontrada && nombre) {
-            body.nombre = nombre;
+        // Agregar DNI solo si se proporcionó
+        if (datos.dni) body.dni = datos.dni;
+
+        // En tipo Persona se respeta lógica anterior de lookup por DNI
+        if (datos.tipo === "Persona") {
+            if (!personaEncontrada && datos.nombre) {
+                body.nombre = datos.nombre;
+            }
+        } else if (datos.nombre) {
+            body.nombre = datos.nombre;
         }
 
         const response = await fetchAuth(`${API_BASE}/ocurrencias`, {
@@ -267,22 +455,16 @@ async function registrarIngreso() {
         mensaje.innerText = `Ingreso registrado correctamente`;
 
         // Limpiar formulario
-        document.getElementById("dni").value = "";
-        document.getElementById("nombre").value = "";
+        limpiarFormularioPorTipo();
         document.getElementById("horaIngreso").value = "";
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
-        document.getElementById("ocurrencia").value = "";
-        
-        // Reset persona encontrada
-        personaEncontrada = null;
-        document.getElementById("persona-info").style.display = "none";
-        document.getElementById("nombre").disabled = false;
-        document.getElementById("nombre").placeholder = "Nombre o descripción de la persona";
 
         // Actualizar tabla
         cargarActivos();
-        document.getElementById("dni").focus();
+        const tipo = obtenerTipoOcurrenciaSeleccionado();
+        const foco = tipo === "Persona" ? "dni" : (tipo === "Vehicular" ? "vehiculoDni" : "encapsuladoDni");
+        document.getElementById(foco)?.focus();
 
     } catch (error) {
         mensaje.className = "error";
@@ -342,7 +524,13 @@ async function cargarActivos() {
         html += '<th>Nombre</th>';
         html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Guardia Ingreso</th>';
-        html += '<th>Ocurrencia</th>';
+        html += '<th>Tipo</th>';
+        html += '<th>Placa(s)</th>';
+        html += '<th>Chofer</th>';
+        html += '<th>Empresa/Proveedor</th>';
+        html += '<th>Procedencia</th>';
+        html += '<th>Destino</th>';
+        html += '<th>Observacion</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -360,6 +548,10 @@ async function cargarActivos() {
 
             const nombreCompleto = o.nombreCompleto || datos.nombre || '-';
             const ocurrencia = datos.ocurrencia || '-';
+            const detalleOcurrencia = parsearDetalleOcurrencia(ocurrencia);
+            const placaTexto = detalleOcurrencia.tipo === 'Encapsulado'
+                ? [detalleOcurrencia.tractoPlaca, detalleOcurrencia.plataformaPlaca].filter(Boolean).join(' / ')
+                : detalleOcurrencia.placa;
             
             const fechaIngresoParam = o.fechaIngreso || '';
             const horaIngresoParam = o.horaIngreso || '';
@@ -369,7 +561,13 @@ async function cargarActivos() {
             html += `<td>${nombreCompleto}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td>${guardiaIngreso}</td>`;
-            html += `<td class="cell-wrap" style="max-width: 200px;">${ocurrencia}</td>`;
+            html += `<td>${detalleOcurrencia.tipo || '-'}</td>`;
+            html += `<td class="cell-wrap" style="max-width: 130px;">${placaTexto || '-'}</td>`;
+            html += `<td>${detalleOcurrencia.chofer || '-'}</td>`;
+            html += `<td>${detalleOcurrencia.empresa || '-'}</td>`;
+            html += `<td>${detalleOcurrencia.procedencia || '-'}</td>`;
+            html += `<td>${detalleOcurrencia.destino || '-'}</td>`;
+            html += `<td class="cell-wrap" style="max-width: 240px;">${detalleOcurrencia.observacion || '-'}</td>`;
             html += '<td>';
             html += `<button onclick="irASalida(${o.id}, '${o.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${ocurrencia.replace(/'/g, "\\'")}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngreso}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
             html += '</td></tr>';
