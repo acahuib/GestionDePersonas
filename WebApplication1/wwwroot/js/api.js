@@ -214,6 +214,216 @@ const API_BASE = "/api";
 })();
 
 // ===============================
+// PROTECCION DE CAMBIOS SIN GUARDAR
+// ===============================
+(function () {
+    if (window.unsavedChangesGuard) return;
+
+    const pathname = String(window.location.pathname || "").toLowerCase();
+    const isCuadernoHtml = /\/[^/]+\/html\/[^/]+\.html$/.test(pathname);
+    const isHistorial = pathname.includes("_historial.html");
+
+    // Alcance acordado: solo ingreso/salida en cuadernos, excluyendo historial.
+    const shouldAutoEnable = isCuadernoHtml && !isHistorial;
+
+    let enabled = false;
+    let hasUnsavedChanges = false;
+    let bypassUntil = 0;
+    let historyTrapInstalled = false;
+    let allowingHistoryBack = false;
+
+    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. ¿Deseas continuar?";
+    const BEFORE_UNLOAD_MESSAGE = "Los cambios que realizaste podrian no guardarse.";
+
+    const now = () => Date.now();
+    const isBypassActive = () => now() < bypassUntil;
+
+    function setBypass(ms = 3000) {
+        bypassUntil = now() + Math.max(0, Number(ms) || 0);
+    }
+
+    function shouldTrackTarget(target) {
+        if (!target || !(target instanceof HTMLElement)) return false;
+        const field = target.closest("input, textarea, select");
+        if (!field) return false;
+        if (field.disabled || field.readOnly) return false;
+        if (field.tagName === "INPUT") {
+            const inputType = String(field.type || "text").toLowerCase();
+            if (inputType === "hidden" || inputType === "button" || inputType === "submit") return false;
+        }
+        return true;
+    }
+
+    function markDirty() {
+        if (!enabled) return;
+        hasUnsavedChanges = true;
+    }
+
+    function markSaved() {
+        hasUnsavedChanges = false;
+    }
+
+    function hasPendingChanges() {
+        return enabled && hasUnsavedChanges && !isBypassActive();
+    }
+
+    function onUserInput(e) {
+        if (!enabled) return;
+        if (!e.isTrusted) return;
+        if (!shouldTrackTarget(e.target)) return;
+        markDirty();
+    }
+
+    function onSubmitIntent(e) {
+        if (!enabled) return;
+        if (!e.isTrusted) return;
+        const form = e.target instanceof HTMLFormElement ? e.target : null;
+        if (!form) return;
+        // Evita alerta por beforeunload cuando el usuario confirma un guardado.
+        setBypass(3000);
+    }
+
+    function onSaveButtonClick(e) {
+        if (!enabled) return;
+        if (!e.isTrusted) return;
+
+        const btn = e.target instanceof HTMLElement ? e.target.closest("button") : null;
+        if (!btn) return;
+
+        const label = `${btn.textContent || ""} ${btn.getAttribute("aria-label") || ""}`.toLowerCase();
+        if (label.includes("registrar") || label.includes("guardar") || label.includes("completar")) {
+            setBypass(3000);
+        }
+    }
+
+    async function onLinkNavigation(e) {
+        if (!enabled) return;
+        if (isBypassActive()) return;
+
+        const anchor = e.target instanceof HTMLElement ? e.target.closest("a[href]") : null;
+        if (!anchor) return;
+
+        const href = anchor.getAttribute("href");
+        if (!href) return;
+        if (href.startsWith("#") || href.startsWith("javascript:")) return;
+        if (anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+        if (!hasPendingChanges()) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const confirmed = await window.appDialog.confirm(DEFAULT_MESSAGE, "Salir de la pagina");
+        if (!confirmed) return;
+
+        setBypass(8000);
+        window.location.assign(anchor.href);
+    }
+
+    function onBeforeUnload(e) {
+        if (!hasPendingChanges()) return;
+        e.preventDefault();
+        e.returnValue = BEFORE_UNLOAD_MESSAGE;
+        return BEFORE_UNLOAD_MESSAGE;
+    }
+
+    async function onPopState() {
+        if (!enabled) return;
+
+        if (allowingHistoryBack || isBypassActive() || !hasPendingChanges()) {
+            return;
+        }
+
+        // Repone la entrada para quedarse en la pagina actual mientras decide.
+        history.pushState({ unsavedGuard: true }, "", window.location.href);
+
+        const confirmed = await window.appDialog.confirm(DEFAULT_MESSAGE, "Salir de la pagina");
+        if (!confirmed) return;
+
+        setBypass(8000);
+        allowingHistoryBack = true;
+        history.back();
+        setTimeout(() => {
+            allowingHistoryBack = false;
+        }, 300);
+    }
+
+    async function onReloadShortcut(e) {
+        if (!enabled) return;
+        if (!hasPendingChanges() || isBypassActive()) return;
+
+        const key = String(e.key || "").toLowerCase();
+        const isReload = key === "f5" || ((e.ctrlKey || e.metaKey) && key === "r");
+        if (!isReload) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const confirmed = await window.appDialog.confirm(DEFAULT_MESSAGE, "Salir de la pagina");
+        if (!confirmed) return;
+
+        setBypass(8000);
+        window.location.reload();
+    }
+
+    function installHistoryTrap() {
+        if (historyTrapInstalled) return;
+        if (window.location.protocol === "file:") return;
+
+        history.pushState({ unsavedGuard: true }, "", window.location.href);
+        historyTrapInstalled = true;
+    }
+
+    function enable() {
+        if (enabled) return;
+        enabled = true;
+
+        document.addEventListener("input", onUserInput, true);
+        document.addEventListener("change", onUserInput, true);
+        document.addEventListener("submit", onSubmitIntent, true);
+        document.addEventListener("click", onSaveButtonClick, true);
+        document.addEventListener("click", onLinkNavigation, true);
+        window.addEventListener("popstate", onPopState);
+        document.addEventListener("keydown", onReloadShortcut, true);
+        window.addEventListener("beforeunload", onBeforeUnload);
+        installHistoryTrap();
+    }
+
+    function disable() {
+        if (!enabled) return;
+        enabled = false;
+        hasUnsavedChanges = false;
+        bypassUntil = 0;
+
+        document.removeEventListener("input", onUserInput, true);
+        document.removeEventListener("change", onUserInput, true);
+        document.removeEventListener("submit", onSubmitIntent, true);
+        document.removeEventListener("click", onSaveButtonClick, true);
+        document.removeEventListener("click", onLinkNavigation, true);
+        window.removeEventListener("popstate", onPopState);
+        document.removeEventListener("keydown", onReloadShortcut, true);
+        window.removeEventListener("beforeunload", onBeforeUnload);
+    }
+
+    window.unsavedChangesGuard = {
+        enable,
+        disable,
+        markDirty,
+        markSaved,
+        hasUnsavedChanges: hasPendingChanges,
+        bypassNextNavigation: setBypass,
+        isEnabled: () => enabled
+    };
+
+    if (shouldAutoEnable) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", enable, { once: true });
+        } else {
+            enable();
+        }
+    }
+})();
+
+// ===============================
 // FETCH CON TOKEN JWT
 // ===============================
 async function fetchAuth(url, options = {}) {
@@ -247,6 +457,11 @@ async function fetchAuth(url, options = {}) {
         console.error(`API request failed: ${url}`, response.status, response.statusText);
         // Devolver la respuesta para que los callers puedan leer el body y mostrar mensajes de error
         return response;
+    }
+
+    const method = String(options.method || "GET").toUpperCase();
+    if (window.unsavedChangesGuard && method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+        window.unsavedChangesGuard.markSaved();
     }
 
     return response;
@@ -352,6 +567,9 @@ function addEnterListener(elementId, callback) {
         element.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
+                const scope = resolverScopeEntrada(element);
+                completarFechasActualesVacias(scope);
+                completarHorasActualesVacias(scope);
                 callback();
             }
         });
@@ -362,6 +580,49 @@ function horaLocalHHmm(date = new Date()) {
     const hh = String(date.getHours()).padStart(2, "0");
     const mm = String(date.getMinutes()).padStart(2, "0");
     return `${hh}:${mm}`;
+}
+
+function esAccionRegistro(element) {
+    if (!(element instanceof HTMLElement)) return false;
+
+    const texto = (element.textContent || "").toLowerCase();
+    const onclick = (element.getAttribute("onclick") || "").toLowerCase();
+    const id = (element.id || "").toLowerCase();
+    const aria = (element.getAttribute("aria-label") || "").toLowerCase();
+
+    return (
+        texto.includes("registrar") ||
+        texto.includes("guardar") ||
+        texto.includes("completar") ||
+        texto.includes("ingreso") ||
+        texto.includes("salida") ||
+        onclick.includes("registrar") ||
+        onclick.includes("guardar") ||
+        onclick.includes("completar") ||
+        id.includes("registrar") ||
+        id.includes("guardar") ||
+        id.includes("ingreso") ||
+        id.includes("salida") ||
+        aria.includes("registrar") ||
+        aria.includes("guardar") ||
+        aria.includes("completar")
+    );
+}
+
+function completarFechasActualesVacias(scope = document) {
+    if (!scope || typeof scope.querySelectorAll !== "function") return;
+
+    const fechaActual = fechaLocalIso();
+    const inputsFecha = scope.querySelectorAll('input[type="date"]');
+    inputsFecha.forEach((input) => {
+        if (!(input instanceof HTMLInputElement)) return;
+        if (input.disabled || input.readOnly) return;
+        if (input.hasAttribute("data-historial-fecha")) return;
+        if ((input.dataset?.autoNow || "").toLowerCase() === "off") return;
+        if (!input.value) {
+            input.value = fechaActual;
+        }
+    });
 }
 
 function completarHorasActualesVacias(scope = document) {
@@ -384,6 +645,40 @@ function resolverScopeEntrada(target) {
     return target.closest("form, .form-card, .container") || document;
 }
 
+function enfocarDniInicial() {
+    const pathname = String(window.location.pathname || "").toLowerCase();
+    const esCuaderno = /\/[^/]+\/html\/[^/]+\.html$/.test(pathname);
+    const esHistorial = pathname.includes("_historial.html");
+    if (!esCuaderno || esHistorial) return;
+
+    const puedeUsar = (el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        if (el.hasAttribute("disabled")) return false;
+        if (el.getAttribute("readonly") !== null) return false;
+        if (el.offsetParent === null) return false;
+        return true;
+    };
+
+    const focoActual = document.activeElement;
+    const hayFocoUsuario = focoActual && focoActual !== document.body;
+    if (hayFocoUsuario) return;
+
+    const dni = document.getElementById("dni");
+    if (dni instanceof HTMLElement && puedeUsar(dni)) {
+        dni.focus();
+        if (dni instanceof HTMLInputElement) dni.select();
+        return;
+    }
+
+    const candidatos = Array.from(document.querySelectorAll("input, select, textarea"))
+        .filter((el) => puedeUsar(el));
+    const primero = candidatos[0];
+    if (primero instanceof HTMLElement) {
+        primero.focus();
+        if (primero instanceof HTMLInputElement) primero.select();
+    }
+}
+
 function habilitarHoraActualPorDefectoGlobal() {
     document.addEventListener("click", (e) => {
         const target = e.target;
@@ -392,12 +687,17 @@ function habilitarHoraActualPorDefectoGlobal() {
         const accion = target.closest('button, input[type="submit"], input[type="button"]');
         if (!accion) return;
 
-        completarHorasActualesVacias(resolverScopeEntrada(accion));
+        if (esAccionRegistro(accion)) {
+            const scope = resolverScopeEntrada(accion);
+            completarFechasActualesVacias(scope);
+            completarHorasActualesVacias(scope);
+        }
     }, true);
 
     document.addEventListener("submit", (e) => {
-        const form = e.target;
-        completarHorasActualesVacias(resolverScopeEntrada(form instanceof Element ? form : null));
+        const scope = resolverScopeEntrada(e.target instanceof Element ? e.target : null);
+        completarFechasActualesVacias(scope);
+        completarHorasActualesVacias(scope);
     }, true);
 }
 
@@ -493,8 +793,11 @@ function habilitarEnterComoTab() {
 
 document.addEventListener("DOMContentLoaded", () => {
     habilitarEnterComoTab();
+    completarFechasActualesVacias();
     completarHorasActualesVacias();
     habilitarHoraActualPorDefectoGlobal();
+    // Prioriza el escaneo: abrir cuaderno con foco en DNI.
+    setTimeout(enfocarDniInicial, 0);
 });
 
 // ===============================

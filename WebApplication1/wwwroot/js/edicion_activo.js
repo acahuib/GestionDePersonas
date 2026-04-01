@@ -4,6 +4,60 @@ let tipoOperacion = "";
 let datosOriginales = {};
 
 const CAMPOS_BLOQUEADOS = new Set(["dni", "nombre", "nombreApellidos"]);
+const CAMPOS_TECNICOS_OCULTOS = new Set([
+    "guardiaIngreso",
+    "guardiaSalida",
+    "estadoActual",
+    "ultimaSalidaTemporal",
+    "ultimoIngresoRetorno",
+    "guardiaUltimaSalidaTemporal",
+    "guardiaUltimoIngresoRetorno",
+    "proveedorSalidaId",
+    "movimientoId",
+    "usuarioId",
+    "tipoOperacion",
+    "fechaCreacion",
+    "cierreDefinitivoUtc"
+]);
+
+const CAMPOS_EDITABLES_POR_TIPO = {
+    Proveedor: ["procedencia", "destino", "observacion"],
+    VehiculosProveedores: ["proveedor", "placa", "tipo", "lote", "cantidad", "procedencia", "observacion"],
+    VehiculoEmpresa: ["tipoRegistro", "placa", "origenSalida", "destinoSalida", "kmSalida", "origenIngreso", "destinoIngreso", "kmIngreso", "observacion"],
+    HabitacionProveedor: ["tipoIngreso", "origen", "cuarto", "frazadas", "observacion"],
+    HotelProveedor: ["numeroPersonas", "observacion"],
+    Ocurrencias: ["ocurrencia", "observacion", "detalles"],
+    PersonalLocal: ["condicion", "observacion", "horaSalidaAlmuerzo", "horaEntradaAlmuerzo"],
+    ControlBienes: ["bienes", "observacion"],
+    DiasLibre: ["motivo", "observacion"],
+    OficialPermisos: ["motivo", "observacion"],
+    SalidasPermisosPersonal: ["motivo", "observacion"],
+    RegistroInformativoEnseresTurno: ["descripcion", "observacion", "detalle"],
+    Cancha: ["numeroCancha", "observacion", "detalle"]
+};
+
+const ETIQUETAS_CAMPOS = {
+    nombreApellidos: "Nombre completo",
+    procedencia: "Procedencia",
+    destino: "Destino",
+    tipoRegistro: "Tipo de registro",
+    tipoIngreso: "Tipo de ingreso",
+    origenSalida: "Origen de salida",
+    destinoSalida: "Destino de salida",
+    origenIngreso: "Origen de ingreso",
+    destinoIngreso: "Destino de ingreso",
+    kmSalida: "Kilometraje salida",
+    kmIngreso: "Kilometraje ingreso",
+    numeroPersonas: "Numero de personas",
+    numeroCancha: "Cancha",
+    lote: "Lote",
+    cantidad: "Cantidad",
+    cuarto: "Cuarto",
+    frazadas: "Frazadas",
+    observacion: "Observacion",
+    horaSalidaAlmuerzo: "Hora salida almuerzo",
+    horaEntradaAlmuerzo: "Hora entrada almuerzo"
+};
 const DESTINOS_PROVEEDOR = [
     "RECEPCION",
     "BALANZA",
@@ -39,14 +93,46 @@ function construirGuiaEdicion() {
     if (!guia) return;
 
     const notas = [
-        "Revise campos marcados como solo lectura: no se guardan cambios en esos datos.",
-        "Campos numericos aceptan solo enteros.",
-        "En horas de columna use HH:mm y en fechas use AAAA-MM-DD.",
-        "Los campos modificados se resaltan en amarillo antes de guardar."
+        "DNI y nombre solo se muestran como referencia (no se pueden editar).",
+        "Solo se muestran campos operativos del cuaderno para evitar confusiones.",
+        "Puede editar fechas y horas del registro.",
+        "Los cambios se resaltan en amarillo antes de guardar."
     ];
 
     guia.innerHTML = `<strong>Guia rapida de edicion (${escaparHtml(tipoOperacion || "Registro")})</strong><ul style="margin:6px 0 0 18px;">${notas.map(n => `<li>${escaparHtml(n)}</li>`).join("")}</ul>`;
     guia.style.display = "block";
+}
+
+function obtenerEtiquetaCampo(key) {
+    if (ETIQUETAS_CAMPOS[key]) return ETIQUETAS_CAMPOS[key];
+
+    return key
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/_/g, " ")
+        .replace(/^./, (m) => m.toUpperCase());
+}
+
+function esCampoEditableEnPantalla(key) {
+    if (!key) return false;
+    if (CAMPOS_BLOQUEADOS.has(key)) return false;
+    if (CAMPOS_TECNICOS_OCULTOS.has(key)) return false;
+
+    const lista = CAMPOS_EDITABLES_POR_TIPO[tipoOperacion] || null;
+    if (!lista) return true;
+    return lista.includes(key);
+}
+
+function ordenarCamposPorTipo(keys) {
+    const lista = CAMPOS_EDITABLES_POR_TIPO[tipoOperacion] || [];
+    if (!lista.length) return [...keys].sort((a, b) => a.localeCompare(b));
+
+    const peso = new Map(lista.map((k, i) => [k, i]));
+    return [...keys].sort((a, b) => {
+        const pa = peso.has(a) ? peso.get(a) : Number.MAX_SAFE_INTEGER;
+        const pb = peso.has(b) ? peso.get(b) : Number.MAX_SAFE_INTEGER;
+        if (pa !== pb) return pa - pb;
+        return a.localeCompare(b);
+    });
 }
 
 function escaparHtml(texto) {
@@ -106,6 +192,7 @@ function volverOrigen() {
 
 function construirCampo(key, value) {
     const readonly = CAMPOS_BLOQUEADOS.has(key) ? "readonly" : "";
+    const label = escaparHtml(obtenerEtiquetaCampo(key));
     const safeKey = escaparHtml(key);
     const ayuda = escaparHtml(formatoEsperadoPorCampo(key));
 
@@ -121,7 +208,7 @@ function construirCampo(key, value) {
             .join("");
 
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <select data-dato-key="${safeKey}" data-dato-tipo="text" ${readonly ? "disabled" : ""}>
                 ${opciones}
             </select>
@@ -131,7 +218,7 @@ function construirCampo(key, value) {
 
     if (CAMPOS_NUMERICOS.has(key)) {
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <input type="number" step="1" min="0" data-dato-key="${safeKey}" data-dato-tipo="number" value="${escaparHtml(value ?? "")}" ${readonly}>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
@@ -139,7 +226,7 @@ function construirCampo(key, value) {
 
     if (CAMPOS_TEXTO_LARGO.has(key)) {
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <textarea data-dato-key="${safeKey}" data-dato-tipo="text" rows="3" ${readonly}>${escaparHtml(value ?? "")}</textarea>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
@@ -147,7 +234,7 @@ function construirCampo(key, value) {
 
     if (key.toLowerCase().includes("fecha")) {
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <input type="date" data-dato-key="${safeKey}" data-dato-tipo="date" value="${toDateLocal(value)}" ${readonly}>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
@@ -155,7 +242,7 @@ function construirCampo(key, value) {
 
     if (key.toLowerCase().includes("hora")) {
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <input type="time" data-dato-key="${safeKey}" data-dato-tipo="time" value="${toTimeLocal(value) || String(value ?? "")}" ${readonly}>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
@@ -164,14 +251,14 @@ function construirCampo(key, value) {
     if (value !== null && typeof value === "object") {
         const contenido = escaparHtml(JSON.stringify(value, null, 2));
         return `
-            <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+            <label>${label}${readonly ? " (solo lectura)" : ""}</label>
             <textarea data-dato-key="${safeKey}" data-dato-tipo="json" rows="4" ${readonly}>${contenido}</textarea>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
     }
 
     return `
-        <label>${safeKey}${readonly ? " (solo lectura)" : ""}</label>
+        <label>${label}${readonly ? " (solo lectura)" : ""}</label>
         <input type="text" data-dato-key="${safeKey}" data-dato-tipo="text" value="${escaparHtml(value ?? "")}" ${readonly}>
         <small class="muted formato-ayuda">${ayuda}</small>
     `;
@@ -264,7 +351,7 @@ async function cargarRegistro() {
         html += `<label>DNI (solo lectura)</label><input type="text" value="${escaparHtml(data.dni || "-")}" readonly>`;
         html += `<label>Nombre (solo lectura)</label><input type="text" value="${escaparHtml(data.nombreCompleto || "-")}" readonly>`;
 
-        const keys = Object.keys(datosOriginales || {});
+        const keys = ordenarCamposPorTipo(Object.keys(datosOriginales || {}).filter(esCampoEditableEnPantalla));
         keys.forEach((k) => {
             html += construirCampo(k, datosOriginales[k]);
         });
