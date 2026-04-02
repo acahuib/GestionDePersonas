@@ -18,6 +18,7 @@ namespace WebApplication1.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _configuration;
 
         private static readonly HashSet<string> ExtensionesPermitidasImagen = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -27,10 +28,11 @@ namespace WebApplication1.Controllers
         private const int MaxImagenesPorRegistro = 10;
         private const long MaxBytesPorImagen = 5 * 1024 * 1024;
 
-        public ImagenesController(AppDbContext context, IWebHostEnvironment env)
+        public ImagenesController(AppDbContext context, IWebHostEnvironment env, IConfiguration configuration)
         {
             _context = context;
             _env = env;
+            _configuration = configuration;
         }
 
         [HttpPost("registro/{operacionDetalleId:int}")]
@@ -57,14 +59,8 @@ namespace WebApplication1.Controllers
                     return BadRequest($"Solo se permiten {MaxImagenesPorRegistro} imagenes por registro");
                 }
 
-                var root = _env.WebRootPath;
-                if (string.IsNullOrWhiteSpace(root))
-                {
-                    root = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                }
-
                 var carpetaRelativa = Path.Combine("uploads", "registros", operacionDetalleId.ToString());
-                var carpetaFisica = Path.Combine(root, carpetaRelativa);
+                var carpetaFisica = Path.Combine(ObtenerRutaRaizUploads(), "registros", operacionDetalleId.ToString());
                 Directory.CreateDirectory(carpetaFisica);
 
                 var creadas = new List<ImagenRegistro>();
@@ -154,6 +150,19 @@ namespace WebApplication1.Controllers
             {
                 return StatusCode(500, $"Error: {ex.Message}");
             }
+        }
+
+        private string ObtenerRutaRaizUploads()
+        {
+            var configuredUploadsRoot = _configuration["Uploads:RootPath"];
+            if (!string.IsNullOrWhiteSpace(configuredUploadsRoot))
+            {
+                return Path.IsPathRooted(configuredUploadsRoot)
+                    ? configuredUploadsRoot
+                    : Path.Combine(_env.ContentRootPath, configuredUploadsRoot);
+            }
+
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ControlAccesos", "uploads");
         }
     }
 }

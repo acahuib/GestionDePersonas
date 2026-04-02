@@ -689,6 +689,23 @@ async function cargarActivos() {
             return tieneIngreso !== tieneSalida;
         });
 
+        // Mostrar primero la ocurrencia activa mas reciente segun su movimiento inicial.
+        activas.sort((a, b) => {
+            const aTieneIngreso = a.horaIngreso !== null && a.horaIngreso !== undefined;
+            const bTieneIngreso = b.horaIngreso !== null && b.horaIngreso !== undefined;
+
+            const aFechaInicial = aTieneIngreso
+                ? (a.horaIngreso || a.fechaIngreso)
+                : (a.horaSalida || a.fechaSalida);
+            const bFechaInicial = bTieneIngreso
+                ? (b.horaIngreso || b.fechaIngreso)
+                : (b.horaSalida || b.fechaSalida);
+
+            const aTime = aFechaInicial ? new Date(aFechaInicial).getTime() : 0;
+            const bTime = bFechaInicial ? new Date(bFechaInicial).getTime() : 0;
+            return bTime - aTime;
+        });
+
         if (activas.length === 0) {
             container.innerHTML = '<p class="text-center muted">No hay ocurrencias activas en este momento</p>';
             return;

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
@@ -125,6 +126,21 @@ if (app.Environment.IsDevelopment())
 // HTTPS redirect desactivado: sistema intranet, se usa HTTP en la red local de la mina.
 
 app.UseStaticFiles();
+
+var configuredUploadsRoot = builder.Configuration["Uploads:RootPath"];
+var uploadsRoot = !string.IsNullOrWhiteSpace(configuredUploadsRoot)
+    ? (Path.IsPathRooted(configuredUploadsRoot)
+        ? configuredUploadsRoot
+        : Path.Combine(app.Environment.ContentRootPath, configuredUploadsRoot))
+    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ControlAccesos", "uploads");
+
+Directory.CreateDirectory(uploadsRoot);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsRoot),
+    RequestPath = "/uploads"
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
