@@ -1,3 +1,5 @@
+﻿// Script frontend para activos_buscador.
+
 (function () {
     const IDS_CONTENEDOR = [
         "lista-activos",
@@ -143,7 +145,7 @@
         pag.innerHTML = `
             <span style="color:#6b7280; font-size:0.9rem;">Mostrando ${inicio}-${fin} de ${totalCoincidencias}</span>
             <button type="button" id="pagActivosPrev" ${paginaActual === 1 ? "disabled" : ""}>Anterior</button>
-            <span style="color:#6b7280; font-size:0.9rem;">Página ${paginaActual}/${totalPaginas}</span>
+            <span style="color:#6b7280; font-size:0.9rem;">PÃ¡gina ${paginaActual}/${totalPaginas}</span>
             <button type="button" id="pagActivosNext" ${paginaActual === totalPaginas ? "disabled" : ""}>Siguiente</button>
         `;
 
@@ -221,3 +223,4 @@
 
     document.addEventListener("DOMContentLoaded", inicializar);
 })();
+

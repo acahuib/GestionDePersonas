@@ -1,10 +1,7 @@
-// ActualizarIngresoVehiculoEmpresaDto.cs - Updated version
+﻿// Archivo backend para ActualizarIngresoVehiculoEmpresaDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para actualizar datos de INGRESO de un vehiculo de empresa
-    /// Se usa cuando el vehiculo regresa después de haber registrado una SALIDA
-    /// </summary>
     public class ActualizarIngresoVehiculoEmpresaDto
     {
         public required DateTime HoraIngreso { get; set; }
@@ -14,3 +11,4 @@ namespace WebApplication1.DTOs
         public string? Observacion { get; set; }
     }
 }
+

@@ -1,17 +1,13 @@
-// =========================================
-// CUADERNO DE PERSONAL LOCAL
-// =========================================
+﻿// Script frontend para personal_local.
 
 let personaEncontrada = null;
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreApellidosInput = document.getElementById("nombreApellidos");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -21,29 +17,25 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`ðŸ“¡ Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campo de nombre
             nombreApellidosInput.value = "";
             nombreApellidosInput.disabled = true;
             nombreApellidosInput.placeholder = "(Ya registrado)";
             
-            // Saltar a observaciones
             document.getElementById("observaciones").focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campo para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreApellidosInput.disabled = false;
@@ -51,12 +43,11 @@ async function buscarPersonaPorDni() {
             nombreApellidosInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreApellidosInput.disabled = false;
@@ -64,7 +55,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar INGRESO de personal local
 async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
@@ -76,7 +66,6 @@ async function registrarIngreso() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni) {
         mensaje.className = "error";
         mensaje.innerText = "DNI es obligatorio";
@@ -85,11 +74,10 @@ async function registrarIngreso() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
-    // Si no hay persona encontrada, validar nombre
     if (!personaEncontrada && !nombreApellidos) {
         mensaje.className = "error";
         mensaje.innerText = "DNI no registrado. Complete el nombre y apellidos.";
@@ -103,12 +91,10 @@ async function registrarIngreso() {
             observaciones: observaciones || null
         };
 
-        // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
             body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
-        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombreApellidos = nombreApellidos;
         }
@@ -127,7 +113,6 @@ async function registrarIngreso() {
         mensaje.className = "success";
         mensaje.innerText = `INGRESO registrado para ${nombreCompleto}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("observaciones").value = "";
@@ -139,7 +124,6 @@ async function registrarIngreso() {
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -148,7 +132,6 @@ async function registrarIngreso() {
     }
 }
 
-// Navegar a salida a almuerzo
 function irASalidaAlmuerzo(salidaId, dni, nombre, horaIngreso, fechaIngreso, guardiaIngreso, observacion) {
     const params = new URLSearchParams({
         salidaId,
@@ -162,7 +145,6 @@ function irASalidaAlmuerzo(salidaId, dni, nombre, horaIngreso, fechaIngreso, gua
     window.location.href = `personal_local_almuerzo_salida.html?${params.toString()}`;
 }
 
-// Navegar a ingreso de almuerzo
 function irAIngresoAlmuerzo(salidaId, dni, nombre, horaIngreso, fechaIngreso, horaSalidaAlmuerzo, fechaSalidaAlmuerzo, guardiaIngreso, guardiaSalidaAlmuerzo, observacion) {
     const params = new URLSearchParams({
         salidaId,
@@ -179,7 +161,6 @@ function irAIngresoAlmuerzo(salidaId, dni, nombre, horaIngreso, fechaIngreso, ho
     window.location.href = `personal_local_almuerzo_ingreso.html?${params.toString()}`;
 }
 
-// Navegar a salida final
 function irASalidaFinal(salidaId, dni, nombre, horaIngreso, fechaIngreso, horaSalidaAlmuerzo, horaEntradaAlmuerzo, guardiaIngreso, observacion) {
     const params = new URLSearchParams({
         salidaId,
@@ -195,7 +176,6 @@ function irASalidaFinal(salidaId, dni, nombre, horaIngreso, fechaIngreso, horaSa
     window.location.href = `personal_local_salida.html?${params.toString()}`;
 }
 
-// Navegar a control de bienes con DNI precargado
 function irAControlBienes(dni, nombre) {
     const params = new URLSearchParams({
         dni,
@@ -278,7 +258,6 @@ function cerrarRegistroDesdePayload(payloadCodificado) {
     }
 }
 
-// Cargar personal activo (con ingreso, sin salida final)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -297,7 +276,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Tomar el ultimo registro por DNI y mostrar solo los que tengan INGRESO pero NO SALIDA FINAL
         const ultimosPorDni = new Map();
 
         salidas.forEach(s => {
@@ -309,14 +287,12 @@ async function cargarActivos() {
                 return;
             }
 
-            // Leer desde columnas primero, luego fallback al JSON
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
             const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
 
             const tieneIngreso = horaIngresoValue !== null && horaIngresoValue !== undefined && String(horaIngresoValue).trim() !== "";
             const tieneSalida = horaSalidaValue !== null && horaSalidaValue !== undefined && String(horaSalidaValue).trim() !== "";
 
-            // Solo mostrar si tiene INGRESO pero NO tiene SALIDA FINAL
             if (!tieneIngreso || tieneSalida) {
                 return;
             }
@@ -337,7 +313,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Convertir a array y mantener solo registros Normal
         const activosNormal = Array.from(ultimosPorDni.values()).filter((s) => {
             const tipo = s?.datos?.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
             return tipo === "Normal";
@@ -348,14 +323,12 @@ async function cargarActivos() {
             return;
         }
 
-        // Ordenar por hora de ingreso (más recientes primero)
         const activos = activosNormal.sort((a, b) => {
             const timeA = new Date(a.horaIngreso || a.datos?.horaIngreso || 0).getTime();
             const timeB = new Date(b.horaIngreso || b.datos?.horaIngreso || 0).getTime();
             return timeB - timeA;
         });
 
-        // Renderizar tabla
         let html = '<div class="table-wrapper">';
         html += '<table class="table">';
         html += '<thead><tr>';
@@ -372,14 +345,12 @@ async function cargarActivos() {
             const dni = (s.dni || "").trim();
             const nombre = s.nombreCompleto || "N/A";
             
-            // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
             const horaIngreso = horaIngresoValue
                 ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
-            // Almuerzo (siempre en JSON)
             const horaSalidaAlmuerzo = datos.horaSalidaAlmuerzo ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : "-";
             const fechaSalidaAlmuerzo = datos.fechaSalidaAlmuerzo ? new Date(datos.fechaSalidaAlmuerzo).toLocaleDateString('es-PE') : "";
             const horaEntradaAlmuerzo = datos.horaEntradaAlmuerzo ? new Date(datos.horaEntradaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : "-";
@@ -450,16 +421,12 @@ async function cargarActivos() {
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
             html += `<button class="btn-inline btn-small" onclick="cerrarRegistroDesdePayload('${payloadCierre}')">Cerrar registro</button> `;
             
-            // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {
-                // No ha salido a almuerzo: puede salir a almuerzo O salir directo
                 html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzoDesdePayload('${payloadSalidaAlmuerzo}')">Salida Almuerzo</button> `;
                 html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaDirecta}')">Salida</button>`;
             } else if (!tieneEntradaAlmuerzo) {
-                // Ha salido a almuerzo pero no ha regresado: debe registrar ingreso de almuerzo
                 html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzoDesdePayload('${payloadIngresoAlmuerzo}')">Ingreso Almuerzo</button>`;
             } else {
-                // Ya regresó del almuerzo: solo puede salir
                 html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaFinal}')">+Salida</button>`;
             }
             
@@ -479,3 +446,5 @@ document.addEventListener("DOMContentLoaded", () => {
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
 });
+
+

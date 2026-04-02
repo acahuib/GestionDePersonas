@@ -1,3 +1,5 @@
+﻿// Archivo backend para HabitacionProveedorController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +12,6 @@ using System.Text.Json;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para Habitación Proveedor
-    /// Proveedor espera descarga en habitación de la mina
-    /// Ruta: /api/habitacion-proveedor
-    /// </summary>
     [ApiController]
     [Route("api/habitacion-proveedor")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -140,11 +137,6 @@ namespace WebApplication1.Controllers
             };
         }
 
-        /// <summary>
-        /// Registra INGRESO inicial a Habitación Proveedor
-        /// POST /api/habitacion-proveedor
-        /// Proveedor INGRESA a la habitación (llega)
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> RegistrarIngreso([FromBody] SalidaHabitacionProveedorDto dto)
         {
@@ -154,7 +146,6 @@ namespace WebApplication1.Controllers
                 var tipoIngreso = NormalizarTipoIngreso(dto.TipoIngreso);
                 var esInformativoPersonalMina = string.Equals(tipoIngreso, "InformativoPersonalMina", StringComparison.OrdinalIgnoreCase);
 
-                // Validación básica
                 if (string.IsNullOrWhiteSpace(dniNormalizado))
                     return BadRequest("DNI es requerido");
 
@@ -166,23 +157,20 @@ namespace WebApplication1.Controllers
                 {
                     proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, dto.ProveedorSalidaId);
                     if (proveedorActivo == null)
-                        return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a Habitación.");
+                        return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a HabitaciÃ³n.");
                 }
 
                 if (await TieneHabitacionActiva(dniNormalizado))
-                    return BadRequest("Este proveedor ya tiene una habitación activa.");
+                    return BadRequest("Este proveedor ya tiene una habitaciÃ³n activa.");
 
-                // Buscar persona en tabla Personas
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
-                // Si no existe la persona, verificar que se haya proporcionado el nombre
                 if (persona == null && string.IsNullOrWhiteSpace(dto.NombresApellidos))
                 {
                     return BadRequest("Debe proporcionar el nombre completo para un DNI no registrado");
                 }
 
-                // Crear persona si no existe
                 if (persona == null)
                 {
                     var tipoPersona = esInformativoPersonalMina ? "PersonalLocal" : "HabitacionProveedor";
@@ -196,18 +184,13 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // Obtener UsuarioId (guardia que atiende el ingreso)
                 var usuarioId = ExtractUsuarioIdFromToken();
 
-                // Obtener nombre del guardia
                 var usuario = usuarioId.HasValue 
                     ? await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
                     : null;
                 string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
-                // MODO INFORMATIVO: NO crear movimiento en tabla Movimientos.
-                // Solo enlazar al último movimiento existente del DNI como referencia técnica.
-                // Respetar hora seleccionada y normalizar a zona Perú.
                 var ahoraLocal = ResolverHoraPeru(dto.HoraIngreso);
                 var fechaActual = ahoraLocal.Date;
 
@@ -224,11 +207,9 @@ namespace WebApplication1.Controllers
 
                 if (!movimientoIdReferencia.HasValue || movimientoIdReferencia.Value <= 0)
                 {
-                    return BadRequest("No se encontró un movimiento base para el DNI indicado. Registre primero su ingreso/salida en el cuaderno correspondiente.");
+                    return BadRequest("No se encontrÃ³ un movimiento base para el DNI indicado. Registre primero su ingreso/salida en el cuaderno correspondiente.");
                 }
 
-                // Crear OperacionDetalle con datos de HabitacionProveedor
-                // JSON solo contiene datos específicos (sin nombre/dni/fechas/horas)
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     movimientoIdReferencia.Value,
                     "HabitacionProveedor",
@@ -243,10 +224,10 @@ namespace WebApplication1.Controllers
                         guardiaSalida = (string?)null
                     },
                     usuarioId,
-                    ahoraLocal,          // horaIngreso (momento de ingreso a habitación)
+                    ahoraLocal,          // horaIngreso (momento de ingreso a habitaciÃ³n)
                     fechaActual,         // fechaIngreso
-                    null,                // horaSalida (se llenará después con PUT)
-                    null,                // fechaSalida (se llenará después con PUT)
+                    null,                // horaSalida (se llenarÃ¡ despuÃ©s con PUT)
+                    null,                // fechaSalida (se llenarÃ¡ despuÃ©s con PUT)
                     dniNormalizado       // DNI va a columna
                 );
 
@@ -259,8 +240,8 @@ namespace WebApplication1.Controllers
                     new
                     {
                         mensaje = esInformativoPersonalMina
-                            ? "Ingreso informativo a Habitación registrado"
-                            : "Ingreso a Habitación Proveedor registrado",
+                            ? "Ingreso informativo a HabitaciÃ³n registrado"
+                            : "Ingreso a HabitaciÃ³n Proveedor registrado",
                         salidaId = salidaDetalle.Id,
                         tipoOperacion = "HabitacionProveedor",
                         tipoIngreso,
@@ -279,11 +260,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Registra SALIDA de Habitación Proveedor
-        /// PUT /api/habitacion-proveedor/{id}/salida
-        /// Proveedor SALE de la habitación
-        /// </summary>
         [HttpPut("{id}/salida")]
         public async Task<IActionResult> RegistrarSalida(int id, [FromBody] ActualizarSalidaHabitacionProveedorDto dto)
         {
@@ -296,18 +272,15 @@ namespace WebApplication1.Controllers
                 if (salidaExistente.TipoOperacion != "HabitacionProveedor")
                     return BadRequest("Este endpoint es solo para HabitacionProveedor");
 
-                // Obtener UsuarioId y nombre del guardia que registra salida
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuario = usuarioId.HasValue
                     ? await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId)
                     : null;
                 string nombreGuardia = usuario?.NombreCompleto ?? "S/N";
 
-                // Respetar hora seleccionada y normalizar a zona Perú.
                 var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
                 var fechaActual = ahoraLocal.Date;
 
-                // Deserializar datos actuales
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
@@ -320,7 +293,6 @@ namespace WebApplication1.Controllers
                         : "Proveedor";
                     var esInformativoPersonalMina = string.Equals(tipoIngreso, "InformativoPersonalMina", StringComparison.OrdinalIgnoreCase);
 
-                    // Actualizar JSON con guardiaSalida
                     var datosActualizados = new
                     {
                         tipoIngreso,
@@ -336,20 +308,19 @@ namespace WebApplication1.Controllers
                         guardiaSalida = nombreGuardia
                     };
 
-                    // Actualizar solo horaSalida y fechaSalida en columnas (horaIngreso no se toca)
                     await _salidasService.ActualizarSalidaDetalle(
                         id, 
                         datosActualizados, 
                         usuarioId,
                         null,               // horaIngreso (no se actualiza)
                         null,               // fechaIngreso (no se actualiza)
-                        ahoraLocal,         // horaSalida (momento de salida de habitación)
+                        ahoraLocal,         // horaSalida (momento de salida de habitaciÃ³n)
                         fechaActual         // fechaSalida
                     );
 
                     return Ok(new
                     {
-                        mensaje = "Salida de Habitación Proveedor registrada",
+                        mensaje = "Salida de HabitaciÃ³n Proveedor registrada",
                         salidaId = id,
                         guardiaSalida = nombreGuardia,
                         salidaProveedorRegistrada = false,
@@ -363,20 +334,12 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtiene una salida por ID
-        /// GET /api/habitacion-proveedor/{id}
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerSalidaPorId(int id)
         {
             return await ObtenerSalidaPorIdCore(id);
         }
 
-        /// <summary>
-        /// Modo tecnico: obtiene una salida por ID (sin autenticacion)
-        /// GET /api/tecnico/habitacion-proveedor/{id}
-        /// </summary>
         [HttpGet("/api/tecnico/habitacion-proveedor/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> ObtenerSalidaPorIdTecnico(int id)
@@ -394,3 +357,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

@@ -1,3 +1,5 @@
+﻿// Archivo backend para PersonasController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
@@ -7,7 +9,6 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    // [Authorize(Roles = "Admin,Guardia")] // Comentado para permitir búsqueda de personas sin auth
     public class PersonasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -17,23 +18,16 @@ namespace WebApplication1.Controllers
             _context = context;
         }
 
-        /// <summary>
-        /// Busca una persona por su DNI en la tabla maestra
-        /// Retorna los datos básicos (DNI, Nombre, Tipo)
-        /// </summary>
-        /// <param name="dni">DNI a buscar (8 dígitos)</param>
-        /// <returns>Persona encontrada o 404</returns>
         [HttpGet("{dni}")]
         public async Task<ActionResult<Persona>> ObtenerPorDni(string dni)
         {
             if (string.IsNullOrWhiteSpace(dni))
                 return BadRequest(new { mensaje = "DNI es requerido" });
 
-            // Normalizar DNI (trim y validar formato)
             var dniNormalizado = dni.Trim();
             
             if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI debe tener 8 dígitos numéricos" });
+                return BadRequest(new { mensaje = "DNI debe tener 8 dÃ­gitos numÃ©ricos" });
 
             var persona = await _context.Personas
                 .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -44,25 +38,17 @@ namespace WebApplication1.Controllers
             return Ok(persona);
         }
 
-        /// <summary>
-        /// Busca personas por DNI parcial (para autocompletado)
-        /// Retorna múltiples coincidencias que comienzan con el DNI buscado
-        /// </summary>
-        /// <param name="dni">DNI parcial o completo a buscar</param>
-        /// <returns>Lista de personas que coinciden</returns>
         [HttpGet("buscar")]
         public async Task<ActionResult<IEnumerable<Persona>>> BuscarPorDni([FromQuery] string dni)
         {
             if (string.IsNullOrWhiteSpace(dni))
-                return BadRequest(new { mensaje = "DNI es requerido para búsqueda" });
+                return BadRequest(new { mensaje = "DNI es requerido para bÃºsqueda" });
 
             var dniNormalizado = dni.Trim();
 
-            // Validar que solo contenga dígitos
             if (!dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI debe contener solo números" });
+                return BadRequest(new { mensaje = "DNI debe contener solo nÃºmeros" });
 
-            // Buscar personas cuyo DNI comience con el valor buscado
             var personas = await _context.Personas
                 .Where(p => p.Dni.StartsWith(dniNormalizado))
                 .Take(10) // Limitar a 10 resultados para autocompletado
@@ -71,12 +57,6 @@ namespace WebApplication1.Controllers
             return Ok(personas);
         }
 
-        /// <summary>
-        /// Busca personas por nombre parcial (para autocompletado)
-        /// Retorna multiples coincidencias que contienen el texto buscado
-        /// </summary>
-        /// <param name="texto">Texto parcial del nombre a buscar</param>
-        /// <returns>Lista de personas que coinciden</returns>
         [HttpGet("buscar-nombre")]
         public async Task<ActionResult<IEnumerable<Persona>>> BuscarPorNombre([FromQuery] string texto)
         {
@@ -99,3 +79,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

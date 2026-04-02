@@ -1,3 +1,5 @@
+﻿// Archivo backend para DispositivosMovimientosController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
@@ -8,17 +10,6 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar movimientos automáticos desde dispositivos (escaners, etc.)
-    /// Ruta: api/dispositivos-movimientos
-    /// 
-    /// Este controller está separado de MovimientosController para permitir:
-    /// - Autenticación independiente de dispositivos
-    /// - Validaciones específicas para escaners
-    /// - Escalabilidad: escaners enviarán datos a PC cercana → PC envía a servidor
-    /// 
-    /// Llamado por: dispositivos.html
-    /// </summary>
     [ApiController]
     [Route("api/dispositivos-movimientos")]
     public class DispositivosMovimientosController : ControllerBase
@@ -37,22 +28,10 @@ namespace WebApplication1.Controllers
             _movimientosService = movimientosService;
         }
 
-        //  =========================
-        //  POST: api/dispositivos-movimientos
-        //  =========================
-        //  Registra un movimiento automático basado en un dispositivo (escaner).
-        //  El dispositivo envía su código único, API key y el DNI de la persona.
-        //  El tipo de movimiento (Entrada/Salida) se determina automáticamente.
-        // 
-        //  Requiere:
-        //  - codigoDispositivo: Identificador único del escaner
-        //  - apiKey: Clave secreta del dispositivo para autenticación
-        //  - dni: DNI de la persona
 
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimientoAutomatico(MovimientoAutomaticoDto dto)
         {
-            // 1️ Buscar dispositivo y validar API key
             var dispositivo = await _context.Dispositivos
                 .FirstOrDefaultAsync(d =>
                     d.Codigo == dto.CodigoDispositivo &&
@@ -60,16 +39,14 @@ namespace WebApplication1.Controllers
                     d.Activo);
 
             if (dispositivo == null)
-                return Unauthorized("Dispositivo no válido, inactivo o API key incorrecta.");
+                return Unauthorized("Dispositivo no vÃ¡lido, inactivo o API key incorrecta.");
 
-            // 2️ Verificar persona
             var persona = await _context.Personas.FindAsync(dto.Dni);
             if (persona == null)
                 return BadRequest("DNI no registrado.");
 
             int puntoControlId = dispositivo.PuntoControlId;
 
-            // 3️ Último movimiento en ese punto
             var ultimoMovimiento = await _context.Movimientos
                 .Where(m =>
                     m.Dni == dto.Dni &&
@@ -77,14 +54,12 @@ namespace WebApplication1.Controllers
                 .OrderByDescending(m => m.FechaHora)
                 .FirstOrDefaultAsync();
 
-            // 4️ Decidir Entrada / Salida automáticamente
             string tipoMovimiento =
                 ultimoMovimiento == null ||
                 ultimoMovimiento.TipoMovimiento == "Salida"
                     ? "Entrada"
                     : "Salida";
 
-            // 5️ Convertir a DTO normal y procesar con la lógica compartida
             var dtoNormal = new MovimientoCreateDto
             {
                 Dni = dto.Dni,
@@ -92,14 +67,8 @@ namespace WebApplication1.Controllers
                 TipoMovimiento = tipoMovimiento
             };
 
-            // =========================
-            // DETECTAR ZONA INTERNA ACTUAL
-            // =========================
             var zonaInternaActual = await _movimientosService.DetectarZonaInternaActual(dto.Dni);
 
-            // =========================
-            // SALIDA IMPLÍCITA AUTOMÁTICA (antes de validaciones)
-            // =========================
             await _movimientosService.ProcesarSalidaImplicitaAutomatica(
                 dto.Dni,
                 dtoNormal.PuntoControlId,
@@ -107,31 +76,23 @@ namespace WebApplication1.Controllers
                 zonaInternaActual
             );
 
-            // Recargar zona interna después de posible salida implícita
             zonaInternaActual = await _movimientosService.DetectarZonaInternaActual(dto.Dni);
 
-            // =========================
-            // VALIDACIONES (después de salida implícita)
-            // =========================
             var validator = _validators.FirstOrDefault(v => v.PuntoControlId == dtoNormal.PuntoControlId);
             if (validator != null)
             {
                 var res = await validator.ValidateAsync(dtoNormal);
                 if (!res.IsValid)
                 {
-                    // Alerta eliminada
-                    return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
+                    return BadRequest(res.ErrorMessage ?? "Movimiento invÃ¡lido.");
                 }
             }
 
-            // =========================
-            // REGISTRAR MOVIMIENTO
-            // =========================
             await _movimientosService.RegistrarMovimientoEnBD(
                 dto.Dni,
                 dtoNormal.PuntoControlId,
                 dtoNormal.TipoMovimiento,
-                null  // Registrado por dispositivo (escáner)
+                null  // Registrado por dispositivo (escÃ¡ner)
             );
 
             return Ok(new
@@ -143,3 +104,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

@@ -1,8 +1,7 @@
+﻿// Archivo backend para RegistrarVehiculoEmpresaDesdeProveedorDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO opcional para crear un registro de VehiculoEmpresa desde un activo de VehiculosProveedores.
-    /// </summary>
     public class RegistrarVehiculoEmpresaDesdeProveedorDto
     {
         public int? KmIngreso { get; set; }
@@ -17,3 +16,5 @@ namespace WebApplication1.DTOs
         public string? Observacion { get; set; }
     }
 }
+
+

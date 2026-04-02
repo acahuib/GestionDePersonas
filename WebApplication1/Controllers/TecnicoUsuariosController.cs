@@ -1,3 +1,5 @@
+﻿// Archivo backend para TecnicoUsuariosController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -74,7 +76,7 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> Crear([FromBody] CrearUsuarioTecnicoDto dto)
         {
             if (dto == null)
-                return BadRequest("Datos inválidos.");
+                return BadRequest("Datos invÃ¡lidos.");
 
             var usuarioLogin = (dto.UsuarioLogin ?? string.Empty).Trim();
             var nombreCompleto = (dto.NombreCompleto ?? string.Empty).Trim();
@@ -95,16 +97,16 @@ namespace WebApplication1.Controllers
                 return BadRequest("Rol es obligatorio.");
 
             if (rol.Length > 100)
-                return BadRequest("Rol excede el máximo permitido.");
+                return BadRequest("Rol excede el mÃ¡ximo permitido.");
 
             if (usuarioLogin.Length > 100)
-                return BadRequest("UsuarioLogin excede el máximo permitido.");
+                return BadRequest("UsuarioLogin excede el mÃ¡ximo permitido.");
 
             if (nombreCompleto.Length > 200)
-                return BadRequest("NombreCompleto excede el máximo permitido.");
+                return BadRequest("NombreCompleto excede el mÃ¡ximo permitido.");
 
             if (dni.Length > 20)
-                return BadRequest("DNI excede el máximo permitido.");
+                return BadRequest("DNI excede el mÃ¡ximo permitido.");
 
             var existe = await _context.Usuarios.AnyAsync(u => u.UsuarioLogin.ToLower() == usuarioLogin.ToLower());
             if (existe)
@@ -158,7 +160,7 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarUsuarioTecnicoDto dto)
         {
             if (dto == null)
-                return BadRequest("Datos inválidos.");
+                return BadRequest("Datos invÃ¡lidos.");
 
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
             if (usuario == null)
@@ -168,7 +170,7 @@ namespace WebApplication1.Controllers
             {
                 var loginNuevo = dto.UsuarioLogin.Trim();
                 if (loginNuevo.Length > 100)
-                    return BadRequest("UsuarioLogin excede el máximo permitido.");
+                    return BadRequest("UsuarioLogin excede el mÃ¡ximo permitido.");
 
                 var duplicado = await _context.Usuarios.AnyAsync(u => u.Id != id && u.UsuarioLogin.ToLower() == loginNuevo.ToLower());
                 if (duplicado)
@@ -181,7 +183,7 @@ namespace WebApplication1.Controllers
             {
                 var nombreNuevo = dto.NombreCompleto.Trim();
                 if (nombreNuevo.Length > 200)
-                    return BadRequest("NombreCompleto excede el máximo permitido.");
+                    return BadRequest("NombreCompleto excede el mÃ¡ximo permitido.");
 
                 usuario.NombreCompleto = nombreNuevo;
             }
@@ -193,7 +195,7 @@ namespace WebApplication1.Controllers
                     return BadRequest("Rol es obligatorio.");
 
                 if (rolNuevo.Length > 100)
-                    return BadRequest("Rol excede el máximo permitido.");
+                    return BadRequest("Rol excede el mÃ¡ximo permitido.");
 
                 usuario.Rol = rolNuevo;
             }
@@ -202,7 +204,7 @@ namespace WebApplication1.Controllers
             {
                 var dniNuevo = string.IsNullOrWhiteSpace(dto.Dni) ? string.Empty : dto.Dni.Trim();
                 if (dniNuevo.Length > 20)
-                    return BadRequest("DNI excede el máximo permitido.");
+                    return BadRequest("DNI excede el mÃ¡ximo permitido.");
 
                 if (!string.IsNullOrWhiteSpace(dniNuevo))
                 {
@@ -316,16 +318,15 @@ namespace WebApplication1.Controllers
             var sqlEx = ex.InnerException as SqlException;
             if (sqlEx != null)
             {
-                // 2601/2627: índice único duplicado en SQL Server
                 if (sqlEx.Number == 2601 || sqlEx.Number == 2627)
-                    return "Conflicto de datos: ya existe un usuario con los mismos datos únicos (usuario o DNI).";
+                    return "Conflicto de datos: ya existe un usuario con los mismos datos Ãºnicos (usuario o DNI).";
 
-                // 8152/2628: datos exceden longitud de columna
                 if (sqlEx.Number == 8152 || sqlEx.Number == 2628)
-                    return "Uno o más campos exceden la longitud permitida por la base de datos.";
+                    return "Uno o mÃ¡s campos exceden la longitud permitida por la base de datos.";
             }
 
-            return "No se pudo guardar el usuario por una restricción de base de datos.";
+            return "No se pudo guardar el usuario por una restricciÃ³n de base de datos.";
         }
     }
 }
+

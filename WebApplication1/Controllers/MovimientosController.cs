@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Archivo backend para MovimientosController.
+
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
@@ -9,13 +11,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar movimientos manuales (desde index.html)
-    /// Requiere autenticación de usuario (Admin o Guardia)
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    // [Authorize(Roles = "Admin,Guardia")] // COMENTADO PARA PRUEBAS EN SWAGGER
     public class MovimientosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -33,40 +30,23 @@ namespace WebApplication1.Controllers
         }
 
 
-        // =========================
-        // POST: api/movimientos
-        // =========================
         [HttpPost]
         public async Task<IActionResult> RegistrarMovimiento(MovimientoCreateDto dto)
         {
-            // 1️ Verificar persona
             var persona = await _context.Personas.FindAsync(dto.Dni);
             if (persona == null)
                 return BadRequest("El DNI no está registrado.");
 
-            // 2️ Último movimiento general
             var ultimoMovimiento = await _movimientosService.GetLastMovimiento(dto.Dni);
 
-            // =========================
-            // GARITA (ID = 1)
-            // =========================
             var ultimaEntradaGarita = await _movimientosService.GetLastMovimiento(dto.Dni, _movimientosService.GaritaId, "Entrada");
             var ultimaSalidaGarita = await _movimientosService.GetLastMovimiento(dto.Dni, _movimientosService.GaritaId, "Salida");
 
-            // =========================
-            // COMEDOR (ID = 2)
-            // =========================
             var ultimaEntradaComedor = await _movimientosService.GetLastMovimiento(dto.Dni, _movimientosService.ComedorId, "Entrada");
             var ultimaSalidaComedor = await _movimientosService.GetLastMovimiento(dto.Dni, _movimientosService.ComedorId, "Salida");
 
-            // =========================
-            // DETECTAR ZONA INTERNA ACTUAL
-            // =========================
             var zonaInternaActual = await _movimientosService.DetectarZonaInternaActual(dto.Dni);
 
-            // =========================
-            // SALIDA IMPLÍCITA AUTOMÁTICA (antes de validaciones)
-            // =========================
             await _movimientosService.ProcesarSalidaImplicitaAutomatica(
                 dto.Dni,
                 dto.PuntoControlId,
@@ -74,26 +54,18 @@ namespace WebApplication1.Controllers
                 zonaInternaActual
             );
 
-            // Recargar zona interna después de posible salida implícita
             zonaInternaActual = await _movimientosService.DetectarZonaInternaActual(dto.Dni);
 
-            // =========================
-            // VALIDACIONES (después de salida implícita)
-            // =========================
             var validator = _validators.FirstOrDefault(v => v.PuntoControlId == dto.PuntoControlId);
             if (validator != null)
             {
                 var res = await validator.ValidateAsync(dto);
                 if (!res.IsValid)
                 {
-                    // Alerta eliminada
                     return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
                 }
             }
 
-            // =========================
-            // REGISTRAR MOVIMIENTO
-            // =========================
             int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             await _movimientosService.RegistrarMovimientoEnBD(dto.Dni, dto.PuntoControlId, dto.TipoMovimiento, usuarioId);
@@ -101,22 +73,9 @@ namespace WebApplication1.Controllers
             return Ok("Movimiento registrado correctamente.");
         }
 
-        // =========================
-        // GET: api/movimientos/persona/{dni}/abierto
-        // =========================
-        /// <summary>
-        /// Busca movimientos abiertos (sin cerrar) de una persona
-        /// Un movimiento está abierto si:
-        /// - Para Proveedor: tiene horaIngreso pero falta horaSalida
-        /// - Para VehiculoEmpresa: tiene horaSalida pero falta horaIngreso
-        /// - Para ControlBienes: tiene fechaIngreso pero falta fechaSalida
-        /// - Para VehiculosProveedores: tiene horaIngreso pero falta horaSalida
-        /// - Para PersonalLocal: tiene horaIngreso pero falta horaSalida
-        /// </summary>
         [HttpGet("persona/{dni}/abierto")]
         public async Task<ActionResult<List<MovimientoAbiertoDto>>> ObtenerMovimientosAbiertos(string dni)
         {
-            // Buscar movimientos de la persona con sus OperacionDetalle
             var movimientos = await _context.Movimientos
                 .Where(m => m.Dni == dni)
                 .OrderByDescending(m => m.FechaHora)
@@ -129,60 +88,50 @@ namespace WebApplication1.Controllers
 
             foreach (var mov in movimientos)
             {
-                // Buscar OperacionDetalle asociado
                 var salida = await _context.OperacionDetalle
                     .FirstOrDefaultAsync(s => s.MovimientoId == mov.Id);
 
                 if (salida == null)
                     continue; // Solo interesa OperacionDetalle
 
-                // Deserializar JSON
                 var datos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(salida.DatosJSON) 
                     ?? new Dictionary<string, object>();
 
-                // Determinar si está abierto
                 bool estaAbierto = false;
                 string motivo = "";
 
                 if (salida.TipoOperacion == "Proveedor")
                 {
-                    // Proveedor está abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
                 }
                 else if (salida.TipoOperacion == "VehiculoEmpresa")
                 {
-                    // VehiculoEmpresa esta abierto si no tiene horaIngreso
                     estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
                 }
                 else if (salida.TipoOperacion == "ControlBienes")
                 {
-                    // ControlBienes esta abierto si no tiene fechaSalida
                     estaAbierto = !datos.ContainsKey("fechaSalida") || string.IsNullOrEmpty(datos["fechaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar fechaSalida" : "Cerrado";
                 }
                 else if (salida.TipoOperacion == "VehiculosProveedores")
                 {
-                    // VehiculosProveedores esta abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida" : "Cerrado";
                 }
                 else if (salida.TipoOperacion == "DiasLibre")
                 {
-                    // DiasLibre se registra completo en un solo paso
                     estaAbierto = false;
                     motivo = "Permiso registrado";
                 }
                 else if (salida.TipoOperacion == "SalidasPermisosPersonal")
                 {
-                    // SalidasPermisosPersonal esta abierto si no tiene horaIngreso
                     estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
                 }
                 else if (salida.TipoOperacion == "Ocurrencias")
                 {
-                    // Ocurrencias esta abierto si le falta o ingreso o salida
                     bool tieneIngreso = datos.ContainsKey("horaIngreso") && !string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
                     bool tieneSalida = datos.ContainsKey("horaSalida") && !string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     estaAbierto = !tieneIngreso || !tieneSalida;
@@ -190,7 +139,6 @@ namespace WebApplication1.Controllers
                 }
                 else if (salida.TipoOperacion == "PersonalLocal")
                 {
-                    // PersonalLocal esta abierto si no tiene horaSalida
                     estaAbierto = !datos.ContainsKey("horaSalida") || string.IsNullOrEmpty(datos["horaSalida"]?.ToString());
                     motivo = estaAbierto ? "Falta registrar horaSalida final" : "Cerrado";
                 }
@@ -214,3 +162,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

@@ -1,3 +1,5 @@
+﻿// Archivo backend para CanchaCompletarDto.
+
 namespace WebApplication1.DTOs
 {
     public class CanchaCompletarDto
@@ -5,3 +7,4 @@ namespace WebApplication1.DTOs
         public string? Observacion { get; set; }
     }
 }
+

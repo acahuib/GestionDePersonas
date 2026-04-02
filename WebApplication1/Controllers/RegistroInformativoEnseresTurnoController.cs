@@ -1,3 +1,5 @@
+﻿// Archivo backend para RegistroInformativoEnseresTurnoController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -80,7 +82,7 @@ namespace WebApplication1.Controllers
                 })
                 .Where(o => !string.IsNullOrWhiteSpace(o.nombre))
                 .Where(o => o.nombre != "-")
-                .Where(o => o.nombre != "—")
+                .Where(o => o.nombre != "â€”")
                 .ToList();
 
             if (objetosNormalizados.Any(o => o.cantidad < 0))
@@ -98,7 +100,7 @@ namespace WebApplication1.Controllers
 
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId);
             if (usuario == null)
-                return Unauthorized("Usuario autenticado no válido");
+                return Unauthorized("Usuario autenticado no vÃ¡lido");
 
                         var dniGuardia = !string.IsNullOrWhiteSpace(usuario.Dni) &&
                                                          usuario.Dni.Trim().Length == 8 &&
@@ -111,7 +113,7 @@ namespace WebApplication1.Controllers
                                         : null;
 
                         if (string.IsNullOrWhiteSpace(dniGuardia))
-                                return BadRequest("El usuario autenticado no tiene un DNI válido configurado");
+                                return BadRequest("El usuario autenticado no tiene un DNI vÃ¡lido configurado");
 
             var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniGuardia);
             if (persona == null)
@@ -146,7 +148,6 @@ namespace WebApplication1.Controllers
                 && fechaRegistro == horaRegistro.Date
                 && horaRegistro.TimeOfDay < TimeSpan.FromHours(7))
             {
-                // Regla operativa: entre 00:00 y 06:59, el turno noche pertenece al dia anterior.
                 fechaRegistro = fechaRegistro.AddDays(-1);
             }
 
@@ -234,8 +235,6 @@ namespace WebApplication1.Controllers
 
                 var guardiasExistentes = guardiasGaritaActuales.Any() || guardiasOtrasZonasActuales.Any();
 
-                // Regla operativa: guardias se registran una sola vez por fecha+turno.
-                // Si intentan guardar solo guardias nuevamente para el mismo turno/fecha, se bloquea.
                 if (tieneGuardias && !tieneObjetos && guardiasExistentes)
                     return BadRequest("Ya se registraron los guardias para este turno y fecha.");
 
@@ -336,3 +335,4 @@ namespace WebApplication1.Controllers
         }
     }
 }
+

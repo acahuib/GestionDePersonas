@@ -1,6 +1,4 @@
-// =========================================
-// SALIDA DE PROVEEDOR (Sin Vehiculo)
-// =========================================
+﻿// Script frontend para proveedor_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -14,7 +12,6 @@ function cargarDatosDesdeUrl() {
     document.getElementById("destino").value = params.get("destino") || "";
     document.getElementById("observacion").value = params.get("observacion") || "";
     
-    // Guardar datos de ingreso para usarlos al registrar salida
     document.getElementById("dni").dataset.fechaIngreso = params.get("fechaIngreso") || "";
     document.getElementById("dni").dataset.horaIngreso = params.get("horaIngreso") || "";
     document.getElementById("dni").dataset.guardiaIngreso = params.get("guardiaIngreso") || "";
@@ -33,7 +30,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
         return;
     }
 
@@ -42,12 +39,10 @@ async function registrarSalida(endpoint, mensajeOk) {
             observacion: observacion || null
         };
 
-        // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
             body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
-        // Usar PUT para actualizar el registro existente
         const responseSalida = await fetchAuth(`${API_BASE}/proveedor/${salidaId}/${endpoint}`, {
             method: "PUT",
             body: JSON.stringify(body)
@@ -61,7 +56,6 @@ async function registrarSalida(endpoint, mensajeOk) {
         mensaje.className = "success";
         mensaje.innerText = mensajeOk;
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             window.location.href = "proveedor.html?refresh=1";
         }, 500);
@@ -73,11 +67,11 @@ async function registrarSalida(endpoint, mensajeOk) {
 }
 
 async function registrarSalidaTemporal() {
-    await registrarSalida("salida-temporal", "✅ SALIDA CON RETORNO registrada correctamente");
+    await registrarSalida("salida-temporal", "âœ… SALIDA CON RETORNO registrada correctamente");
 }
 
 async function registrarSalidaDefinitiva() {
-    await registrarSalida("salida", "✅ SALIDA DEFINITIVA registrada correctamente");
+    await registrarSalida("salida", "âœ… SALIDA DEFINITIVA registrada correctamente");
 }
 
 function volver() {
@@ -94,15 +88,15 @@ function obtenerFechaLocalISO() {
 
 function obtenerMensajeUsuario(error) {
     const mensajeBase = (error?.message || error || "").toString().trim();
-    if (!mensajeBase) return "No se pudo completar la operación.";
+    if (!mensajeBase) return "No se pudo completar la operaciÃ³n.";
 
     try {
         const json = JSON.parse(mensajeBase);
         if (json?.mensaje) return String(json.mensaje);
         if (json?.error) return String(json.error);
     } catch {
-        // Ignorar: no era JSON.
     }
 
     return mensajeBase.replace(/^error\s*:\s*/i, "");
 }
+

@@ -1,8 +1,7 @@
+﻿// Archivo backend para ActualizarHorarioOcurrenciasDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para actualizar horarios de ocurrencia
-    /// </summary>
     public class ActualizarHorarioOcurrenciasDto
     {
         public DateTime? HoraIngreso { get; set; }
@@ -10,3 +9,5 @@ namespace WebApplication1.DTOs
         public string? Ocurrencia { get; set; }
     }
 }
+
+

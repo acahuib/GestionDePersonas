@@ -1,17 +1,13 @@
-// =========================================
-// CUADERNO DE PERMISOS OFICIALES
-// =========================================
+﻿// Script frontend para oficial_permisos.
 
 let personaEncontrada = null;
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -21,29 +17,25 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`ðŸ“¡ Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campos de nombre/apellido
             nombreCompletoInput.value = "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
             
-            // Saltar a área
             document.getElementById("deDonde").focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campos para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -51,12 +43,11 @@ async function buscarPersonaPorDni() {
             nombreCompletoInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -64,7 +55,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar SALIDA de personal
 async function registrarSalida() {
     const dni = document.getElementById("dni").value.trim();
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
@@ -79,16 +69,15 @@ async function registrarSalida() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni || !deDonde || !tipo || !quienAutoriza) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, De Dónde, Tipo y Quién Autoriza";
+        mensaje.innerText = "Complete DNI, De DÃ³nde, Tipo y QuiÃ©n Autoriza";
         return;
     }
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
@@ -110,7 +99,6 @@ async function registrarSalida() {
             observacion: observacion || null
         };
 
-        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombreCompleto = nombreCompleto;
         }
@@ -129,7 +117,6 @@ async function registrarSalida() {
         mensaje.className = "success";
         mensaje.innerText = `SALIDA registrada para ${nombreMostrar}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombreCompleto").value = "";
         document.getElementById("deDonde").value = "";
@@ -145,7 +132,6 @@ async function registrarSalida() {
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -154,9 +140,7 @@ async function registrarSalida() {
     }
 }
 
-// Navegar a la pantalla de ingreso con datos precargados
 function irAIngreso(salidaId, dni, nombreCompleto, deDonde, tipo, quienAutoriza, observacion, fechaSalidaParam, horaSalidaParam, guardiaSalida) {
-    // Formatear fechas para mostrar
     const fechaSalida = fechaSalidaParam ? new Date(fechaSalidaParam).toLocaleDateString("es-PE") : "N/A";
     const horaSalida = horaSalidaParam ? new Date(horaSalidaParam).toLocaleTimeString("es-PE") : "N/A";
     
@@ -201,7 +185,6 @@ function irAIngresoDesdePayload(payloadCodificado) {
     }
 }
 
-// Cargar personal activo (fuera, sin ingreso)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -220,7 +203,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Tomar el último registro por DNI y mostrar solo los que no tengan ingreso
         const ultimosPorDni = new Map();
 
         salidas.forEach(s => {
@@ -230,12 +212,10 @@ async function cargarActivos() {
             const fechaSalida = s.fechaSalida ? new Date(s.fechaSalida) : null;
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso) : null;
 
-            // Si ya hay registro de este DNI
             if (ultimosPorDni.has(dni)) {
                 const existente = ultimosPorDni.get(dni);
                 const fechaExistente = existente.fechaSalida ? new Date(existente.fechaSalida) : null;
                 
-                // Comparar fechas de salida: quedarse con la más reciente
                 if (fechaSalida && (!fechaExistente || fechaSalida > fechaExistente)) {
                     ultimosPorDni.set(dni, s);
                 }
@@ -244,7 +224,6 @@ async function cargarActivos() {
             }
         });
 
-        // Filtrar solo los que NO tengan ingreso
         const activosSinIngreso = Array.from(ultimosPorDni.values())
             .filter(s => !s.horaIngreso);
 
@@ -253,7 +232,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Ordenar por fecha de salida más reciente
         activosSinIngreso.sort((a, b) => {
             const dateA = a.fechaSalida ? new Date(a.fechaSalida) : new Date(0);
             const dateB = b.fechaSalida ? new Date(b.fechaSalida) : new Date(0);
@@ -265,7 +243,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>De Dónde</th>';
+        html += '<th>De DÃ³nde</th>';
         html += '<th>Tipo</th>';
         html += '<th>Autorizado por</th>';
         html += '<th>Fecha / Hora Salida</th>';
@@ -283,7 +261,6 @@ async function cargarActivos() {
             const guardiaSalida = datos.guardiaSalida || "N/A";
             const observacion = datos.observacion || "";
             
-            // Preparar parámetros para pasar a la función
             const fechaSalidaParam = s.fechaSalida || "";
             const horaSalidaParam = s.horaSalida || "";
             const payload = encodeURIComponent(JSON.stringify({
@@ -330,3 +307,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

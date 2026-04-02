@@ -1,6 +1,4 @@
-// =========================================
-// INGRESO DE VEHÍCULO DE EMPRESA
-// =========================================
+﻿// Script frontend para vehiculo_empresa_ingreso.
 
 function setElementValueIfExists(id, value) {
     const element = document.getElementById(id);
@@ -54,7 +52,7 @@ async function cargarDetalleOperacion(salidaId) {
     const mensaje = document.getElementById("mensaje");
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro";
         return;
     }
 
@@ -105,7 +103,7 @@ async function registrarMovimientoComplementario() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro";
         return;
     }
 
@@ -134,7 +132,7 @@ async function registrarMovimientoComplementario() {
 
     if (km && (isNaN(km) || parseInt(km, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un número válido";
+        mensaje.innerText = "El kilometraje debe ser un nÃºmero vÃ¡lido";
         return;
     }
 
@@ -181,8 +179,8 @@ async function registrarMovimientoComplementario() {
 
         mensaje.className = "success";
         mensaje.innerText = esIngreso
-            ? "✅ INGRESO registrado correctamente"
-            : "✅ SALIDA registrada correctamente";
+            ? "âœ… INGRESO registrado correctamente"
+            : "âœ… SALIDA registrada correctamente";
 
         setTimeout(() => {
             window.location.href = "vehiculo_empresa.html?refresh=1";
@@ -204,3 +202,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
 }
+

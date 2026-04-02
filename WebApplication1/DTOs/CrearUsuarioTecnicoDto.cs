@@ -1,3 +1,5 @@
+﻿// Archivo backend para CrearUsuarioTecnicoDto.
+
 namespace WebApplication1.DTOs
 {
     public class CrearUsuarioTecnicoDto

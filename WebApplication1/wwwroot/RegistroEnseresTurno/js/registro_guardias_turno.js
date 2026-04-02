@@ -1,8 +1,4 @@
-// ===============================================
-// REGISTRO DE GUARDIAS POR TURNO
-// Página dedicada solo al registro de guardias.
-// Usa el mismo endpoint que Enseres por Turno.
-// ===============================================
+﻿// Script frontend para registro_guardias_turno.
 
 const CONFIG_TURNOS_GUARDIAS = {
     "7am-7pm": {
@@ -26,18 +22,17 @@ const CONFIG_TURNOS_GUARDIAS = {
 let guardiasYaRegistrados = false;
 
 function obtenerMensajePlanoRGT(error) {
-    if (!error) return "No se pudo completar la operación.";
+    if (!error) return "No se pudo completar la operaciÃ³n.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operaciÃ³n.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operaciÃ³n.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
 }
 
-// ---- Helpers ----
 
 function turnoTextoRGT(turno) {
     if (turno === "7am-7pm") return "7am-7pm (Turno dia)";
@@ -87,7 +82,6 @@ function obtenerFechaOperativaTurnoRGT(turno, fechaIso) {
     return fechaIso;
 }
 
-// ---- Renderizar slots según turno ----
 
 function renderizarSlots() {
     const turno = document.getElementById("turno").value;
@@ -207,7 +201,6 @@ async function verificarEstadoGuardiasTurno() {
     }
 }
 
-// ---- Guardar ----
 
 async function guardarGuardias() {
     const turno  = document.getElementById("turno").value;
@@ -283,7 +276,6 @@ async function guardarGuardias() {
         mensaje.className = "success";
         mensaje.innerText = "Guardias del turno registrados correctamente";
 
-        // Limpiar campos de nombre
         document.querySelectorAll("[data-slot] .slot-nombre").forEach(i => i.value = "");
         document.getElementById("horaRegistro").value = "";
 
@@ -295,7 +287,6 @@ async function guardarGuardias() {
     }
 }
 
-// ---- Mostrar registros del día agrupados por turno ----
 
 async function cargarRegistrosDia() {
     const container = document.getElementById("tabla-registros-dia");
@@ -320,7 +311,6 @@ async function cargarRegistrosDia() {
             return;
         }
 
-        // Mostrar último registro por turno
         const porTurno = {};
         hoyRegistros.forEach(r => {
             const t = r?.datos?.turno;
@@ -336,7 +326,7 @@ async function cargarRegistrosDia() {
                 ? new Date(r.fechaCreacion).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
                 : "-";
 
-            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">— registrado a las ${horaReg}</span></h4>`;
+            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">â€” registrado a las ${horaReg}</span></h4>`;
             html += '<div class="table-wrapper"><table class="table"><thead><tr><th>Puesto / Zona</th><th>Guardia</th></tr></thead><tbody>';
 
             if (guardiasGarita.length) {
@@ -365,3 +355,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

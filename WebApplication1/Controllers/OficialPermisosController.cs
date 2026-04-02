@@ -1,3 +1,5 @@
+﻿// Archivo backend para OficialPermisosController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +12,6 @@ using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar permisos oficiales de personal
-    /// Similar a Proveedor pero para control de salidas autorizadas de personal interno
-    /// Ruta: /api/oficial-permisos
-    /// </summary>
     [ApiController]
     [Route("api/oficial-permisos")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -48,27 +45,19 @@ namespace WebApplication1.Controllers
             };
         }
 
-        // ======================================================
-        // POST: /api/oficial-permisos
-        // Registra SALIDA de Personal con Permiso Oficial
-        // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarSalida([FromBody] SalidaOficialPermisosDto dto)
         {
             try
             {
-                // Validar que solo se envía UNO: horaSalida O horaIngreso
                 if (dto.HoraSalida.HasValue && dto.HoraIngreso.HasValue)
-                    return BadRequest("OficialPermisos: solo envíe horaSalida O horaIngreso, no ambos");
+                    return BadRequest("OficialPermisos: solo envÃ­e horaSalida O horaIngreso, no ambos");
 
                 if (!dto.HoraSalida.HasValue && !dto.HoraIngreso.HasValue)
                     return BadRequest("OficialPermisos: debe enviar horaSalida O horaIngreso");
 
-                // Determinar tipo de movimiento basado en cuál campo se proporciona
                 string tipoMovimiento = dto.HoraSalida.HasValue ? "Salida" : "Entrada";
 
-                // Regla funcional: solo permitir SALIDA si la persona está actualmente dentro
-                // (último movimiento debe ser Entrada/Ingreso)
                 if (dto.HoraSalida.HasValue)
                 {
                     var ultimoMovimientoGlobal = await _context.Movimientos
@@ -86,10 +75,9 @@ namespace WebApplication1.Controllers
                         string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
 
                     if (!estaDentro)
-                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (último movimiento no es Entrada).");
+                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (Ãºltimo movimiento no es Entrada).");
                 }
 
-                // ===== Buscar o crear en tabla Personas =====
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -114,8 +102,6 @@ namespace WebApplication1.Controllers
                     _context.Personas.Add(persona);
                     await _context.SaveChangesAsync();
                 }
-                // Si persona ya existe, se usa el nombre de la tabla
-                // ===== FIN =====
 
                 int? usuarioId = UserClaimsHelper.GetUserId(User);
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -127,15 +113,12 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
-                // Cada ingreso/salida debe tener su propio MovimientoId único
                 var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
                     dniNormalizado, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
                 var horaIngresoBase = dto.HoraIngreso.HasValue
                     ? ResolverHoraPeru(dto.HoraIngreso)
                     : ResolverHoraPeru(null);
@@ -143,13 +126,11 @@ namespace WebApplication1.Controllers
                     ? ResolverHoraPeru(dto.HoraSalida)
                     : ResolverHoraPeru(null);
                 
-                // Extraer horaIngreso/fechaIngreso o horaSalida/fechaSalida para guardar en columnas
                 var horaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase : (DateTime?)null;
                 var fechaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase.Date : (DateTime?)null;
                 var horaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase : (DateTime?)null;
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase.Date : (DateTime?)null;
 
-                // DatosJSON solo contiene datos variables del evento específico
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "OficialPermisos",
@@ -190,10 +171,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // ======================================================
-        // PUT: /api/oficial-permisos/{id}/ingreso
-        // Actualiza hora de INGRESO (retorno)
-        // ======================================================
         [HttpPut("{id}/ingreso")]
         public async Task<IActionResult> ActualizarIngreso(int id, [FromBody] ActualizarIngresoOficialPermisosDto dto)
         {
@@ -215,13 +192,11 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
             var ahoraLocal = dto.HoraIngreso.HasValue
                 ? ResolverHoraPeru(dto.HoraIngreso)
                 : ResolverHoraPeru(null);
             var fechaActual = ahoraLocal.Date;
             
-            // Actualizar JSON manteniendo datos previos
             var datosActualizados = new
             {
                 deDonde = datosActuales.TryGetProperty("deDonde", out var dd) && dd.ValueKind == JsonValueKind.String
@@ -240,7 +215,6 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
-            // Pasar horaIngreso y fechaIngreso como columnas
             await _salidasService.ActualizarSalidaDetalle(
                 id, 
                 datosActualizados, 
@@ -281,10 +255,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/oficial-permisos/{id}
-        // Obtiene detalle de permiso oficial con información de tabla Personas
-        // ======================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPermisoPorId(int id)
         {
@@ -316,10 +286,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/oficial-permisos/consultar/{dni}
-        // Busca permisos por DNI
-        // ======================================================
         [HttpGet("consultar/{dni}")]
         public async Task<IActionResult> ConsultarPorDni(string dni)
         {
@@ -358,3 +324,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

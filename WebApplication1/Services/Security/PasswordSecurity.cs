@@ -1,3 +1,5 @@
+﻿// Archivo backend para PasswordSecurity.
+
 using System.Security.Cryptography;
 using System.Text;
 

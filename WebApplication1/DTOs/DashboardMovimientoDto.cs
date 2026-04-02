@@ -1,9 +1,7 @@
+﻿// Archivo backend para DashboardMovimientoDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO extendido para el dashboard de administrador
-    /// Incluye información completa del movimiento, persona y detalles de salida
-    /// </summary>
     public class DashboardMovimientoDto
     {
         public int Id { get; set; }
@@ -17,3 +15,5 @@ namespace WebApplication1.DTOs
         public int PuntoControlId { get; set; }
     }
 }
+
+

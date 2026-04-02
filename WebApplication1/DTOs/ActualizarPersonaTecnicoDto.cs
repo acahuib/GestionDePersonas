@@ -1,3 +1,5 @@
+﻿// Archivo backend para ActualizarPersonaTecnicoDto.
+
 namespace WebApplication1.DTOs
 {
     public class ActualizarPersonaTecnicoDto
@@ -7,3 +9,4 @@ namespace WebApplication1.DTOs
         public string? Tipo { get; set; }
     }
 }
+

@@ -1,3 +1,5 @@
+﻿// Archivo backend para VehiculoEmpresaController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +11,6 @@ using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar vehículos de empresa
-    /// Ruta: /api/vehiculo-empresa
-    /// </summary>
     [ApiController]
     [Route("api/vehiculo-empresa")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -71,18 +69,13 @@ namespace WebApplication1.Controllers
             return await query.AnyAsync();
         }
 
-        // ======================================================
-        // POST: /api/vehiculo-empresa
-        // Registra operación inicial (SALIDA o INGRESO)
-        // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarSalida(SalidaVehiculoEmpresaDto dto)
         {
             try
             {
-                // Validar que solo se envía UNO: horaIngreso O horaSalida
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("VehiculoEmpresa: solo envíe horaSalida O horaIngreso, no ambos");
+                    return BadRequest("VehiculoEmpresa: solo envÃ­e horaSalida O horaIngreso, no ambos");
 
                 if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
                     return BadRequest("VehiculoEmpresa: debe enviar horaSalida O horaIngreso");
@@ -119,7 +112,6 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // NUEVO: Buscar o crear persona en tabla Personas
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -134,13 +126,11 @@ namespace WebApplication1.Controllers
                 
                 if (persona == null)
                 {
-                    // Validar que se proporcione el nombre del conductor
                     if (string.IsNullOrWhiteSpace(dto.Conductor))
                     {
-                        return BadRequest("El conductor es requerido cuando el DNI no está registrado. Por favor proporcione el nombre del conductor.");
+                        return BadRequest("El conductor es requerido cuando el DNI no estÃ¡ registrado. Por favor proporcione el nombre del conductor.");
                     }
                     
-                    // Crear nueva persona
                     persona = new Models.Persona
                     {
                         Dni = dniNormalizado,
@@ -151,15 +141,12 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
-                // Cada ingreso/salida debe tener su propio MovimientoId único
                 var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
                     dniNormalizado, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
                 var horaIngresoBase = dto.HoraIngreso.HasValue
                     ? ResolverHoraPeru(dto.HoraIngreso)
                     : ResolverHoraPeru(null);
@@ -167,15 +154,11 @@ namespace WebApplication1.Controllers
                     ? ResolverHoraPeru(dto.HoraSalida)
                     : ResolverHoraPeru(null);
                 
-                // Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
                 var horaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase : (DateTime?)null;
                 var fechaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase.Date : (DateTime?)null;
                 var horaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase : (DateTime?)null;
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase.Date : (DateTime?)null;
 
-                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
-                // DNI se guarda en columna para JOIN directo con Personas
-                // conductor se guarda solo como referencia temporal (nombre real viene de Personas)
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "VehiculoEmpresa",
@@ -190,7 +173,6 @@ namespace WebApplication1.Controllers
                         destinoSalida = esSalidaInicial ? dto.DestinoSalida?.Trim() : null,
                         origenIngreso = esSalidaInicial ? null : dto.OrigenIngreso?.Trim(),
                         destinoIngreso = esSalidaInicial ? null : dto.DestinoIngreso?.Trim(),
-                        // Compatibilidad con estructura antigua
                         origen = esSalidaInicial ? dto.OrigenSalida?.Trim() : dto.OrigenIngreso?.Trim(),
                         destino = esSalidaInicial ? dto.DestinoSalida?.Trim() : dto.DestinoIngreso?.Trim(),
                         guardiaSalida = esSalidaInicial ? guardiaNombre : null,
@@ -225,11 +207,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // ======================================================
-        // POST: /api/vehiculo-empresa/desde-vehiculo-proveedor/{salidaProveedorId}
-        // Crea un INGRESO en VehiculoEmpresa desde un activo de VehiculosProveedores
-        // Reutiliza MovimientoId para no duplicar el ingreso fisico en garita
-        // ======================================================
         [HttpPost("desde-vehiculo-proveedor/{salidaProveedorId:int}")]
         public async Task<IActionResult> RegistrarDesdeVehiculoProveedor(
             int salidaProveedorId,
@@ -238,10 +215,6 @@ namespace WebApplication1.Controllers
             return BadRequest("Registro espejo entre VehiculoEmpresa y VehiculosProveedores deshabilitado temporalmente.");
         }
 
-        // ======================================================
-        // PUT: /api/vehiculo-empresa/{id}/ingreso
-        // Actualiza datos de INGRESO
-        // ======================================================
         [HttpPut("{id}/ingreso")]
         public async Task<IActionResult> ActualizarIngreso(int id, ActualizarIngresoVehiculoEmpresaDto dto)
         {
@@ -267,12 +240,9 @@ namespace WebApplication1.Controllers
             if (dto.KmIngreso.HasValue && dto.KmIngreso.Value < 0)
                 return BadRequest("VehiculoEmpresa: kmIngreso no puede ser negativo");
 
-            // Respetar hora enviada por el usuario
             var ahoraLocal = dto.HoraIngreso;
             var fechaActual = ahoraLocal.Date;
 
-            // NUEVO: horaIngreso y fechaIngreso ya NO van al JSON, van a columnas
-            // Usar TryGetProperty para safe parsing
             var datosActualizados = new
             {
                 tipoRegistro = LeerString(datosActuales, "tipoRegistro") ?? "VehiculoEmpresa",
@@ -284,7 +254,6 @@ namespace WebApplication1.Controllers
                 destinoSalida = LeerString(datosActuales, "destinoSalida", "destino"),
                 origenIngreso = dto.OrigenIngreso,
                 destinoIngreso = dto.DestinoIngreso,
-                // Compatibilidad con estructura antigua
                 origen = LeerString(datosActuales, "origenSalida", "origen") ?? dto.OrigenIngreso,
                 destino = LeerString(datosActuales, "destinoSalida", "destino") ?? dto.DestinoIngreso,
                 guardiaSalida = LeerString(datosActuales, "guardiaSalida"),
@@ -292,7 +261,6 @@ namespace WebApplication1.Controllers
                 observacion = dto.Observacion ?? (datosActuales.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
             };
 
-            // NUEVO: Pasar horaIngreso y fechaIngreso como columnas
             await _salidasService.ActualizarSalidaDetalle(
                 id, 
                 datosActualizados, 
@@ -333,10 +301,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // PUT: /api/vehiculo-empresa/{id}/salida
-        // Actualiza datos de SALIDA (cuando se inició con INGRESO)
-        // ======================================================
         [HttpPut("{id}/salida")]
         public async Task<IActionResult> ActualizarSalida(int id, ActualizarSalidaVehiculoEmpresaDto dto)
         {
@@ -393,7 +357,6 @@ namespace WebApplication1.Controllers
                 destinoSalida = dto.DestinoSalida,
                 origenIngreso = LeerString(datosActuales, "origenIngreso", "origen"),
                 destinoIngreso = LeerString(datosActuales, "destinoIngreso", "destino"),
-                // Compatibilidad con estructura antigua
                 origen = dto.OrigenSalida,
                 destino = dto.DestinoSalida,
                 guardiaSalida = guardiaNombre,
@@ -496,3 +459,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

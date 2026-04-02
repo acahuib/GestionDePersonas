@@ -1,3 +1,5 @@
+﻿// Archivo backend para SalidaHotelProveedorDto.
+
 namespace WebApplication1.DTOs
 {
     public class SalidaHotelProveedorDto
@@ -12,3 +14,4 @@ namespace WebApplication1.DTOs
         public string? Observacion { get; set; }
     }
 }
+

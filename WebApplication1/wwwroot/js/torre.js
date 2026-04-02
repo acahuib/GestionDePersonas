@@ -1,3 +1,5 @@
+﻿// Script frontend para torre.
+
 const TORRE_TIPOS_OPERACION = {
     Proveedor: "Proveedores",
     VehiculosProveedores: "Vehiculos Proveedores",
@@ -428,3 +430,4 @@ window.addEventListener("DOMContentLoaded", async () => {
         torreCargarHistorial();
     }, TORRE_AUTO_REFRESH_MS);
 });
+

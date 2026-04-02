@@ -1,8 +1,7 @@
+﻿// Archivo backend para SalidaOcurrenciasDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para registrar ocurrencias (visitantes, técnicos, familiares, etc)
-    /// </summary>
     public class SalidaOcurrenciasDto
     {
         public string? Dni { get; set; }
@@ -12,3 +11,5 @@ namespace WebApplication1.DTOs
         public required string Ocurrencia { get; set; }
     }
 }
+
+

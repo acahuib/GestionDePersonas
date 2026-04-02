@@ -1,3 +1,5 @@
+﻿// Script frontend para registro_enseres_turno.
+
 const TIPO_OPERACION_ENSERES = "RegistroInformativoEnseresTurno";
 const CONFIG_GUARDIAS_POR_TURNO = {
     "7am-7pm": {
@@ -37,12 +39,12 @@ const PLANTILLA_ENSERES_BASE = [
 let enseresItems = [];
 
 function obtenerMensajePlano(error) {
-    if (!error) return "No se pudo completar la operación.";
+    if (!error) return "No se pudo completar la operaciÃ³n.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operaciÃ³n.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operaciÃ³n.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
@@ -54,7 +56,6 @@ function obtenerTextoTurno(turno) {
     return turno || "-";
 }
 
-// ---- Helpers para panel informativo de guardias ----
 
 function _fechaIsoLocalE(date = new Date()) {
     const y = date.getFullYear();
@@ -417,7 +418,7 @@ async function cargarUltimoRegistroEnseres() {
             cargarPlantillaBaseEnseres();
             if (mensaje) {
                 mensaje.className = "";
-                mensaje.innerText = "No hay registro previo con enseres. Se cargó la plantilla base.";
+                mensaje.innerText = "No hay registro previo con enseres. Se cargÃ³ la plantilla base.";
             }
             return;
         }
@@ -539,7 +540,7 @@ async function registrarEnseres() {
 
     if (objetos.length === 0) {
         mensaje.className = "error";
-        mensaje.innerText = "Debe registrar al menos un ítem";
+        mensaje.innerText = "Debe registrar al menos un Ã­tem";
         return;
     }
 
@@ -549,7 +550,7 @@ async function registrarEnseres() {
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "Revise los ítems: nombre obligatorio y cantidad no negativa";
+        mensaje.innerText = "Revise los Ã­tems: nombre obligatorio y cantidad no negativa";
         return;
     }
 
@@ -662,3 +663,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

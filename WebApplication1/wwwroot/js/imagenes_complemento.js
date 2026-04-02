@@ -1,6 +1,5 @@
-// =========================================
-// IMAGENES EN MOVIMIENTO COMPLEMENTARIO (REUTILIZABLE)
-// =========================================
+﻿// Script frontend para imagenes_complemento.
+
 (function () {
     if (window.imagenesComplemento) return;
 
@@ -80,3 +79,4 @@
         uploadSelected
     };
 })();
+

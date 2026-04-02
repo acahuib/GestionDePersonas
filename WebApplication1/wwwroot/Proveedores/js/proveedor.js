@@ -1,6 +1,4 @@
-// =========================================
-// CUADERNO DE PROVEEDORES (Sin Vehículo)
-// =========================================
+﻿// Script frontend para proveedor.
 
 let personaEncontrada = null;
 const DESTINOS_PROVEEDOR = [
@@ -28,14 +26,12 @@ function construirOpcionesDestinoRetorno(destinoSeleccionado) {
         .join("");
 }
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -45,29 +41,25 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`ðŸ“¡ Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campos de nombre/apellido
             nombreCompletoInput.value = "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
             
-            // Saltar a procedencia
             document.getElementById("procedencia").focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campos para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -75,12 +67,11 @@ async function buscarPersonaPorDni() {
             nombreCompletoInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -88,7 +79,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar ENTRADA de proveedor
 async function registrarEntrada() {
     const dni = document.getElementById("dni").value.trim();
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
@@ -100,7 +90,6 @@ async function registrarEntrada() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni || !procedencia || !destino) {
         mensaje.className = "error";
         mensaje.innerText = "Complete DNI, Procedencia y Destino";
@@ -109,7 +98,7 @@ async function registrarEntrada() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
@@ -129,12 +118,10 @@ async function registrarEntrada() {
             observacion: observacion || null
         };
 
-        // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
             body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
         }
 
-        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombreCompleto = nombreCompleto;
         }
@@ -164,7 +151,6 @@ async function registrarEntrada() {
         mensaje.className = "success";
         mensaje.innerText = `ENTRADA registrada para ${nombreMostrar}${advertenciaImagenes}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombreCompleto").value = "";
         document.getElementById("procedencia").value = "";
@@ -179,7 +165,6 @@ async function registrarEntrada() {
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -188,7 +173,6 @@ async function registrarEntrada() {
     }
 }
 
-// Navegar a la pantalla de salida con datos precargados
 function irASalida(salidaId, dni, nombreCompleto, procedencia, destino, observacion, fechaIngreso, horaIngreso, guardiaIngreso) {
     const params = new URLSearchParams({
         salidaId,
@@ -239,7 +223,7 @@ async function liberarHabitacionDesdeProveedor(habitacionSalidaId, nombreComplet
 
     if (!habitacionSalidaId) return;
 
-    const confirmar = window.confirm(`Se registrara la salida de habitación para ${nombreCompleto || "el proveedor"}. ¿Desea continuar?`);
+    const confirmar = window.confirm(`Se registrara la salida de habitaciÃ³n para ${nombreCompleto || "el proveedor"}. Â¿Desea continuar?`);
     if (!confirmar) return;
 
     try {
@@ -250,13 +234,13 @@ async function liberarHabitacionDesdeProveedor(habitacionSalidaId, nombreComplet
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "No se pudo registrar la salida de habitación");
+            throw new Error(error || "No se pudo registrar la salida de habitaciÃ³n");
         }
 
         const data = await response.json();
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = data?.mensaje || "Salida de habitación registrada";
+            mensaje.innerText = data?.mensaje || "Salida de habitaciÃ³n registrada";
         }
 
         await cargarActivos();
@@ -440,7 +424,7 @@ async function cancelarRetornoDesdeFila(salidaId) {
     const mensaje = document.getElementById("mensaje");
     if (!salidaId) return;
 
-    const confirmar = window.confirm("Se cerrara este registro sin retorno. ¿Desea continuar?");
+    const confirmar = window.confirm("Se cerrara este registro sin retorno. Â¿Desea continuar?");
     if (!confirmar) return;
 
     const observacion = document.getElementById(`retorno-observacion-${salidaId}`)?.value?.trim() || "";
@@ -493,7 +477,6 @@ function esProveedorFueraTemporal(datos) {
     return ultimaSalidaTemporal.getTime() > ultimoIngresoRetorno.getTime();
 }
 
-// Cargar proveedores activos (sin salida)
 async function cargarActivos() {
     asegurarEstilosVistaProveedores();
     const container = document.getElementById("lista-activos");
@@ -522,11 +505,9 @@ async function cargarActivos() {
             return;
         }
 
-        // Tomar el ultimo registro por DNI y mostrar solo los que no tengan salida
         const ultimosPorDni = new Map();
 
         salidas.forEach(s => {
-            // NUEVO: DNI ahora está en columna, no en JSON
             const dni = (s.dni || "").trim();
             if (!dni) return;
 
@@ -541,7 +522,6 @@ async function cargarActivos() {
         const proveedoresAbiertos = Array.from(ultimosPorDni.values()).filter(s => {
             const datos = s.datos || {};
             
-            // NUEVO: Leer desde columnas primero, luego fallback al JSON
             const horaIngreso = s.horaIngreso || datos.horaIngreso;
             const horaSalida = s.horaSalida || datos.horaSalida;
 
@@ -578,7 +558,7 @@ async function cargarActivos() {
 
                 const datos = h.datos || {};
                 const cuartoRaw = (datos.cuarto || "").toString().trim();
-                const cuarto = cuartoRaw ? `Habitación ${cuartoRaw}` : "En habitación";
+                const cuarto = cuartoRaw ? `HabitaciÃ³n ${cuartoRaw}` : "En habitaciÃ³n";
                 const fecha = h.fechaCreacion ? new Date(h.fechaCreacion).getTime() : 0;
                 const actual = habitacionesActivasPorDni.get(dniHabitacion);
 
@@ -598,7 +578,7 @@ async function cargarActivos() {
             html += '<th>Procedencia</th>';
             html += '<th>Destino</th>';
             html += '<th>Fecha / Hora Ingreso</th>';
-            html += '<th>Habitación</th>';
+            html += '<th>HabitaciÃ³n</th>';
             html += '<th>Estado</th>';
             html += '<th>Acciones</th>';
             html += '</tr></thead><tbody>';
@@ -607,7 +587,6 @@ async function cargarActivos() {
                 const datos = p.datos || {};
                 const esFueraTemporal = esProveedorFueraTemporal(datos);
                 
-                // NUEVO: Leer horaIngreso desde columnas primero, luego fallback al JSON
                 const horaIngresoValue = p.horaIngreso || datos.horaIngreso;
                 const horaIngreso = horaIngresoValue
                     ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
@@ -616,10 +595,8 @@ async function cargarActivos() {
                     ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE')
                     : 'N/A';
                 
-                // NUEVO: Obtener nombreCompleto desde el endpoint que hace JOIN con Personas
                 const nombreCompleto = p.nombreCompleto || `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
                 
-                // NUEVO: Preparar valores para pasar a la función de salida (usar columnas si existen)
                 const fechaIngresoParam = p.fechaIngreso || datos.fechaIngreso || '';
                 const horaIngresoParam = p.horaIngreso || datos.horaIngreso || '';
                 const guardiaIngresoParam = datos.guardiaIngreso || '';
@@ -631,7 +608,7 @@ async function cargarActivos() {
                     : (estaEnHabitacion ? 'estado-habitacion' : 'estado-en-mina');
                 const textoEstado = esFueraTemporal
                     ? 'Fuera temporal'
-                    : (estaEnHabitacion ? 'En habitación' : 'En mina');
+                    : (estaEnHabitacion ? 'En habitaciÃ³n' : 'En mina');
                 const ultimaSalida = datos.ultimaSalidaTemporal
                     ? new Date(datos.ultimaSalidaTemporal).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
                     : '';
@@ -685,7 +662,7 @@ async function cargarActivos() {
                 html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroProveedorDesdePayload('${payloadImagenes}')">Ver imagenes</button>`;
                 if (esFueraTemporal) {
                     html += `<select id="retorno-destino-${p.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoRetorno(destinoRetorno)}</select>`;
-                    html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="Observación" class="retorno-input retorno-input-observacion">`;
+                    html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="ObservaciÃ³n" class="retorno-input retorno-input-observacion">`;
                     html += `<input type="date" id="retorno-fecha-${p.id}" value="${hoy}" class="retorno-input retorno-input-fecha">`;
                     html += `<input type="time" id="retorno-hora-${p.id}" value="${horaActual}" class="retorno-input retorno-input-hora">`;
                     html += `<button onclick="registrarIngresoRetornoDesdeFila(${p.id})" class="btn-success btn-small">Ingreso (retorno)</button>`;
@@ -694,8 +671,8 @@ async function cargarActivos() {
                     html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
                     html += `<button onclick="irAHotelDesdePayload('${payloadHotel}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
                     html += estaEnHabitacion
-                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar Habitación</button><span class="estado-etiqueta estado-habitacion">Con habitación</span>`
-                        : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a Habitación</button>`;
+                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar HabitaciÃ³n</button><span class="estado-etiqueta estado-habitacion">Con habitaciÃ³n</span>`
+                        : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a HabitaciÃ³n</button>`;
                 }
                 html += '</div>';
                 html += '</td></tr>';
@@ -710,7 +687,6 @@ async function cargarActivos() {
     }
 }
 
-// Nota: la salida se registra en una pagina aparte
 
 function construirFechaHoraCelda(fechaTexto, horaTexto) {
     return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
@@ -718,14 +694,13 @@ function construirFechaHoraCelda(fechaTexto, horaTexto) {
 
 function obtenerMensajeUsuario(error) {
     const mensajeBase = (error?.message || error || "").toString().trim();
-    if (!mensajeBase) return "No se pudo completar la operación.";
+    if (!mensajeBase) return "No se pudo completar la operaciÃ³n.";
 
     try {
         const json = JSON.parse(mensajeBase);
         if (json?.mensaje) return String(json.mensaje);
         if (json?.error) return String(json.error);
     } catch {
-        // Ignorar: no era JSON.
     }
 
     return mensajeBase.replace(/^error\s*:\s*/i, "");
@@ -795,4 +770,6 @@ function asegurarEstilosVistaProveedores() {
 
     document.head.appendChild(style);
 }
+
+
 

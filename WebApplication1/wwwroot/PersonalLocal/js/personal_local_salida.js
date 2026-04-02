@@ -1,6 +1,4 @@
-// =========================================
-// SALIDA FINAL DE PERSONAL LOCAL
-// =========================================
+﻿// Script frontend para personal_local_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -16,7 +14,6 @@ function cargarDatosDesdeUrl() {
     if (fechaSalida) fechaSalida.value = obtenerFechaLocalISO();
     document.getElementById("observaciones").value = params.get("observacion") || "";
     
-    // Mostrar info de almuerzo si existe
     const horaSalidaAlmuerzo = params.get("horaSalidaAlmuerzo");
     const horaEntradaAlmuerzo = params.get("horaEntradaAlmuerzo");
     
@@ -40,7 +37,7 @@ async function registrarSalida() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
         return;
     }
 
@@ -49,12 +46,10 @@ async function registrarSalida() {
             observaciones: observaciones || null
         };
 
-        // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
             body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
-        // Usar PUT para actualizar el registro existente
         const responseSalida = await fetchAuth(`${API_BASE}/personal-local/${salidaId}/salida`, {
             method: "PUT",
             body: JSON.stringify(body)
@@ -66,9 +61,8 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA registrada correctamente";
+        mensaje.innerText = "âœ… SALIDA registrada correctamente";
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";
         }, 500);
@@ -90,3 +84,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

@@ -1,6 +1,4 @@
-﻿// =========================================
-// CUADERNO DE HABITACION PROVEEDOR
-// =========================================
+﻿// Script frontend para habitacion_proveedor.
 
 let personaEncontrada = null;
 
@@ -598,3 +596,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     actualizarUIByTipoIngreso();
 });
+

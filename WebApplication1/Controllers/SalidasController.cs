@@ -1,3 +1,5 @@
+﻿// Archivo backend para SalidasController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -13,17 +15,8 @@ using System.Globalization;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller genérico para operaciones CRUD de OperacionDetalle
-    /// Para endpoints específicos por tipo, ver los controllers individuales:
-    /// - ProveedorController
-    /// - VehiculoEmpresaController
-    /// - ControlBienesController
-    /// - VehiculosProveedoresController
-    /// </summary>
     [ApiController]
     [Route("api/salidas")]
-    // [Authorize(Roles = "Admin,Guardia")]
     public class SalidasController : ControllerBase
     {
         public class EditarActivoDto
@@ -117,10 +110,10 @@ namespace WebApplication1.Controllers
             };
 
             if (!tiposPermitidos.Contains(dto.TipoOperacion))
-                return BadRequest("TipoOperacion no permitido en modo técnico.");
+                return BadRequest("TipoOperacion no permitido en modo tÃ©cnico.");
 
             if (string.IsNullOrWhiteSpace(dto.Dni) || dto.Dni.Trim().Length != 8 || !dto.Dni.Trim().All(char.IsDigit))
-                return BadRequest("DNI debe tener 8 dígitos numéricos.");
+                return BadRequest("DNI debe tener 8 dÃ­gitos numÃ©ricos.");
 
             var esRegistroEnseres = string.Equals(dto.TipoOperacion, "RegistroInformativoEnseresTurno", StringComparison.OrdinalIgnoreCase);
             if (esRegistroEnseres)
@@ -150,7 +143,6 @@ namespace WebApplication1.Controllers
                     _ => dto.TipoOperacion
                 };
 
-                // En modo técnico, salida puede registrarse aunque el DNI no exista en Personas.
                 if (string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
                 {
                     var nombreFallback = $"MODO TECNICO {dniNormalizado}";
@@ -195,7 +187,7 @@ namespace WebApplication1.Controllers
                     .FirstOrDefaultAsync();
 
                 if (string.IsNullOrWhiteSpace(guardiaSeleccionado))
-                    return BadRequest("Guardia seleccionado no válido.");
+                    return BadRequest("Guardia seleccionado no vÃ¡lido.");
 
                 guardiaNombre = guardiaSeleccionado;
             }
@@ -214,8 +206,6 @@ namespace WebApplication1.Controllers
                     : "Info";
             var esControlBienes = string.Equals(dto.TipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase);
 
-            // Si se va a registrar una nueva entrada/info técnica para el DNI,
-            // cerrar previamente operaciones pendientes del mismo DNI para evitar doble abierto.
             if (tipoMovimiento is "Entrada" or "Info")
             {
                 await CerrarOperacionesPendientesModoTecnico(
@@ -229,7 +219,7 @@ namespace WebApplication1.Controllers
             if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
             {
                 if (!string.Equals(tipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("DiasLibre en modo técnico solo permite TipoMovimiento='Salida'.");
+                    return BadRequest("DiasLibre en modo tÃ©cnico solo permite TipoMovimiento='Salida'.");
             }
 
             Models.Movimiento? movimiento = null;
@@ -319,7 +309,7 @@ namespace WebApplication1.Controllers
 
                         return Ok(new
                         {
-                            mensaje = "Registro manual técnico actualizado en operación abierta de ControlBienes",
+                            mensaje = "Registro manual tÃ©cnico actualizado en operaciÃ³n abierta de ControlBienes",
                             operacionId = operacionAbierta.Id,
                             tipoOperacion = "ControlBienes",
                             tipoMovimiento = "Entrada",
@@ -413,7 +403,7 @@ namespace WebApplication1.Controllers
 
                         return Ok(new
                         {
-                            mensaje = "Salida técnica creada sin ingreso previo en ControlBienes",
+                            mensaje = "Salida tÃ©cnica creada sin ingreso previo en ControlBienes",
                             operacionId = operacionSalida.Id,
                             tipoOperacion = "ControlBienes",
                             tipoMovimiento = "Salida",
@@ -431,7 +421,7 @@ namespace WebApplication1.Controllers
 
                     var idsActivos = activos.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     if (idsRetiro.Any(idBien => !idsActivos.Contains(idBien)))
-                        return BadRequest("Uno o más bienes seleccionados no están activos para salida técnica.");
+                        return BadRequest("Uno o mÃ¡s bienes seleccionados no estÃ¡n activos para salida tÃ©cnica.");
 
                     foreach (var bien in bienesActuales.Where(b => idsRetiro.Contains(b.Id) && string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -460,7 +450,7 @@ namespace WebApplication1.Controllers
 
                     return Ok(new
                     {
-                        mensaje = "Salida técnica parcial/completa aplicada en ControlBienes",
+                        mensaje = "Salida tÃ©cnica parcial/completa aplicada en ControlBienes",
                         operacionId = operacionAbierta.Id,
                         tipoOperacion = "ControlBienes",
                         tipoMovimiento = "Salida",
@@ -518,7 +508,7 @@ namespace WebApplication1.Controllers
 
             return Ok(new
             {
-                mensaje = "Registro manual técnico creado",
+                mensaje = "Registro manual tÃ©cnico creado",
                 operacionId = operacion.Id,
                 tipoOperacion = operacion.TipoOperacion,
                 tipoMovimiento = movimiento.TipoMovimiento,
@@ -739,11 +729,6 @@ namespace WebApplication1.Controllers
             return "Normal";
         }
 
-        // ======================================================
-        // POST: /api/salidas
-        // Registra salida genérica con JSON flexible
-        // Para tipos no predefinidos o dinámicos
-        // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarSalidaGeneral(OperacionDetalleCreateDto dto)
         {
@@ -763,10 +748,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/salidas/{id}
-        // Obtiene los detalles de una salida específica
-        // ======================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerSalida(int id)
         {
@@ -793,7 +774,6 @@ namespace WebApplication1.Controllers
                 usuarioId = salida.UsuarioId,
                 dni = salida.Dni,
                 nombreCompleto,
-                // NUEVO: Incluir columnas con fallback al JSON
                 horaIngreso = _salidasService.ObtenerHoraIngreso(salida),
                 fechaIngreso = _salidasService.ObtenerFechaIngreso(salida),
                 horaSalida = _salidasService.ObtenerHoraSalida(salida),
@@ -801,11 +781,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // PUT: /api/salidas/{id}/edicion-activo
-        // Edición genérica desde tabla de activos
-        // NO permite editar DNI ni nombre/nombreApellidos
-        // ======================================================
         [HttpPut("{id}/edicion-activo")]
         public async Task<IActionResult> EditarActivo(int id, [FromBody] EditarActivoDto dto)
         {
@@ -820,7 +795,7 @@ namespace WebApplication1.Controllers
             }
             catch
             {
-                return BadRequest("DatosJSON inválido en el registro");
+                return BadRequest("DatosJSON invÃ¡lido en el registro");
             }
 
             var resultado = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
@@ -865,11 +840,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/salidas/tipo/{tipoOperacion}
-        // Obtiene todas las salidas de un tipo específico
-        // JOIN directo con Personas usando campo Dni
-        // ======================================================
         [HttpGet("tipo/{tipoOperacion}")]
         public async Task<IActionResult> ObtenerSalidasPorTipo(string tipoOperacion)
         {
@@ -910,7 +880,6 @@ namespace WebApplication1.Controllers
                         s.FechaCreacion,
                         s.UsuarioId,
                         s.Dni,
-                        // JOIN directo con Personas usando el campo Dni
                         NombreCompleto = _context.Personas
                             .Where(p => p.Dni == s.Dni)
                             .Select(p => p.Nombre)
@@ -966,10 +935,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // ======================================================
-        // GET: /api/salidas/export/excel
-        // Exportacion de historial general con filtros (admin)
-        // ======================================================
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportarHistorialExcel(
             [FromQuery] DateTime? fechaInicio,
@@ -1272,10 +1237,6 @@ namespace WebApplication1.Controllers
             );
         }
 
-        // ======================================================
-        // DELETE: /api/salidas/{id}
-        // Elimina una salida
-        // ======================================================
         [HttpDelete("{id}")]
         public async Task<IActionResult> EliminarSalida(int id)
         {
@@ -1284,3 +1245,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

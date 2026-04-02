@@ -1,3 +1,5 @@
+﻿// Archivo backend para DiasLibreController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +11,6 @@ using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar DiasLibre (permiso de salida)
-    /// Ruta: /api/dias-libre
-    /// </summary>
     [ApiController]
     [Route("api/dias-libre")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -46,14 +44,9 @@ namespace WebApplication1.Controllers
             };
         }
 
-        // ======================================================
-        // POST: /api/dias-libre
-        // Registra permiso de salida DiasLibre (solo SALIDA, no hay INGRESO)
-        // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarDiasLibre([FromBody] SalidaDiasLibreDto dto)
         {
-            // Validación de datos requeridos
             if (string.IsNullOrWhiteSpace(dto.Dni))
                 return BadRequest("DNI es requerido");
 
@@ -68,8 +61,6 @@ namespace WebApplication1.Controllers
             if (dto.Al.Date < dto.Del.Date)
                 return BadRequest("La fecha Al no puede ser menor que Del");
 
-            // Regla funcional: DiasLibre SOLO registra SALIDA si la persona está DENTRO
-            // (último movimiento debe ser Entrada)
             var ultimoMovimiento = await _context.Movimientos
                 .Where(m => m.Dni == dniNormalizado)
                 .OrderByDescending(m => m.FechaHora)
@@ -77,22 +68,19 @@ namespace WebApplication1.Controllers
                 .FirstOrDefaultAsync();
 
             if (ultimoMovimiento == null)
-                return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
+                return BadRequest("No se puede registrar DÃ­as Libres: la persona no tiene movimiento previo de entrada.");
 
             if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
+                return BadRequest("No se puede registrar DÃ­as Libres: la persona no estÃ¡ dentro de la mina (Ãºltimo movimiento no es Entrada).");
 
-            // Buscar persona en tabla Personas
             var persona = await _context.Personas
                 .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
-            // Si no existe la persona, verificar que se haya proporcionado el nombre
             if (persona == null && string.IsNullOrWhiteSpace(dto.NombresApellidos))
             {
                 return BadRequest("Debe proporcionar el nombre completo para un DNI no registrado");
             }
 
-            // Crear persona si no existe
             if (persona == null)
             {
                 persona = new Models.Persona
@@ -123,16 +111,13 @@ namespace WebApplication1.Controllers
             if (movimiento == null)
                 return StatusCode(500, "Error al registrar movimiento");
 
-            // Calcular fecha de regreso al trabajo (día después de Al)
             var fechaTrabaja = dto.Al.Date.AddDays(1);
 
-            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
             var ahoraLocal = dto.HoraSalida.HasValue
                 ? ResolverHoraPeru(dto.HoraSalida)
                 : ResolverHoraPeru(null);
             var fechaActual = ahoraLocal.Date;
 
-            // Crear OperacionDetalle - JSON solo contiene datos específicos (sin nombre/dni)
             var salida = await _salidasService.CrearSalidaDetalle(
                 movimiento.Id,
                 "DiasLibre",
@@ -169,3 +154,5 @@ namespace WebApplication1.Controllers
 
     }
 }
+
+

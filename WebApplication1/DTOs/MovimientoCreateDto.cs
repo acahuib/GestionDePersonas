@@ -1,3 +1,5 @@
+﻿// Archivo backend para MovimientoCreateDto.
+
 namespace WebApplication1.DTOs
 {
     public class MovimientoCreateDto
@@ -7,3 +9,4 @@ namespace WebApplication1.DTOs
         public required string TipoMovimiento { get; set; }   // Entrada / Salida
     }
 }
+

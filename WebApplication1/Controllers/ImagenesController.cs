@@ -1,3 +1,5 @@
+﻿// Archivo backend para ImagenesController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,10 +9,6 @@ using WebApplication1.Models;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// API generica para imagenes asociadas a cualquier registro de OperacionDetalle.
-    /// Ruta: /api/imagenes/registro/{operacionDetalleId}
-    /// </summary>
     [ApiController]
     [Route("api/imagenes")]
     [Authorize]
@@ -166,3 +164,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

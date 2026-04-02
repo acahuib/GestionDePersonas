@@ -1,8 +1,7 @@
+﻿// Archivo backend para ImagenRegistro.
+
 namespace WebApplication1.Models
 {
-    /// <summary>
-    /// Evidencias fotograficas asociadas a cualquier registro de OperacionDetalle.
-    /// </summary>
     public class ImagenRegistro
     {
         public int Id { get; set; }
@@ -17,3 +16,5 @@ namespace WebApplication1.Models
         public OperacionDetalle? OperacionDetalle { get; set; }
     }
 }
+
+

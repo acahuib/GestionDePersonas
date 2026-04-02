@@ -1,3 +1,5 @@
+﻿// Archivo backend para ReporteMovimientoDto.
+
 namespace WebApplication1.DTOs
 {
     public class ReporteMovimientoDto
@@ -9,3 +11,4 @@ namespace WebApplication1.DTOs
         public required string TipoMovimiento { get; set; }
     }
 }
+

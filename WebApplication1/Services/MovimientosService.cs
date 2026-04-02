@@ -1,3 +1,5 @@
+﻿// Archivo backend para MovimientosService.
+
 using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Models;
@@ -18,9 +20,6 @@ namespace WebApplication1.Services
             _context = context;
         }
 
-        // =========================
-        // OBTENER ÚLTIMO MOVIMIENTO
-        // =========================
         public async Task<Movimiento?> GetLastMovimiento(string dni, int? puntoControlId = null, string? tipo = null)
         {
             var query = _context.Movimientos.Where(m => m.Dni == dni);
@@ -32,9 +31,6 @@ namespace WebApplication1.Services
             return await query.OrderByDescending(m => m.FechaHora).FirstOrDefaultAsync();
         }
 
-        // =========================
-        // DETECTAR ZONA INTERNA ACTUAL
-        // =========================
         public async Task<int?> DetectarZonaInternaActual(string dni)
         {
             foreach (var zonaId in ZONAS_INTERNAS)
@@ -47,20 +43,13 @@ namespace WebApplication1.Services
             }
             return null;
         }
-        // Alerta eliminada - ya no se usa
 
-        // =========================
-        // SALIDA IMPLÍCITA AUTOMÁTICA (Zonas Internas)
-        // =========================
         public async Task ProcesarSalidaImplicitaAutomatica(
             string dni,
             int puntoControlActual,
             string tipoMovimientoActual,
             int? zonaInternaActual)
         {
-            // Solo aplicar si:
-            // 1. Está dentro de una zona interna (comedor o quimico)
-            // 2. Intenta salir de Garita O entrar a otra zona diferente
             if (!zonaInternaActual.HasValue)
                 return;
 
@@ -72,7 +61,6 @@ namespace WebApplication1.Services
             if (!debeAplicarSalida)
                 return;
 
-            // ===== REGISTRAR SALIDA IMPLÍCITA DE LA ZONA INTERNA =====
             var salidaImplicita = new Movimiento
             {
                 Dni = dni,
@@ -84,41 +72,30 @@ namespace WebApplication1.Services
             _context.Movimientos.Add(salidaImplicita);
             await _context.SaveChangesAsync();
 
-            // Alerta eliminada
         }
 
-        // =========================
-        // VALIDAR ENTRADA DUPLICADA
-        // =========================
         private async Task ValidarEntradaDuplicada(string dni, int puntoControlId, string tipoMovimiento)
         {
-            // Solo validar en Garita y solo cuando el movimiento es Entrada/Ingreso
             if (puntoControlId != GARITA_ID)
                 return;
 
             if (tipoMovimiento != "Entrada" && tipoMovimiento != "Ingreso")
                 return;
 
-            // Obtener último movimiento de esta persona en Garita
             var ultimoMovimiento = await GetLastMovimiento(dni, GARITA_ID);
 
             if (ultimoMovimiento == null)
                 return; // Primera vez, permitir entrada
 
-            // Si el último movimiento fue Entrada/Ingreso, rechazar
             if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
             {
-                throw new InvalidOperationException($"Esta persona ya está adentro con el DNI {dni}");
+                throw new InvalidOperationException($"Esta persona ya estÃ¡ adentro con el DNI {dni}");
             }
         }
 
 
-        // =========================
-        // REGISTRAR MOVIMIENTO EN BD
-        // =========================
         public async Task<Movimiento> RegistrarMovimientoEnBD(string dni, int puntoControlId, string tipoMovimiento, int? usuarioId)
         {
-            // Validar que no se registre una entrada duplicada
             await ValidarEntradaDuplicada(dni, puntoControlId, tipoMovimiento);
 
             var movimiento = new Movimiento
@@ -135,12 +112,11 @@ namespace WebApplication1.Services
             return movimiento;
         }
 
-        // =========================
-        // CONSTANTES PÚBLICAS
-        // =========================
         public int GaritaId => GARITA_ID;
         public int ComedorId => COMEDOR_ID;
         public int QuimicoId => QUIMICO_ID;
         public int[] ZonasInternas => ZONAS_INTERNAS;
     }
 }
+
+

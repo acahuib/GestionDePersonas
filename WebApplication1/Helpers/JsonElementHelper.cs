@@ -1,3 +1,5 @@
+﻿// Archivo backend para JsonElementHelper.
+
 using System.Globalization;
 using System.Text.Json;
 
@@ -70,3 +72,4 @@ namespace WebApplication1.Helpers
         }
     }
 }
+

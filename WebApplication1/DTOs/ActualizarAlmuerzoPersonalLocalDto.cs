@@ -1,8 +1,7 @@
+﻿// Archivo backend para ActualizarAlmuerzoPersonalLocalDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para actualizar datos de almuerzo del personal local
-    /// </summary>
     public class ActualizarAlmuerzoPersonalLocalDto
     {
         public DateTime? HoraSalidaAlmuerzo { get; set; }
@@ -10,3 +9,5 @@ namespace WebApplication1.DTOs
         public string? Observaciones { get; set; }
     }
 }
+
+

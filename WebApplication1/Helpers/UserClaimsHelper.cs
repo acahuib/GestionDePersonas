@@ -1,3 +1,5 @@
+﻿// Archivo backend para UserClaimsHelper.
+
 using System.Security.Claims;
 
 namespace WebApplication1.Helpers
@@ -11,3 +13,4 @@ namespace WebApplication1.Helpers
         }
     }
 }
+

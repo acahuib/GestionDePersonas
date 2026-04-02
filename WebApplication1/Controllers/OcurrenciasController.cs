@@ -1,3 +1,5 @@
+﻿// Archivo backend para OcurrenciasController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +12,6 @@ using System.Text.Json;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar ocurrencias (visitantes, técnicos, familiares, etc)
-    /// Ruta: /api/ocurrencias
-    /// </summary>
     [ApiController]
     [Route("api/ocurrencias")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -50,22 +48,16 @@ namespace WebApplication1.Controllers
             };
         }
 
-        /// <summary>
-        /// Registra una ocurrencia
-        /// POST /api/ocurrencias
-        /// Si DNI está vacío, genera uno ficticio (OCR_YYYYMMDD_###)
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> RegistrarOcurrencia([FromBody] SalidaOcurrenciasDto dto)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
-                    return BadRequest("Descripción de ocurrencia es requerida");
+                    return BadRequest("DescripciÃ³n de ocurrencia es requerida");
 
-                // Validar que solo se envía uno de horaIngreso O horaSalida
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("Ocurrencias: solo envíe horaIngreso O horaSalida, no ambos");
+                    return BadRequest("Ocurrencias: solo envÃ­e horaIngreso O horaSalida, no ambos");
 
                 if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
                     return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
@@ -79,19 +71,15 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Determinar tipo de movimiento basado en cuál hora se proporciona
                 string tipoMovimiento = dto.HoraIngreso.HasValue ? "Entrada" : "Salida";
 
-                // Determinar DNI: usar proporcionado o generar ficticio
                 string dni = string.IsNullOrWhiteSpace(dto.Dni)
                     ? await GenerarDniFicticio()
                     : dto.Dni.Trim();
 
-                // Buscar o crear Persona
                 var persona = await _context.Personas.FindAsync(dni);
                 if (persona == null)
                 {
-                    // Crear nueva Persona
                     persona = new Persona
                     {
                         Dni = dni,
@@ -102,15 +90,12 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
-                // Cada ingreso/salida debe tener su propio MovimientoId único
                 var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
                     dni, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
                 var horaIngresoBase = dto.HoraIngreso.HasValue
                     ? ResolverHoraPeru(dto.HoraIngreso)
                     : ResolverHoraPeru(null);
@@ -118,15 +103,11 @@ namespace WebApplication1.Controllers
                     ? ResolverHoraPeru(dto.HoraSalida)
                     : ResolverHoraPeru(null);
                 
-                // Extraer horaIngreso/fechaIngreso/horaSalida/fechaSalida para guardar en columnas
                 var horaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase : (DateTime?)null;
                 var fechaIngresoCol = dto.HoraIngreso.HasValue ? horaIngresoBase.Date : (DateTime?)null;
                 var horaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase : (DateTime?)null;
                 var fechaSalidaCol = dto.HoraSalida.HasValue ? horaSalidaBase.Date : (DateTime?)null;
 
-                // NUEVO: DatosJSON ya NO contiene horaIngreso/fechaIngreso/horaSalida/fechaSalida
-                // DNI se guarda en columna para JOIN directo con Personas
-                // Crear OperacionDetalle
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Ocurrencias",
@@ -169,10 +150,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Actualiza nombre de la ocurrencia (solo para tipo Ocurrencia)
-        /// PUT /api/ocurrencias/{id}/nombre
-        /// </summary>
         [HttpPut("{id}/nombre")]
         public async Task<IActionResult> ActualizarNombre(int id, [FromBody] ActualizarNombreOcurrenciasDto dto)
         {
@@ -185,25 +162,19 @@ namespace WebApplication1.Controllers
                 if (salidaExistente.TipoOperacion != "Ocurrencias")
                     return BadRequest("Este endpoint es solo para ocurrencias");
 
-                // Deserializar datos actuales
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
-                    // DNI ahora está en columna, no en JSON
                     var dni = salidaExistente.Dni;
 
-                    // Verificar que es Ocurrencia o DNI ficticio
                     var persona = await _context.Personas.FindAsync(dni);
                     if (persona == null || (persona.Tipo != "Ocurrencia" && !dni!.StartsWith("99")))
                         return BadRequest("Solo se puede actualizar nombre de ocurrencias");
 
-                    // Actualizar nombre en Persona
                     persona.Nombre = dto.Nombre;
                     _context.Personas.Update(persona);
                     await _context.SaveChangesAsync();
 
-                    // Actualizar en OperacionDetalle
-                    // Mantener datos existentes del JSON
                     var datosActualizados = new
                     {
                         nombre = dto.Nombre,
@@ -228,10 +199,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Actualiza horarios y descripción de ocurrencia
-        /// PUT /api/ocurrencias/{id}/horario
-        /// </summary>
         [HttpPut("{id}/horario")]
         public async Task<IActionResult> ActualizarHorario(int id, [FromBody] ActualizarHorarioOcurrenciasDto dto)
         {
@@ -244,12 +211,10 @@ namespace WebApplication1.Controllers
                 if (salidaExistente.TipoOperacion != "Ocurrencias")
                     return BadRequest("Este endpoint es solo para ocurrencias");
 
-                // Deserializar datos actuales
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
-                    // Respetar horas enviadas; si no vienen, usar hora local del servidor
                     var horaIngresoNueva = dto.HoraIngreso.HasValue
                         ? ResolverHoraPeru(dto.HoraIngreso)
                         : ResolverHoraPeru(null);
@@ -268,7 +233,6 @@ namespace WebApplication1.Controllers
                             : null);
                     guardiaNombre ??= "S/N";
                     
-                    // Horas actuales desde COLUMNAS, no JSON
                     var horaIngresoActual = salidaExistente.HoraIngreso;
                     var fechaIngresoActual = salidaExistente.FechaIngreso;
                     var horaSalidaActual = salidaExistente.HoraSalida;
@@ -281,7 +245,6 @@ namespace WebApplication1.Controllers
                         ? gs.GetString()
                         : null;
 
-                    // Actualizar JSON (sin fechas/horas)
                     var datosActualizados = new
                     {
                         nombre = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null 
@@ -292,7 +255,6 @@ namespace WebApplication1.Controllers
                         ocurrencia = dto.Ocurrencia ?? root.GetProperty("ocurrencia").GetString()
                     };
                     
-                    // Actualizar columnas de fecha/hora
                     await _salidasService.ActualizarSalidaDetalle(
                         id, 
                         datosActualizados, 
@@ -352,20 +314,12 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtiene una ocurrencia por ID
-        /// GET /api/ocurrencias/{id}
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerOcurrenciaPorId(int id)
         {
             return await ObtenerOcurrenciaPorIdCore(id);
         }
 
-        /// <summary>
-        /// Modo tecnico: obtiene una ocurrencia por ID (sin autenticacion)
-        /// GET /api/tecnico/ocurrencias/{id}
-        /// </summary>
         [HttpGet("/api/tecnico/ocurrencias/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> ObtenerOcurrenciaPorIdTecnico(int id)
@@ -389,29 +343,24 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Genera un DNI ficticio único (99MMDDNN - máximo 8 dígitos)
-        /// 99 = prefijo ficticio, MM = mes, DD = día, NN = contador 00-99
-        /// </summary>
         private async Task<string> GenerarDniFicticio()
         {
             var hoy = DateTime.Now;
-            var prefijo = $"99{hoy.Month:00}{hoy.Day:00}"; // 99MMDD = 6 dígitos
+            var prefijo = $"99{hoy.Month:00}{hoy.Day:00}"; // 99MMDD = 6 dÃ­gitos
             var contador = 0;
             string dniGenerado;
 
             do
             {
-                dniGenerado = $"{prefijo}{contador:00}"; // 99MMDDNN = 8 dígitos
+                dniGenerado = $"{prefijo}{contador:00}"; // 99MMDDNN = 8 dÃ­gitos
                 var existe = await _context.Personas.AnyAsync(p => p.Dni == dniGenerado);
                 if (!existe)
                     break;
                 contador++;
-            } while (contador < 100); // Máximo 99 ocurrencias por día
+            } while (contador < 100); // MÃ¡ximo 99 ocurrencias por dÃ­a
 
             if (contador >= 100)
             {
-                // Si se agotaron los contadores del día, usar timestamp
                 var timestamp = DateTime.Now.ToString("HHmmss");
                 dniGenerado = $"99{timestamp.Substring(0, 6)}"; // 99HHMMSS
             }
@@ -419,9 +368,6 @@ namespace WebApplication1.Controllers
             return dniGenerado;
         }
 
-        /// <summary>
-        /// Extrae el ID de usuario del token JWT
-        /// </summary>
         private int? ExtractUsuarioIdFromToken()
         {
             var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -432,3 +378,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

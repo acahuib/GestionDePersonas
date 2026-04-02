@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// Archivo backend para Program.
+
+using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -17,7 +19,6 @@ if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
     throw new InvalidOperationException("La configuración Jwt:Key debe tener al menos 32 caracteres.");
 }
 
-// Controladores
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -28,23 +29,15 @@ builder.Services.AddControllers()
         options.Filters.Add<WebApplication1.Filters.ApiErrorFilter>();
     });
 
-// Validators de movimientos
-// Nota: Solo para garita. Comedor y Quimico se eliminaron
-// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.GaritaValidator>();
-// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.ComedorValidator>();
-// builder.Services.AddScoped<WebApplication1.Services.Validators.IMovimientoValidator, WebApplication1.Services.Validators.QuimicoValidator>();
 
-// Servicios compartidos
 builder.Services.AddScoped<WebApplication1.Services.MovimientosService>();
 builder.Services.AddScoped<WebApplication1.Services.SalidasService>();
 builder.Services.AddScoped<WebApplication1.Services.VehiculoEmpresaSalidaTemporalPolicy>();
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-// Entity Framework
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -81,16 +74,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RequireExpirationTime = true,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey)),
-            // Optional: reduce default clock skew if you need stricter expiry checks
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
 builder.Services.AddAuthorization();
 
-// --------------------
-// App
-// --------------------
 
 var app = builder.Build();
 
@@ -123,7 +112,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// HTTPS redirect desactivado: sistema intranet, se usa HTTP en la red local de la mina.
 
 app.UseStaticFiles();
 
@@ -148,3 +136,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+

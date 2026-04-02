@@ -1,3 +1,5 @@
+﻿// Script frontend para login.
+
 async function login() {
 
     const usuario = document.getElementById("usuario").value;
@@ -28,13 +30,11 @@ async function login() {
 
         const data = await response.json();
 
-        // Guardar sesión
         localStorage.setItem("token", data.token);
         localStorage.setItem("rol", data.rol);
         localStorage.setItem("usuario", usuario);
         localStorage.setItem("nombreCompleto", data.nombreCompleto || usuario);
 
-        // Redirigir según rol
         const rolNormalizado = String(data.rol || "").toLowerCase();
 
         if (rolNormalizado === "admin") {
@@ -57,3 +57,5 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("usuario", login);
     addEnterListener("password", login);
 });
+
+

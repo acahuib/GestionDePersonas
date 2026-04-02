@@ -1,3 +1,5 @@
+﻿// Archivo backend para Persona.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace WebApplication1.Models
@@ -9,10 +11,8 @@ namespace WebApplication1.Models
 
         public required string Nombre { get; set; }
         
-        /// <summary>
-        /// Tipo de persona: "Proveedor", "PersonalLocal", "Visitante", etc.
-        /// Puede ser null para registros antiguos o sin clasificar
-        /// </summary>
         public string? Tipo { get; set; }
     }
 }
+
+

@@ -1,3 +1,5 @@
+﻿// Script frontend para tecnico-usuarios.
+
 (function () {
     const ENDPOINT = `${API_BASE}/tecnico/usuarios`;
     const ENDPOINT_ROLES = `${ENDPOINT}/roles`;
@@ -198,7 +200,7 @@
 
         const nuevoEstado = !usuario.activo;
         const accion = nuevoEstado ? "activar" : "desactivar";
-        const confirmar = await appDialog.confirm(`¿Deseas ${accion} la cuenta ${usuario.usuarioLogin}?`, "Cambiar estado de cuenta");
+        const confirmar = await appDialog.confirm(`Â¿Deseas ${accion} la cuenta ${usuario.usuarioLogin}?`, "Cambiar estado de cuenta");
         if (!confirmar) return;
 
         const response = await fetchAuth(`${ENDPOINT}/${id}/estado`, {
@@ -268,3 +270,4 @@
         await cargarUsuarios();
     });
 })();
+

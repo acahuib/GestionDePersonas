@@ -1,3 +1,5 @@
+﻿// Archivo backend para Movimiento.
+
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApplication1.Models
@@ -12,13 +14,8 @@ namespace WebApplication1.Models
         public required string TipoMovimiento { get; set; }
         public DateTime FechaHora { get; set; }
 
-        // ===== AUDITORÍA =====
-        /// <summary>
-        /// ID del guardia/usuario que registró este movimiento
-        /// </summary>
         public int? UsuarioId { get; set; }
 
-        // ===== RELACIONES =====
 
         [ForeignKey(nameof(Dni))]
         public Persona? Persona { get; set; }
@@ -26,6 +23,7 @@ namespace WebApplication1.Models
         [ForeignKey(nameof(UsuarioId))]
         public Usuario? Usuario { get; set; }
 
-        // PuntoControl eliminado - ya no se usa
     }
 }
+
+

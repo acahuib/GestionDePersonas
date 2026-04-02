@@ -1,3 +1,5 @@
+﻿// Script frontend para cuaderno_historial.
+
 async function initCuadernoHistorial() {
     const container = document.querySelector("[data-cuaderno-historial]");
     if (!container) return;
@@ -400,7 +402,7 @@ async function initCuadernoHistorial() {
         paginacion.innerHTML = `
             <span class="muted">Mostrando ${desde}-${hasta} de ${totalRegistros}</span>
             <button type="button" class="btn-inline btn-small" data-historial-prev ${paginaActual === 1 ? "disabled" : ""}>Anterior</button>
-            <span class="muted">Página ${paginaActual}/${totalPaginas}</span>
+            <span class="muted">PÃ¡gina ${paginaActual}/${totalPaginas}</span>
             <button type="button" class="btn-inline btn-small" data-historial-next ${paginaActual === totalPaginas ? "disabled" : ""}>Siguiente</button>
         `;
 
@@ -510,7 +512,7 @@ async function initCuadernoHistorial() {
             .join("");
 
         tbody.innerHTML = rows;
-        if (resumen) resumen.textContent = `${items.length} registros | Página ${paginaActual}/${totalPaginas}`;
+        if (resumen) resumen.textContent = `${items.length} registros | PÃ¡gina ${paginaActual}/${totalPaginas}`;
         renderPaginacion(items.length, totalPaginas);
     };
 
@@ -572,3 +574,4 @@ async function initCuadernoHistorial() {
 }
 
 document.addEventListener("DOMContentLoaded", initCuadernoHistorial);
+

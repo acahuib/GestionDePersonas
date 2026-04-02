@@ -1,8 +1,7 @@
+﻿// Archivo backend para SolicitudPermisoPersonalDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para crear solicitud de permiso desde Google Forms
-    /// </summary>
     public class SolicitudPermisoPersonalDto
     {
         public required string Dni { get; set; }
@@ -16,3 +15,5 @@ namespace WebApplication1.DTOs
         public required string Autorizador { get; set; }
     }
 }
+
+

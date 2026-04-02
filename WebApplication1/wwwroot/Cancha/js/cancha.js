@@ -1,3 +1,5 @@
+﻿// Script frontend para cancha.
+
 let personaEncontrada = null;
 
 const AUTOCOMPLETE_DELAY = 300;
@@ -308,3 +310,4 @@ async function completarRegistro(id, observacion) {
         }
     }
 }
+

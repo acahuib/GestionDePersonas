@@ -1,10 +1,7 @@
-// =========================================
-// SALIDA DE HABITACIÓN
-// =========================================
+﻿// Script frontend para habitacion_proveedor_salida.
 
 let salidaId = null;
 
-// Cargar datos desde URL
 function cargarDatos() {
     const params = new URLSearchParams(window.location.search);
     
@@ -23,7 +20,6 @@ function cargarDatos() {
     document.getElementById("guardiaIngreso").value = params.get("guardiaIngreso") || "S/N";
 }
 
-// Registrar SALIDA de habitación
 async function registrarSalida() {
     const mensaje = document.getElementById("mensaje");
     mensaje.innerText = "";
@@ -55,9 +51,8 @@ async function registrarSalida() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = `✅ ${data.mensaje}`;
+        mensaje.innerText = `âœ… ${data.mensaje}`;
 
-        // Redirigir después de 2 segundos
         setTimeout(() => {
             window.location.href = "habitacion_proveedor.html?refresh=1";
         }, 2000);
@@ -75,3 +70,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

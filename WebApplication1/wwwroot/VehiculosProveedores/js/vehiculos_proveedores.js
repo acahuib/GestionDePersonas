@@ -1,17 +1,13 @@
-// =========================================
-// CUADERNO DE VEHÍCULOS PROVEEDORES
-// =========================================
+﻿// Script frontend para vehiculos_proveedores.
 
 let personaEncontrada = null;
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -21,45 +17,40 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas y último registro: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas y Ãºltimo registro: '${dni}'`);
 
-        // Consultar persona y último registro en paralelo
         const [response, ultimoResponse] = await Promise.all([
             fetchAuth(`${API_BASE}/personas/${dni}`),
             fetchAuth(`${API_BASE}/vehiculos-proveedores/ultimo/${dni}`)
         ]);
         
-        console.log(`📡 Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
+        console.log(`ðŸ“¡ Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campo de nombre completo
             nombreCompletoInput.value = "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campos para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
             nombreCompletoInput.placeholder = "Nombre completo del conductor";
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
 
-        // Pre-rellenar campos con el último registro si existe
         if (ultimoResponse.ok) {
             const ultimo = await ultimoResponse.json();
-            console.log(`📋 Precargando datos del último registro:`, ultimo);
+            console.log(`ðŸ“‹ Precargando datos del Ãºltimo registro:`, ultimo);
             if (ultimo.placa)       document.getElementById("placa").value = ultimo.placa;
             if (ultimo.tipo)        document.getElementById("tipo").value = ultimo.tipo;
             if (ultimo.lote)        document.getElementById("lote").value = ultimo.lote;
@@ -69,12 +60,10 @@ async function buscarPersonaPorDni() {
             if (ultimo.observacion) document.getElementById("observacion").value = ultimo.observacion;
         }
 
-        // Saltar a placa para seguir el nuevo orden de llenado
         document.getElementById("placa").focus();
 
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -83,7 +72,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar ENTRADA de vehículo proveedor
 async function registrarEntrada() {
     const dni = document.getElementById("dni").value.trim();
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
@@ -101,7 +89,6 @@ async function registrarEntrada() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni || !proveedor || !placa || !tipo || !lote || !cantidad || !procedencia) {
         mensaje.className = "error";
         mensaje.innerText = "Complete todos los campos obligatorios (*)";
@@ -110,11 +97,10 @@ async function registrarEntrada() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
-    // Si no hay persona encontrada, validar nombre completo
     if (!personaEncontrada && !nombreCompleto) {
         mensaje.className = "error";
         mensaje.innerText = "DNI no registrado. Complete Nombre y Apellidos para registrar la persona.";
@@ -133,12 +119,10 @@ async function registrarEntrada() {
             observacion: observacion || null
         };
 
-        // Enviar horaIngreso solo si se especifica
         if (horaIngresoInput) {
             body.horaIngreso = combinarFechaHoraLocal(fechaIngresoInput, horaIngresoInput);
         }
 
-        // Solo enviar nombre completo si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombreApellidos = nombreCompleto;
         }
@@ -168,7 +152,6 @@ async function registrarEntrada() {
         mensaje.className = "success";
         mensaje.innerText = `ENTRADA registrada para ${nombreCompletoRegistro} - Placa: ${placa}${advertenciaImagenes}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombreCompleto").value = "";
         document.getElementById("proveedor").value = "";
@@ -187,7 +170,6 @@ async function registrarEntrada() {
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -196,7 +178,6 @@ async function registrarEntrada() {
     }
 }
 
-// Navegar a la pantalla de salida con datos precargados
 function irASalida(salidaId, dni, nombreCompleto, proveedor, placa, tipo, lote, cantidad, procedencia, observacion, fechaIngreso, horaIngreso, guardiaIngreso) {
     const params = new URLSearchParams({
         salidaId,
@@ -258,7 +239,6 @@ function abrirImagenesRegistroVehiculosProveedores(registroId, info = {}) {
     });
 }
 
-// Cargar vehículos activos (sin salida)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -267,19 +247,18 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehículos activos");
+            throw new Error(error || "Error al cargar vehÃ­culos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos activos en este momento</p>';
             return;
         }
 
         const tieneValor = (v) => v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
 
-        // Mostrar cada operación activa real (no colapsar por DNI)
         const activos = salidas
             .filter(s => {
                 const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
@@ -293,11 +272,10 @@ async function cargarActivos() {
             });
 
         if (activos.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos activos en este momento</p>';
             return;
         }
 
-        // Renderizar tabla
         let html = '<div class="table-wrapper">';
         html += '<table class="table">';
         html += '<thead><tr>';
@@ -325,7 +303,6 @@ async function cargarActivos() {
             const procedencia = datos.procedencia || "N/A";
             const observacion = datos.observacion || "";
             
-            // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
             const fechaIngresoValue = s.fechaIngreso || datos.fechaIngreso;
             const horaIngreso = horaIngresoValue
@@ -387,4 +364,6 @@ function combinarFechaHoraLocal(fechaIso, horaTexto) {
         ? `${fechaIso}T${horaLimpia}:00`
         : `${fechaIso}T${horaLimpia}`;
 }
+
+
 

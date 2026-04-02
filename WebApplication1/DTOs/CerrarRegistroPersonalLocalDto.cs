@@ -1,3 +1,5 @@
+﻿// Archivo backend para CerrarRegistroPersonalLocalDto.
+
 namespace WebApplication1.DTOs
 {
     public class CerrarRegistroPersonalLocalDto
@@ -6,3 +8,4 @@ namespace WebApplication1.DTOs
         public string? Observaciones { get; set; }
     }
 }
+

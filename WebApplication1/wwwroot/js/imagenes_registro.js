@@ -1,6 +1,5 @@
-// ===============================
-// MODAL GLOBAL DE IMAGENES (REUTILIZABLE)
-// ===============================
+﻿// Script frontend para imagenes_registro.
+
 (function () {
     if (window.abrirImagenesRegistroModal) return;
 
@@ -227,8 +226,9 @@
         }
     };
 
-    // Alias para compatibilidad con llamadas previas.
     window.abrirImagenesOcurrenciaModal = function (registroId) {
         return window.abrirImagenesRegistroModal(registroId);
     };
 })();
+
+

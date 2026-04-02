@@ -1,3 +1,5 @@
+﻿// Archivo backend para ConsultasController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +21,6 @@ namespace WebApplication1.Controllers
             _context = context;
         }
 
-        /// <summary>
-        /// Obtiene el ultimo movimiento de una persona por DNI.
-        /// GET /api/consultas/ultimo-movimiento/{dni}
-        /// </summary>
         [HttpGet("ultimo-movimiento/{dni}")]
         public async Task<IActionResult> ObtenerUltimoMovimiento(string dni)
         {
@@ -54,3 +52,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

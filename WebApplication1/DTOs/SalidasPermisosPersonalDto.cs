@@ -1,9 +1,7 @@
+﻿// Archivo backend para SalidasPermisosPersonalDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para registrar permiso de salida temporal de personal
-    /// Flujo: POST con horaSalida → PUT para actualizar horaIngreso
-    /// </summary>
     public class SalidasPermisosPersonalDto
     {
         public required string Dni { get; set; }
@@ -16,4 +14,6 @@ namespace WebApplication1.DTOs
         public string? Observaciones { get; set; }
     }
 }
+
+
 

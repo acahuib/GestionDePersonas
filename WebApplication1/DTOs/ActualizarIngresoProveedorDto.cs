@@ -1,9 +1,7 @@
+﻿// Archivo backend para ActualizarIngresoProveedorDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para registrar el ingreso de retorno de un proveedor
-    /// despues de una salida temporal.
-    /// </summary>
     public class ActualizarIngresoProveedorDto
     {
         public DateTime? HoraIngreso { get; set; }
@@ -11,3 +9,5 @@ namespace WebApplication1.DTOs
         public string? Destino { get; set; }
     }
 }
+
+

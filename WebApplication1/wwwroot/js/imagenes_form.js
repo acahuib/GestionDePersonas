@@ -1,6 +1,5 @@
-// ===============================
-// FORMULARIO DE IMAGENES (REUTILIZABLE)
-// ===============================
+﻿// Script frontend para imagenes_form.
+
 (function () {
     if (window.imagenesForm) return;
 
@@ -149,3 +148,4 @@
         uploadFromInput
     };
 })();
+

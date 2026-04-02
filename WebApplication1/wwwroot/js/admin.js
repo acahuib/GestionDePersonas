@@ -1,4 +1,5 @@
-// Variables globales
+﻿// Script frontend para admin.
+
 let paginaActual = 1;
 const registrosPorPagina = 20;
 let intervalId = null;
@@ -17,17 +18,14 @@ function setErrorCell(elementId, message) {
     if (message) el.title = message;
 }
 
-// Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     verificarAutenticacion();
     cargarNombreUsuario();
     actualizarDashboard();
     
-    // Auto-actualizar cada 30 segundos
     intervalId = setInterval(actualizarDashboard, 30000);
 });
 
-// Verificar que el usuario esté autenticado y sea Admin
 function verificarAutenticacion() {
     const token = localStorage.getItem('token');
     const rol = localStorage.getItem('rol');
@@ -40,13 +38,11 @@ function verificarAutenticacion() {
     return true;
 }
 
-// Cargar nombre de usuario
 function cargarNombreUsuario() {
     const nombreCompleto = localStorage.getItem('nombreCompleto') || 'Administrador';
     document.getElementById('nombreUsuario').textContent = nombreCompleto;
 }
 
-// Función principal para actualizar todo el dashboard
 async function actualizarDashboard() {
     await Promise.all([
         cargarEstadisticas(),
@@ -58,17 +54,16 @@ async function actualizarDashboard() {
     actualizarHoraActualizacion();
 }
 
-// Cargar estadísticas generales
 async function cargarEstadisticas() {
     try {
         const hoy = new Date();
         const fechaInicio = hoy.toISOString().split('T')[0];
         
-        console.log('📊 Cargando estadísticas para:', fechaInicio);
+        console.log('ðŸ“Š Cargando estadÃ­sticas para:', fechaInicio);
         
         const token = localStorage.getItem('token');
         const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=1000`;
-        console.log('🌐 URL:', url);
+        console.log('ðŸŒ URL:', url);
         
         const response = await fetch(url, {
             headers: {
@@ -76,59 +71,54 @@ async function cargarEstadisticas() {
             }
         });
         
-        console.log('📡 Response status:', response.status);
+        console.log('ðŸ“¡ Response status:', response.status);
         
         if (!response.ok) {
             const errorText = await readApiError(response);
-            console.error('❌ Error response:', errorText);
-            throw new Error(errorText || 'Error al cargar estadísticas');
+            console.error('âŒ Error response:', errorText);
+            throw new Error(errorText || 'Error al cargar estadÃ­sticas');
         }
         
         const data = await response.json();
-        console.log('✅ Data recibida:', data);
-        console.log('📋 Total movimientos:', data.total);
-        console.log('📋 Movimientos array length:', data.movimientos?.length);
+        console.log('âœ… Data recibida:', data);
+        console.log('ðŸ“‹ Total movimientos:', data.total);
+        console.log('ðŸ“‹ Movimientos array length:', data.movimientos?.length);
         
         const movimientos = data.movimientos || [];
         
         if (movimientos.length > 0) {
-            console.log('📝 Primer movimiento:', movimientos[0]);
+            console.log('ðŸ“ Primer movimiento:', movimientos[0]);
         }
         
-        // Contar ingresos y salidas
         const ingresos = movimientos.filter(m => m.tipoMovimiento === 'Entrada').length;
         const salidas = movimientos.filter(m => m.tipoMovimiento === 'Salida').length;
         
-        console.log(`📥 Ingresos: ${ingresos}, 📤 Salidas: ${salidas}`);
+        console.log(`ðŸ“¥ Ingresos: ${ingresos}, ðŸ“¤ Salidas: ${salidas}`);
         
-        // Actualizar cards
         document.getElementById('movimientosHoy').textContent = movimientos.length;
         document.getElementById('ingresosHoy').textContent = ingresos;
         document.getElementById('salidasHoy').textContent = salidas;
         
     } catch (error) {
-        console.error('❌ Error al cargar estadísticas:', error);
-        const mensaje = error?.message || "Error al cargar estadísticas";
+        console.error('âŒ Error al cargar estadÃ­sticas:', error);
+        const mensaje = error?.message || "Error al cargar estadÃ­sticas";
         setErrorCell('movimientosHoy', mensaje);
         setErrorCell('ingresosHoy', mensaje);
         setErrorCell('salidasHoy', mensaje);
     }
 }
 
-// Cargar personas actualmente dentro
 async function cargarPersonasDentro() {
     try {
-        console.log('🏢 Cargando personas dentro...');
+        console.log('ðŸ¢ Cargando personas dentro...');
         
-        // Para determinar quién está dentro, necesitamos consultar TODO el historial
-        // No solo el día de hoy, porque alguien pudo haber entrado días antes
         const fechaInicio = '2020-01-01'; // Fecha antigua para obtener todo el historial
         
         const token = localStorage.getItem('token');
         const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=10000`;
         
-        console.log('🌐 URL personas dentro:', url);
-        console.log('🔑 Token presente:', !!token);
+        console.log('ðŸŒ URL personas dentro:', url);
+        console.log('ðŸ”‘ Token presente:', !!token);
         
         const response = await fetch(url, {
             headers: {
@@ -136,20 +126,19 @@ async function cargarPersonasDentro() {
             }
         });
         
-        console.log('📡 Response status personas dentro:', response.status);
+        console.log('ðŸ“¡ Response status personas dentro:', response.status);
         
         if (!response.ok) {
             const errorText = await readApiError(response);
-            console.error('❌ Error response personas dentro:', errorText);
+            console.error('âŒ Error response personas dentro:', errorText);
             throw new Error(errorText || 'Error al cargar personas dentro');
         }
         
         const data = await response.json();
         const movimientos = data.movimientos || [];
         
-        console.log('🏢 Procesando', movimientos.length, 'movimientos históricos...');
+        console.log('ðŸ¢ Procesando', movimientos.length, 'movimientos histÃ³ricos...');
         
-        // Agrupar por DNI y obtener el ÚLTIMO movimiento de cada persona
         const ultimoMovimientoPorDni = {};
         
         movimientos.forEach(mov => {
@@ -157,7 +146,6 @@ async function cargarPersonasDentro() {
             if (!ultimoMovimientoPorDni[dni]) {
                 ultimoMovimientoPorDni[dni] = mov;
             } else {
-                // Mantener solo el movimiento más reciente
                 const fechaActual = new Date(mov.fechaHora);
                 const fechaGuardada = new Date(ultimoMovimientoPorDni[dni].fechaHora);
                 if (fechaActual > fechaGuardada) {
@@ -166,19 +154,16 @@ async function cargarPersonasDentro() {
             }
         });
         
-        console.log('👥 DNIs únicos:', Object.keys(ultimoMovimientoPorDni).length);
+        console.log('ðŸ‘¥ DNIs Ãºnicos:', Object.keys(ultimoMovimientoPorDni).length);
         
-        // Determinar quién está actualmente dentro
         const personasDentro = [];
         
         for (const dni in ultimoMovimientoPorDni) {
             const ultimoMov = ultimoMovimientoPorDni[dni];
             const tipoMov = (ultimoMov.tipoMovimiento || '').toLowerCase();
             
-            console.log(`👤 ${dni}: Último movimiento = ${ultimoMov.tipoMovimiento} @ ${ultimoMov.fechaHora} (tipo: ${tipoMov})`);
+            console.log(`ðŸ‘¤ ${dni}: Ãšltimo movimiento = ${ultimoMov.tipoMovimiento} @ ${ultimoMov.fechaHora} (tipo: ${tipoMov})`);
             
-            // Una persona está DENTRO si su último movimiento es "Entrada" o "Ingreso"
-            // Está FUERA si su último movimiento es "Salida"
             if (tipoMov === 'entrada' || tipoMov === 'ingreso') {
                 const fechaObj = new Date(ultimoMov.fechaHora);
                 const fechaStr = fechaObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -195,9 +180,8 @@ async function cargarPersonasDentro() {
             }
         }
         
-        console.log('✅ Personas actualmente dentro:', personasDentro.length);
+        console.log('âœ… Personas actualmente dentro:', personasDentro.length);
         
-        // Actualizar contador
         document.getElementById('totalDentro').textContent = personasDentro.length;
         
         personasDentroActuales = personasDentro;
@@ -205,14 +189,13 @@ async function cargarPersonasDentro() {
         renderizarTablaPersonasDentro();
         
     } catch (error) {
-        console.error('❌ Error al cargar personas dentro:', error);
+        console.error('âŒ Error al cargar personas dentro:', error);
         setErrorCell('totalDentro', error?.message || "Error al cargar personas dentro");
         document.getElementById('tablaPersonasDentro').innerHTML = 
             `<tr><td colspan="5" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
 }
 
-// Cargar últimos movimientos
 async function cargarUltimosMovimientos() {
     try {
         const hoy = new Date();
@@ -242,26 +225,24 @@ async function cargarUltimosMovimientos() {
         
         renderizarTablaUltimosMovimientos(movimientos);
         
-        // Actualizar controles de paginación
-        document.getElementById('paginaActual').textContent = `Página ${paginaActual}`;
+        document.getElementById('paginaActual').textContent = `PÃ¡gina ${paginaActual}`;
         document.getElementById('btnAnterior').disabled = paginaActual === 1;
         document.getElementById('btnSiguiente').disabled = movimientos.length < registrosPorPagina;
         
     } catch (error) {
-        console.error('Error al cargar últimos movimientos:', error);
+        console.error('Error al cargar Ãºltimos movimientos:', error);
         document.getElementById('tablaUltimosMovimientos').innerHTML = 
             `<tr><td colspan="6" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
 }
 
-// Renderizar tabla de personas dentro
 function renderizarTablaPersonasDentro() {
     const tbody = document.getElementById('tablaPersonasDentro');
 
     if (!personasDentroActuales || personasDentroActuales.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay personas dentro actualmente</td></tr>';
         const paginaTexto = document.getElementById('paginaPersonasActual');
-        if (paginaTexto) paginaTexto.textContent = 'Página 0 de 0';
+        if (paginaTexto) paginaTexto.textContent = 'PÃ¡gina 0 de 0';
         actualizarEstadoPaginacionPersonasDentro();
         return;
     }
@@ -284,7 +265,7 @@ function renderizarTablaPersonasDentro() {
     `).join('');
 
     const paginaTexto = document.getElementById('paginaPersonasActual');
-    if (paginaTexto) paginaTexto.textContent = `Página ${paginaPersonasActual} de ${totalPaginas}`;
+    if (paginaTexto) paginaTexto.textContent = `PÃ¡gina ${paginaPersonasActual} de ${totalPaginas}`;
     actualizarEstadoPaginacionPersonasDentro();
 }
 
@@ -319,7 +300,6 @@ function obtenerEstadoCuaderno(mov) {
     return "N/A";
 }
 
-// Renderizar tabla de últimos movimientos
 function renderizarTablaUltimosMovimientos(movimientos) {
     const tbody = document.getElementById('tablaUltimosMovimientos');
     
@@ -347,7 +327,6 @@ function getMovimientoBadge(tipoMovimiento) {
     return 'secondary';
 }
 
-// Cargar registros del cuaderno de enseres por turno (solo lectura)
 async function cargarRegistrosEnseresTurno(resetPagina = true) {
     const tbody = document.getElementById('tablaEnseresTurnoAdmin');
 
@@ -385,7 +364,7 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
     } catch (error) {
         console.error('Error al cargar enseres por turno:', error);
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error al cargar registros: ${error?.message || "-"}</td></tr>`;
-        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
+        document.getElementById('paginaEnseresActual').textContent = 'PÃ¡gina 0 de 0';
         actualizarEstadoPaginacionEnseres();
     }
 }
@@ -399,7 +378,7 @@ function renderizarTablaEnseresTurnoAdmin() {
 
     if (!registrosEnseres || registrosEnseres.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay registros informativos</td></tr>';
-        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
+        document.getElementById('paginaEnseresActual').textContent = 'PÃ¡gina 0 de 0';
         actualizarEstadoPaginacionEnseres();
         return;
     }
@@ -429,7 +408,7 @@ function renderizarTablaEnseresTurnoAdmin() {
         `;
     }).join('');
 
-    document.getElementById('paginaEnseresActual').textContent = `Página ${paginaEnseresActual} de ${totalPaginasEnseres} (${registrosEnseres.length} registros)`;
+    document.getElementById('paginaEnseresActual').textContent = `PÃ¡gina ${paginaEnseresActual} de ${totalPaginasEnseres} (${registrosEnseres.length} registros)`;
     actualizarEstadoPaginacionEnseres();
 }
 
@@ -465,7 +444,6 @@ function actualizarEstadoPaginacionEnseres() {
     btnUltima.disabled = sinDatos || paginaEnseresActual >= totalPaginasEnseres;
 }
 
-// Calcular tiempo dentro
 function calcularTiempoDentro(horaIngreso) {
     const inicio = new Date(horaIngreso);
     const ahora = new Date();
@@ -482,7 +460,6 @@ function calcularTiempoDentro(horaIngreso) {
     return resultado.trim();
 }
 
-// Formatear fecha y hora
 function formatearFechaHora(fechaHora) {
     const fecha = new Date(fechaHora);
     const hoy = new Date();
@@ -492,12 +469,10 @@ function formatearFechaHora(fechaHora) {
         minute: '2-digit' 
     });
     
-    // Si es hoy, solo mostrar hora
     if (fecha.toDateString() === hoy.toDateString()) {
         return horaStr;
     }
     
-    // Si no, mostrar fecha y hora
     return `${fecha.toLocaleDateString('es-PE', { 
         day: '2-digit', 
         month: '2-digit' 
@@ -508,7 +483,6 @@ function construirFechaHoraCelda(fechaTexto, horaTexto) {
     return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || '-'}</span><span class="hora-linea">${horaTexto || '-'}</span></div>`;
 }
 
-// Obtener clase de badge según tipo
 function getTipoBadge(tipo) {
     const tipos = {
         'Personal Local': 'primary',
@@ -520,7 +494,6 @@ function getTipoBadge(tipo) {
     return tipos[tipo] || 'secondary';
 }
 
-// Actualizar hora de última actualización
 function actualizarHoraActualizacion() {
     const ahora = new Date();
     const horaStr = ahora.toLocaleTimeString('es-PE', { 
@@ -531,7 +504,6 @@ function actualizarHoraActualizacion() {
     document.getElementById('lastUpdate').textContent = horaStr;
 }
 
-// Cambiar página
 function cambiarPagina(direccion) {
     const nuevaPagina = paginaActual + direccion;
     if (nuevaPagina < 1) return;
@@ -540,21 +512,19 @@ function cambiarPagina(direccion) {
     cargarUltimosMovimientos();
 }
 
-// Cerrar sesión
 function cerrarSesion() {
-    if (confirm('¿Estás seguro de cerrar sesión?')) {
-        // Limpiar intervalo
+    if (confirm('Â¿EstÃ¡s seguro de cerrar sesiÃ³n?')) {
         if (intervalId) {
             clearInterval(intervalId);
         }
         
-        // Limpiar localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('rol');
         localStorage.removeItem('usuario');
         localStorage.removeItem('nombreCompleto');
         
-        // Redirigir al login
         window.location.href = '/login.html';
     }
 }
+
+

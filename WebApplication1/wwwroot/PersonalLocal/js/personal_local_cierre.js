@@ -1,6 +1,4 @@
-// =========================================
-// CIERRE ADMINISTRATIVO - PERSONAL LOCAL
-// =========================================
+﻿// Script frontend para personal_local_cierre.
 
 (function () {
     async function cerrarRegistroPersonalLocal(id, dni, nombre) {
@@ -57,3 +55,4 @@
         cerrarRegistroPersonalLocal
     };
 })();
+

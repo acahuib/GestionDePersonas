@@ -1,6 +1,4 @@
-// =========================================
-// INGRESO DE ALMUERZO - PERSONAL LOCAL
-// =========================================
+﻿// Script frontend para personal_local_almuerzo_ingreso.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -30,7 +28,7 @@ async function registrarIngresoAlmuerzo() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
         return;
     }
 
@@ -39,12 +37,10 @@ async function registrarIngresoAlmuerzo() {
             observaciones: observaciones || null
         };
 
-        // Enviar horaEntradaAlmuerzo solo si se especifica
         if (horaEntradaAlmuerzoInput) {
             body.horaEntradaAlmuerzo = construirDateTimeLocal(fechaEntradaAlmuerzoInput, horaEntradaAlmuerzoInput);
         }
 
-        // Usar PUT para actualizar el registro existente
         const response = await fetchAuth(`${API_BASE}/personal-local/${salidaId}/almuerzo/ingreso`, {
             method: "PUT",
             body: JSON.stringify(body)
@@ -56,9 +52,8 @@ async function registrarIngresoAlmuerzo() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ INGRESO DE ALMUERZO registrado correctamente";
+        mensaje.innerText = "âœ… INGRESO DE ALMUERZO registrado correctamente";
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";
         }, 500);
@@ -80,3 +75,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

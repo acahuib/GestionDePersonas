@@ -1,8 +1,7 @@
+﻿// Script frontend para api.
+
 const API_BASE = "/api";
 
-// ===============================
-// DIALOGOS VISUALES GLOBALES
-// ===============================
 (function () {
     if (window.appDialog) return;
 
@@ -119,7 +118,7 @@ const API_BASE = "/api";
             document.body.appendChild(overlay);
         },
 
-        confirm(message, title = "Confirmación") {
+        confirm(message, title = "ConfirmaciÃ³n") {
             return new Promise((resolve) => {
                 const { overlay, actions } = crearDialogoBase(title, String(message || ""));
 
@@ -207,15 +206,11 @@ const API_BASE = "/api";
         }
     };
 
-    // Reemplaza alert nativo para evitar mensajes del navegador tipo "localhost says".
     window.alert = function (message) {
         window.appDialog.alert(message, "Aviso");
     };
 })();
 
-// ===============================
-// PROTECCION DE CAMBIOS SIN GUARDAR
-// ===============================
 (function () {
     if (window.unsavedChangesGuard) return;
 
@@ -223,7 +218,6 @@ const API_BASE = "/api";
     const isCuadernoHtml = /\/[^/]+\/html\/[^/]+\.html$/.test(pathname);
     const isHistorial = pathname.includes("_historial.html");
 
-    // Alcance acordado: solo ingreso/salida en cuadernos, excluyendo historial.
     const shouldAutoEnable = isCuadernoHtml && !isHistorial;
 
     let enabled = false;
@@ -232,7 +226,7 @@ const API_BASE = "/api";
     let historyTrapInstalled = false;
     let allowingHistoryBack = false;
 
-    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. ¿Deseas continuar?";
+    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. Â¿Deseas continuar?";
     const BEFORE_UNLOAD_MESSAGE = "Los cambios que realizaste podrian no guardarse.";
 
     const now = () => Date.now();
@@ -279,7 +273,6 @@ const API_BASE = "/api";
         if (!e.isTrusted) return;
         const form = e.target instanceof HTMLFormElement ? e.target : null;
         if (!form) return;
-        // Evita alerta por beforeunload cuando el usuario confirma un guardado.
         setBypass(3000);
     }
 
@@ -333,7 +326,6 @@ const API_BASE = "/api";
             return;
         }
 
-        // Repone la entrada para quedarse en la pagina actual mientras decide.
         history.pushState({ unsavedGuard: true }, "", window.location.href);
 
         const confirmed = await window.appDialog.confirm(DEFAULT_MESSAGE, "Salir de la pagina");
@@ -423,9 +415,6 @@ const API_BASE = "/api";
     }
 })();
 
-// ===============================
-// FETCH CON TOKEN JWT
-// ===============================
 async function fetchAuth(url, options = {}) {
     const token = localStorage.getItem("token");
 
@@ -453,9 +442,8 @@ async function fetchAuth(url, options = {}) {
         headers
     });
 
-    // Token inválido o expirado
     if (response.status === 401 || response.status === 403) {
-        alert("Sesión expirada o no autorizada");
+        alert("SesiÃ³n expirada o no autorizada");
         localStorage.clear();
         window.location.href = "/login.html";
         return;
@@ -463,7 +451,6 @@ async function fetchAuth(url, options = {}) {
 
     if (!response.ok) {
         console.error(`API request failed: ${url}`, response.status, response.statusText);
-        // Devolver la respuesta para que los callers puedan leer el body y mostrar mensajes de error
         return response;
     }
 
@@ -535,9 +522,6 @@ function normalizarBodyMayusculas(body, method, url) {
     return body;
 }
 
-// ===============================
-// LEER MENSAJE DE ERROR
-// ===============================
 async function readApiError(response) {
     if (!response) return "Error desconocido";
 
@@ -601,12 +585,9 @@ async function readApiError(response) {
     }
 }
 
-// ===============================
-// MENSAJE LIMPIO PARA UI
-// ===============================
 function getPlainErrorMessage(error) {
     const base = (error?.message || error || "").toString().trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operaciÃ³n.";
 
     try {
         const parsed = JSON.parse(base);
@@ -616,19 +597,16 @@ function getPlainErrorMessage(error) {
             parsed?.error ||
             parsed?.detail ||
             parsed?.title ||
-            "No se pudo completar la operación."
+            "No se pudo completar la operaciÃ³n."
         );
     } catch {
         return base
-            .replace(/^❌\s*/u, "")
+            .replace(/^âŒ\s*/u, "")
             .replace(/^error\s*:\s*/i, "")
             .replace(/^"|"$/g, "");
     }
 }
 
-// ===============================
-// DETECTAR ENTER EN INPUTS
-// ===============================
 function addEnterListener(elementId, callback) {
     const element = document.getElementById(elementId);
     if (element) {
@@ -802,7 +780,6 @@ function forzarMayusculasGlobal() {
             try {
                 el.setSelectionRange(inicio, fin);
             } catch {
-                // Algunos tipos de input no permiten setSelectionRange.
             }
         }
     };
@@ -860,9 +837,6 @@ function intentarEjecutarAccionPrincipal(scope) {
     return true;
 }
 
-// ===============================
-// ENTER => SIGUIENTE CAMPO (GLOBAL)
-// ===============================
 function habilitarEnterComoTab() {
     document.addEventListener("keydown", (e) => {
         if (e.key !== "Enter") return;
@@ -902,7 +876,6 @@ function habilitarEnterComoTab() {
             return;
         }
 
-        // Si Enter se presiona en el ultimo campo editable, ejecutar la accion principal.
         if (idx === focusables.length - 1) {
             e.preventDefault();
             intentarEjecutarAccionPrincipal(formScope);
@@ -916,13 +889,9 @@ document.addEventListener("DOMContentLoaded", () => {
     completarFechasActualesVacias();
     completarHorasActualesVacias();
     habilitarHoraActualPorDefectoGlobal();
-    // Prioriza el escaneo: abrir cuaderno con foco en DNI.
     setTimeout(enfocarDniInicial, 0);
 });
 
-// ===============================
-// FECHA/HORA LOCAL SIN DESFASE UTC
-// ===============================
 function fechaLocalIso(date = new Date()) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -959,7 +928,6 @@ function construirFechaHoraCelda(fechaTexto, horaTexto, fallback = "N/A") {
     return `<div class="fecha-hora-celda"><span class="fecha-linea">${fecha}</span><span class="hora-linea">${hora}</span></div>`;
 }
 
-// Alias de compatibilidad para cuadernos existentes.
 function obtenerFechaLocalISO() {
     return fechaLocalIso();
 }
@@ -967,3 +935,5 @@ function obtenerFechaLocalISO() {
 function obtenerHoraLocalHHMM() {
     return horaLocalHHmm();
 }
+
+

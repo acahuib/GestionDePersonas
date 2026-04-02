@@ -1,13 +1,10 @@
-// =========================================
-// CONTROL DE BIENES - REGISTRAR SALIDA
-// =========================================
+﻿// Script frontend para control_bienes_salida.
 
 let salidaId = null;
 let dni = null;
 let nombreCompleto = null;
 let bienesActivos = [];
 
-// Cargar datos desde URL
 window.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     
@@ -90,7 +87,6 @@ function marcarTodosBienes(marcar) {
     });
 }
 
-// Registrar SALIDA
 async function registrarSalida() {
     const observacionSalida = document.getElementById("observacion-salida").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
@@ -130,7 +126,7 @@ async function registrarSalida() {
         const result = await response.json();
         const estado = result?.estado || "Salida registrada";
         mensaje.className = "success";
-        mensaje.innerText = `✅ ${estado} para ${nombreCompleto || dni}`;
+        mensaje.innerText = `âœ… ${estado} para ${nombreCompleto || dni}`;
 
         setTimeout(() => {
             window.location.href = "control_bienes.html";
@@ -149,3 +145,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

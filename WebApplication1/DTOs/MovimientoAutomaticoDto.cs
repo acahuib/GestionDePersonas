@@ -1,3 +1,5 @@
+﻿// Archivo backend para MovimientoAutomaticoDto.
+
 namespace WebApplication1.DTOs
 {
     public class MovimientoAutomaticoDto
@@ -7,3 +9,4 @@ namespace WebApplication1.DTOs
         public required string ApiKey { get; set; }
     }
 }
+

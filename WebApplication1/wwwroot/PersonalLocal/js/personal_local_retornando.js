@@ -1,6 +1,4 @@
-// =========================================
-// CUADERNO DE PERSONAL RETORNANDO
-// =========================================
+﻿// Script frontend para personal_local_retornando.
 
 let personaEncontrada = null;
 
@@ -67,7 +65,7 @@ async function registrarIngresoRetornando() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
@@ -243,3 +241,4 @@ document.addEventListener("DOMContentLoaded", () => {
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
 });
+

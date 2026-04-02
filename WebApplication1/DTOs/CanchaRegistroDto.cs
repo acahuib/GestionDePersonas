@@ -1,3 +1,5 @@
+﻿// Archivo backend para CanchaRegistroDto.
+
 using System.ComponentModel.DataAnnotations;
 
 namespace WebApplication1.DTOs
@@ -21,3 +23,4 @@ namespace WebApplication1.DTOs
         public List<string>? EquipoB { get; set; }
     }
 }
+

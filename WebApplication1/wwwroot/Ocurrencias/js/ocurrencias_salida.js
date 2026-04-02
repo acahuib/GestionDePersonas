@@ -1,6 +1,4 @@
-// =========================================
-// SALIDA DE OCURRENCIA
-// =========================================
+﻿// Script frontend para ocurrencias_salida.
 
 let salidaId = null;
 let ocurrencia = '';
@@ -28,7 +26,6 @@ function actualizarTextosModo() {
     }
 }
 
-// Cargar datos desde URL params
 function cargarDatos() {
     const params = new URLSearchParams(window.location.search);
     
@@ -47,13 +44,12 @@ function cargarDatos() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontrÃ³ el ID del registro de ingreso';
         return;
     }
 
     actualizarTextosModo();
 
-    // Mostrar información del movimiento inicial (ingreso o salida)
     document.getElementById('readonly-dni').value = dni || '-';
     document.getElementById('readonly-nombre').value = nombre || '-';
 
@@ -61,7 +57,6 @@ function cargarDatos() {
     const horaInicial = modoComplemento === 'ingreso' ? horaSalida : horaIngreso;
     const guardiaInicial = modoComplemento === 'ingreso' ? guardiaSalida : guardiaIngreso;
     
-    // Formatear fecha inicial
     if (fechaInicial) {
         const fecha = new Date(fechaInicial);
         if (!isNaN(fecha.getTime())) {
@@ -69,7 +64,6 @@ function cargarDatos() {
         }
     }
     
-    // Formatear hora inicial
     if (horaInicial) {
         const hora = new Date(horaInicial);
         if (!isNaN(hora.getTime())) {
@@ -85,7 +79,7 @@ async function registrarSalida() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontrÃ³ el ID del registro de ingreso';
         return;
     }
 
@@ -131,10 +125,9 @@ async function registrarSalida() {
 
         mensaje.className = 'success';
         mensaje.innerText = modoComplemento === 'ingreso'
-            ? '✅ INGRESO registrado correctamente'
-            : '✅ SALIDA registrada correctamente';
+            ? 'âœ… INGRESO registrado correctamente'
+            : 'âœ… SALIDA registrada correctamente';
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             window.location.href = 'ocurrencias.html?refresh=1';
         }, 500);
@@ -156,3 +149,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

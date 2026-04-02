@@ -1,3 +1,5 @@
+﻿// Archivo backend para Usuario.
+
 namespace WebApplication1.Models
 {
     public class Usuario

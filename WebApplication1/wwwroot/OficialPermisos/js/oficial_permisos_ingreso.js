@@ -1,6 +1,4 @@
-// =========================================
-// REGISTRO DE INGRESO (RETORNO) - PERMISOS OFICIALES
-// =========================================
+﻿// Script frontend para oficial_permisos_ingreso.
 
 let salidaId = null;
 
@@ -20,11 +18,10 @@ function cargarDatosDesdeUrl() {
 
     if (!salidaId) {
         document.getElementById("mensaje").className = "error";
-        document.getElementById("mensaje").innerText = "No se recibió ID de salida";
+        document.getElementById("mensaje").innerText = "No se recibiÃ³ ID de salida";
         return;
     }
 
-    // Llenar campos
     document.getElementById("dni").value = dni || "";
     document.getElementById("nombreCompleto").value = nombreCompleto || "";
     document.getElementById("deDonde").value = deDonde || "";
@@ -68,9 +65,8 @@ async function registrarIngreso() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ INGRESO registrado exitosamente";
+        mensaje.innerText = "âœ… INGRESO registrado exitosamente";
 
-        // Redirigir después de 1.5 segundos
         setTimeout(() => {
             window.location.href = "oficial_permisos.html?refresh=1";
         }, 1500);
@@ -92,3 +88,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

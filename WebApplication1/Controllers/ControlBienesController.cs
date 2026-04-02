@@ -1,3 +1,5 @@
+﻿// Archivo backend para ControlBienesController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +15,6 @@ using System.Text;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para control de bienes personales (opcional)
-    /// Ruta: /api/control-bienes
-    /// </summary>
     [ApiController]
     [Route("api/control-bienes")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -63,10 +61,6 @@ namespace WebApplication1.Controllers
             };
         }
 
-        // ======================================================
-        // POST: /api/control-bienes
-        // Registra INGRESO con bienes
-        // ======================================================
         [HttpPost]
         public async Task<IActionResult> RegistrarIngreso([FromBody] SalidaControlBienesDto dto)
         {
@@ -75,9 +69,8 @@ namespace WebApplication1.Controllers
                 var bienesNuevos = dto.Bienes ?? new List<BienDeclarado>();
 
                 if (bienesNuevos.Any(b => string.IsNullOrWhiteSpace(b.Descripcion)))
-                    return BadRequest("Todos los bienes nuevos deben tener descripción");
+                    return BadRequest("Todos los bienes nuevos deben tener descripciÃ³n");
 
-                // ===== Buscar o crear en tabla Personas =====
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -113,8 +106,6 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // ControlBienes no debe registrar entradas/salidas de persona.
-                // Solo se enlaza al último movimiento existente del DNI como referencia técnica.
                 var ultimoMovimiento = await _context.Movimientos
                     .Where(m => m.Dni == dniNormalizado)
                     .OrderByDescending(m => m.FechaHora)
@@ -124,7 +115,6 @@ namespace WebApplication1.Controllers
                 if (ultimoMovimiento == null)
                     return BadRequest("No existe movimiento previo para este DNI. Registre primero a la persona en su cuaderno correspondiente.");
 
-                // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
                 var ahoraLocal = dto.HoraIngreso.HasValue
                     ? ResolverHoraPeru(dto.HoraIngreso)
                     : ResolverHoraPeru(null);
@@ -190,7 +180,6 @@ namespace WebApplication1.Controllers
                 if (bienesIniciales.Count == 0)
                     return BadRequest("Debe declarar al menos un bien");
 
-                // DNI en columna, bienes en JSON
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "ControlBienes",
@@ -232,10 +221,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // ======================================================
-        // PUT: /api/control-bienes/{id}/salida
-        // Actualiza fecha de SALIDA
-        // ======================================================
         [HttpPut("{id}/salida")]
         public async Task<IActionResult> ActualizarSalida(int id, ActualizarSalidaControlBienesDto dto)
         {
@@ -260,7 +245,6 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // Respetar hora enviada por el usuario; si no viene, usar hora local del servidor (Perú UTC-5)
             var ahoraLocal = dto.HoraSalida.HasValue
                 ? ResolverHoraPeru(dto.HoraSalida)
                 : ResolverHoraPeru(null);
@@ -282,7 +266,7 @@ namespace WebApplication1.Controllers
             var bienesActivosIds = bienesActivos.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var idsInvalidos = idsSeleccionados.Where(idBien => !bienesActivosIds.Contains(idBien)).ToList();
             if (idsInvalidos.Count > 0)
-                return BadRequest("Uno o más bienes seleccionados no están activos o no existen en este registro.");
+                return BadRequest("Uno o mÃ¡s bienes seleccionados no estÃ¡n activos o no existen en este registro.");
 
             foreach (var bien in bienesActuales.Where(b => idsSeleccionados.Contains(b.Id) && string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase)))
             {
@@ -329,10 +313,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/control-bienes/{id}
-        // Obtiene detalle con información de tabla Personas
-        // ======================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerControlBienesPorId(int id)
         {
@@ -367,10 +347,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/control-bienes/persona/{dni}
-        // Obtiene todos los bienes de una persona
-        // ======================================================
         [HttpGet("persona/{dni}")]
         public async Task<IActionResult> ObtenerPorPersona(string dni)
         {
@@ -398,7 +374,6 @@ namespace WebApplication1.Controllers
                 datos = JsonDocument.Parse(s.DatosJSON).RootElement,
                 fechaCreacion = s.FechaCreacion,
                 usuarioId = s.UsuarioId,
-                // NUEVO: Incluir columnas con fallback al JSON
                 horaIngreso = _salidasService.ObtenerHoraIngreso(s),
                 fechaIngreso = _salidasService.ObtenerFechaIngreso(s),
                 horaSalida = _salidasService.ObtenerHoraSalida(s),
@@ -408,16 +383,12 @@ namespace WebApplication1.Controllers
             return Ok(resultado);
         }
 
-        // ======================================================
-        // GET: /api/control-bienes/persona/{dni}/activos
-        // Obtiene bienes activos pendientes para el DNI
-        // ======================================================
         [HttpGet("persona/{dni}/activos")]
         public async Task<IActionResult> ObtenerActivosPorPersona(string dni)
         {
             var dniNormalizado = (dni ?? string.Empty).Trim();
             if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI inválido" });
+                return BadRequest(new { mensaje = "DNI invÃ¡lido" });
 
             var operacionAbierta = await _context.OperacionDetalle
                 .Where(o => o.TipoOperacion == "ControlBienes" &&
@@ -546,3 +517,5 @@ namespace WebApplication1.Controllers
 
     }
 }
+
+

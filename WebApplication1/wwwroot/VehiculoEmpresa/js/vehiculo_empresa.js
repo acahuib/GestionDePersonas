@@ -1,6 +1,4 @@
-// =========================================
-// CUADERNO DE VEHÍCULOS DE EMPRESA
-// =========================================
+﻿// Script frontend para vehiculo_empresa.
 
 let personaEncontrada = null;
 
@@ -23,7 +21,6 @@ function actualizarPreviewImagenesVehiculoEmpresa() {
 }
 
 function removerImagenSeleccionadaVehiculoEmpresa(index) {
-    // La eliminacion se maneja en el modulo compartido por evento de click.
 }
 
 function inicializarPreviewImagenesVehiculoEmpresa() {
@@ -62,14 +59,12 @@ function actualizarFormularioPorTipoInicial() {
         : '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO';
 }
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const conductorInput = document.getElementById("conductor");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -79,29 +74,25 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`ðŸ“¡ Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campo de conductor
             conductorInput.value = "";
             conductorInput.disabled = true;
             conductorInput.placeholder = "(Ya registrado)";
             
-            // Saltar a placa
             document.getElementById("placa").focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campo para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             conductorInput.disabled = false;
@@ -109,12 +100,11 @@ async function buscarPersonaPorDni() {
             conductorInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         conductorInput.disabled = false;
@@ -122,7 +112,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar movimiento inicial (SALIDA o INGRESO)
 async function registrarMovimientoInicial() {
     const tipoInicial = document.getElementById("tipoInicial").value;
     const esSalidaInicial = tipoInicial === "Salida";
@@ -141,7 +130,6 @@ async function registrarMovimientoInicial() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni || !placa || !origenMovimiento || !destinoMovimiento) {
         mensaje.className = "error";
         mensaje.innerText = "Complete todos los campos obligatorios (*)";
@@ -150,21 +138,19 @@ async function registrarMovimientoInicial() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
-    // Si no hay persona encontrada, validar conductor
     if (!personaEncontrada && !conductor) {
         mensaje.className = "error";
         mensaje.innerText = "DNI no registrado. Complete el nombre del conductor.";
         return;
     }
 
-    // Validar kilometraje
     if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un número válido";
+        mensaje.innerText = "El kilometraje debe ser un nÃºmero vÃ¡lido";
         return;
     }
 
@@ -182,7 +168,6 @@ async function registrarMovimientoInicial() {
             }
             body.origenSalida = origenMovimiento;
             body.destinoSalida = destinoMovimiento;
-            // Enviar horaSalida solo si se especifica
             if (horaMovimientoInput) {
                 body.horaSalida = construirDateTimeLocal(fechaMovimientoInput, horaMovimientoInput);
             } else {
@@ -194,7 +179,6 @@ async function registrarMovimientoInicial() {
             }
             body.origenIngreso = origenMovimiento;
             body.destinoIngreso = destinoMovimiento;
-            // Enviar horaIngreso solo si se especifica
             if (horaMovimientoInput) {
                 body.horaIngreso = construirDateTimeLocal(fechaMovimientoInput, horaMovimientoInput);
             } else {
@@ -202,7 +186,6 @@ async function registrarMovimientoInicial() {
             }
         }
 
-        // Solo enviar conductor si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.conductor = conductor;
         }
@@ -232,7 +215,6 @@ async function registrarMovimientoInicial() {
         const tipoTexto = esSalidaInicial ? "SALIDA" : "INGRESO";
         mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}${textoImagenes}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("conductor").value = "";
         document.getElementById("placa").value = "";
@@ -253,7 +235,6 @@ async function registrarMovimientoInicial() {
         if (inputImagenes) window.imagenesForm?.clearSelection("vehiculoEmpresaImagenes");
         actualizarPreviewImagenesVehiculoEmpresa();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -262,7 +243,6 @@ async function registrarMovimientoInicial() {
     }
 }
 
-// Navegar a la pantalla de movimiento complementario
 function irAMovimiento(salidaId, modo) {
     const params = new URLSearchParams({
         salidaId,
@@ -271,7 +251,6 @@ function irAMovimiento(salidaId, modo) {
     window.location.href = `vehiculo_empresa_ingreso.html?${params.toString()}`;
 }
 
-// Cargar vehículos pendientes (con solo un lado del flujo completo)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -280,13 +259,13 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehículos activos");
+            throw new Error(error || "Error al cargar vehÃ­culos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos pendientes en este momento</p>';
             return;
         }
 
@@ -307,7 +286,7 @@ async function cargarActivos() {
         });
 
         if (pendientes.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos pendientes en este momento</p>';
             return;
         }
 
@@ -329,7 +308,7 @@ async function cargarActivos() {
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
         html += '<th>Fecha / Hora</th>';
-        html += '<th>Acción</th>';
+        html += '<th>AcciÃ³n</th>';
         html += '</tr></thead><tbody>';
 
         pendientes.forEach(s => {
@@ -397,4 +376,6 @@ async function cargarActivos() {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
+
+
 

@@ -1,3 +1,5 @@
+﻿// Script frontend para dispositivo.
+
 async function registrarAutomatico() {
 
     const dni = document.getElementById("dni").value;
@@ -13,7 +15,6 @@ async function registrarAutomatico() {
         return;
     }
 
-    // Usar fetch normal, NO fetchAuth (no necesita token de usuario, usa API Key)
     const response = await fetch(`${API_BASE}/dispositivos-movimientos`, {
         method: "POST",
         headers: {
@@ -28,7 +29,7 @@ async function registrarAutomatico() {
 
     if (response.ok) {
         mensaje.className = "success";
-        mensaje.innerText = "Movimiento automático registrado";
+        mensaje.innerText = "Movimiento automÃ¡tico registrado";
         document.getElementById("dni").value = "";
         document.getElementById("dni").focus();
     } else {
@@ -36,3 +37,4 @@ async function registrarAutomatico() {
         mensaje.innerText = await readApiError(response);
     }
 }
+

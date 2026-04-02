@@ -1,3 +1,5 @@
+﻿// Archivo backend para ApiError.
+
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApplication1.Helpers
@@ -15,3 +17,4 @@ namespace WebApplication1.Helpers
         }
     }
 }
+

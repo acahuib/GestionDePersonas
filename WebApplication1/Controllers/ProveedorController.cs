@@ -1,3 +1,5 @@
+﻿// Archivo backend para ProveedorController.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +12,6 @@ using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controller para registrar proveedores SIN vehículo
-    /// Ruta: /api/proveedor
-    /// </summary>
     [ApiController]
     [Route("api/proveedor")]
     public class ProveedorController : ControllerBase
@@ -136,24 +134,17 @@ namespace WebApplication1.Controllers
             };
         }
 
-        // ======================================================
-        // POST: /api/proveedor
-        // Registra INGRESO de Proveedor
-        // ======================================================
         [HttpPost]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> RegistrarIngreso(SalidaProveedorDto dto)
         {
             try
             {
-                // Flujo estricto Proveedor: este endpoint es solo para INGRESO
                 if (dto.HoraSalida.HasValue)
                     return BadRequest("Proveedor: este endpoint solo registra ingreso. Use PUT /api/proveedor/{id}/salida para la salida.");
 
                 string tipoMovimiento = "Entrada";
 
-                // ===== NUEVO: Buscar o crear en tabla Personas =====
-                // Normalizar DNI (trim y uppercase por si hay inconsistencias)
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -178,8 +169,6 @@ namespace WebApplication1.Controllers
                     _context.Personas.Add(persona);
                     await _context.SaveChangesAsync();
                 }
-                // Si persona ya existe, se usa el nombre de la tabla
-                // ===== FIN NUEVO =====
 
                 int? usuarioId = UserClaimsHelper.GetUserId(User);
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -191,27 +180,20 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
-                // Cada ingreso/salida debe tener su propio MovimientoId único
                 var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
                     dniNormalizado, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // Respetar hora seleccionada y normalizar a zona Perú.
                 var ahoraLocal = ResolverHoraPeru(dto.HoraIngreso);
                 var fechaActual = ahoraLocal.Date;
                 
-                // Extraer horaIngreso/fechaIngreso para guardar en columnas
                 var horaIngresoCol = ahoraLocal;
                 var fechaIngresoCol = fechaActual;
                 DateTime? horaSalidaCol = null;
                 DateTime? fechaSalidaCol = null;
 
-                // NUEVO: DatosJSON ya NO contiene nombres/apellidos/dni (están en tabla Personas)
-                // DNI se guarda en columna Dni de OperacionDetalle para JOIN directo
-                // Solo datos variables del evento específico
                 var salida = await _salidasService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "Proveedor",
@@ -255,10 +237,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // ======================================================
-        // PUT: /api/proveedor/{id}/salida-temporal
-        // Marca salida temporal (puede volver a ingresar)
-        // ======================================================
         [HttpPut("{id}/salida-temporal")]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> RegistrarSalidaTemporal(int id, ActualizarSalidaProveedorDto dto)
@@ -276,7 +254,7 @@ namespace WebApplication1.Controllers
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             var estadoActual = LeerEstadoActual(datosActuales);
             if (estadoActual == "FueraTemporal")
-                return BadRequest("Este proveedor ya está fuera. Registre el ingreso de retorno.");
+                return BadRequest("Este proveedor ya estÃ¡ fuera. Registre el ingreso de retorno.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -343,10 +321,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // PUT: /api/proveedor/{id}/ingreso-retorno
-        // Registra reingreso luego de salida temporal
-        // ======================================================
         [HttpPut("{id}/ingreso-retorno")]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> RegistrarIngresoRetorno(int id, ActualizarIngresoProveedorDto dto)
@@ -363,7 +337,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             if (!EstaFueraTemporal(datosActuales))
-                return BadRequest("Solo se puede registrar ingreso si el proveedor está fuera temporalmente.");
+                return BadRequest("Solo se puede registrar ingreso si el proveedor estÃ¡ fuera temporalmente.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -456,10 +430,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // PUT: /api/proveedor/{id}/cancelar-retorno
-        // Cierra una salida temporal sin registrar reingreso
-        // ======================================================
         [HttpPut("{id}/cancelar-retorno")]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> CancelarRetorno(int id, ActualizarSalidaProveedorDto dto)
@@ -476,7 +446,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             if (!EstaFueraTemporal(datosActuales))
-                return BadRequest("Solo se puede cancelar retorno si el proveedor está fuera temporalmente.");
+                return BadRequest("Solo se puede cancelar retorno si el proveedor estÃ¡ fuera temporalmente.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -535,10 +505,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // PUT: /api/proveedor/{id}/salida
-        // Actualiza hora de SALIDA
-        // ======================================================
         [HttpPut("{id}/salida")]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> ActualizarSalida(int id, ActualizarSalidaProveedorDto dto)
@@ -561,13 +527,12 @@ namespace WebApplication1.Controllers
                     : null);
             guardiaNombre ??= "S/N";
 
-            // Respetar hora seleccionada y normalizar a zona Perú.
             var ahoraLocal = ResolverHoraPeru(dto.HoraSalida);
             var fechaActual = ahoraLocal.Date;
             
             var estadoActual = LeerEstadoActual(datosActuales);
             if (estadoActual == "FueraTemporal")
-                return BadRequest("El proveedor está fuera temporalmente. Registre primero el ingreso de retorno o use salida temporal según corresponda.");
+                return BadRequest("El proveedor estÃ¡ fuera temporalmente. Registre primero el ingreso de retorno o use salida temporal segÃºn corresponda.");
 
             var movimientosInternos = LeerMovimientosInternos(datosActuales);
             movimientosInternos.Add(new
@@ -596,7 +561,6 @@ namespace WebApplication1.Controllers
                 ultimaSalidaTemporal,
                 ultimoIngresoRetorno);
 
-            // NUEVO: Pasar horaSalida y fechaSalida como columnas
             await _salidasService.ActualizarSalidaDetalle(
                 id, 
                 datosActualizados, 
@@ -638,10 +602,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: /api/proveedor/{id}
-        // Obtiene detalle de proveedor con información de tabla Personas
-        // ======================================================
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin,Guardia")]
         public async Task<IActionResult> ObtenerProveedorPorId(int id)
@@ -656,8 +616,6 @@ namespace WebApplication1.Controllers
 
             var datosJSON = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
-            // NUEVO: DNI ahora está en columna, no en JSON
-            // nombreCompleto viene de tabla Personas mediante JOIN
             return Ok(new
             {
                 id = salida.Id,
@@ -678,10 +636,6 @@ namespace WebApplication1.Controllers
                 movimientosInternos = LeerMovimientosInternos(datosJSON)
             });
         }
-        // ======================================================
-        // POST: /api/proveedor/modo-tecnico-ingreso
-        // Registra INGRESO con fecha antigua (migración operativa)
-        // ======================================================
         [HttpPost("modo-tecnico-ingreso")]
         [Authorize(Roles = "Tecnico")]
         public async Task<IActionResult> RegistrarIngresoManual(
@@ -696,12 +650,11 @@ namespace WebApplication1.Controllers
                     return BadRequest("DNI es requerido.");
 
                 if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                    return BadRequest("DNI debe tener 8 dígitos numéricos.");
+                    return BadRequest("DNI debe tener 8 dÃ­gitos numÃ©ricos.");
 
                 if (dto.FechaHoraIngresoManual > DateTime.Now)
                     return BadRequest("La fecha/hora manual no puede ser futura.");
 
-                // ===== Buscar o crear Persona =====
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 
@@ -723,7 +676,6 @@ namespace WebApplication1.Controllers
 
                 int? usuarioId = UserClaimsHelper.GetUserId(User);
 
-                // ===== Crear Movimiento con fecha manual =====
                 var movimiento = new Models.Movimiento
                 {
                     Dni = dniNormalizado,
@@ -736,7 +688,6 @@ namespace WebApplication1.Controllers
                 _context.Movimientos.Add(movimiento);
                 await _context.SaveChangesAsync();
 
-                // ===== Crear OperacionDetalle con fecha manual =====
                 var operacion = new Models.OperacionDetalle
                 {
                     MovimientoId = movimiento.Id,
@@ -776,3 +727,5 @@ namespace WebApplication1.Controllers
 
     }
 }
+
+

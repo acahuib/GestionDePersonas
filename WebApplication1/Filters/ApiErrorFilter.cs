@@ -1,3 +1,5 @@
+﻿// Archivo backend para ApiErrorFilter.
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System;
@@ -91,3 +93,4 @@ namespace WebApplication1.Filters
         }
     }
 }
+

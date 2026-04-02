@@ -1,3 +1,5 @@
+﻿// Archivo backend para CanchaController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -101,7 +103,6 @@ namespace WebApplication1.Controllers
             var fechaRegistro = dto.Fecha.Date;
             var fechaHoraRegistro = fechaRegistro.Add(hora);
 
-            // Evita doble reserva activa en el mismo horario.
             var yaReservado = await _context.OperacionDetalle
                 .AnyAsync(o => o.TipoOperacion == TipoOperacion &&
                                o.HoraIngreso.HasValue &&
@@ -223,3 +224,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

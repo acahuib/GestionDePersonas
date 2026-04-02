@@ -1,6 +1,4 @@
-// =========================================
-// OCURRENCIAS.JS - Registro de ocurrencias
-// =========================================
+﻿// Script frontend para ocurrencias.
 
 let personaEncontrada = null;
 
@@ -14,7 +12,6 @@ function actualizarPreviewImagenes() {
 }
 
 function removerImagenSeleccionada(index) {
-    // La eliminacion se maneja en el modulo compartido por evento de click.
 }
 
 function inicializarPreviewImagenes() {
@@ -109,7 +106,7 @@ function cambiarTipoOcurrencia() {
         if (personaInfo) personaInfo.style.display = "none";
         if (nombreInput) {
             nombreInput.disabled = false;
-            nombreInput.placeholder = "Nombre o descripción de la persona";
+            nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
         }
     }
 
@@ -133,11 +130,11 @@ function construirDescripcionPorTipo() {
         const ocurrencia = leerValor("ocurrencia");
 
         if (!ocurrencia) {
-            return { ok: false, error: "La descripción de ocurrencia es obligatoria" };
+            return { ok: false, error: "La descripciÃ³n de ocurrencia es obligatoria" };
         }
 
         if (!validarDniOpcional(dni)) {
-            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+            return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
         }
 
         return {
@@ -159,7 +156,7 @@ function construirDescripcionPorTipo() {
         const observacion = leerValor("vehiculoObservacion");
 
         if (!validarDniOpcional(dni)) {
-            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+            return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
         }
 
         if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
@@ -196,7 +193,7 @@ function construirDescripcionPorTipo() {
     const observacion = leerValor("encapsuladoObservacion");
 
     if (!validarDniOpcional(dni)) {
-        return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
     }
 
     if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
@@ -242,7 +239,7 @@ function limpiarFormularioPorTipo() {
     if (personaInfo) personaInfo.style.display = "none";
     if (nombreInput) {
         nombreInput.disabled = false;
-        nombreInput.placeholder = "Nombre o descripción de la persona";
+        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
     }
 
     const inputImagenes = obtenerInputImagenes();
@@ -456,7 +453,6 @@ async function cargarInfoGuardiasTurno() {
     }
 }
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     if (obtenerTipoOcurrenciaSeleccionado() !== "Persona") return;
 
@@ -465,13 +461,12 @@ async function buscarPersonaPorDni() {
     const personaNombre = document.getElementById("persona-nombre");
     const nombreInput = document.getElementById("nombre");
 
-    // Reset si DNI inválido o vacío
     if (!dni || dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
         nombreInput.disabled = false;
         nombreInput.value = "";
-        nombreInput.placeholder = "Nombre o descripción de la persona";
+        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
         return;
     }
 
@@ -482,7 +477,6 @@ async function buscarPersonaPorDni() {
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
 
-            // Completar nombre automaticamente cuando el DNI existe.
             nombreInput.value = personaEncontrada.nombre || "";
             nombreInput.disabled = true;
             nombreInput.placeholder = "(Autocompletado por DNI)";
@@ -492,16 +486,15 @@ async function buscarPersonaPorDni() {
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreInput.disabled = false;
-            nombreInput.placeholder = "Nombre o descripción de la persona";
+            nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
             nombreInput.focus();
         }
     } catch (error) {
         console.error("Error al buscar persona:", error);
-        // En caso de error, permitir registro manual
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreInput.disabled = false;
-        nombreInput.placeholder = "Nombre o descripción de la persona";
+        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
     }
 }
 
@@ -519,7 +512,6 @@ async function autocompletarChoferDesdeDni(dniId, choferId) {
             choferInput.value = persona.nombre;
         }
     } catch {
-        // Mantener edición manual en caso de error o DNI no existente.
     }
 }
 
@@ -554,7 +546,6 @@ function inicializarAutocompletadoDniOcurrencias() {
     }
 }
 
-// Registrar movimiento inicial
 async function registrarIngreso() {
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
@@ -588,10 +579,8 @@ async function registrarIngreso() {
                 : ahoraLocalDateTime();
         }
 
-        // Agregar DNI solo si se proporcionó
         if (datos.dni) body.dni = datos.dni;
 
-        // En tipo Persona se respeta lógica anterior de lookup por DNI
         if (datos.tipo === "Persona") {
             if (!personaEncontrada && datos.nombre) {
                 body.nombre = datos.nombre;
@@ -620,13 +609,11 @@ async function registrarIngreso() {
         mensaje.className = "success";
         mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}`;
 
-        // Limpiar formulario
         limpiarFormularioPorTipo();
         document.getElementById("horaIngreso").value = "";
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
 
-        // Actualizar tabla
         cargarActivos();
         const tipo = obtenerTipoOcurrenciaSeleccionado();
         const foco = tipo === "Persona" ? "dni" : (tipo === "Vehicular" ? "vehiculoDni" : "encapsuladoDni");
@@ -638,7 +625,6 @@ async function registrarIngreso() {
     }
 }
 
-// Navegar a la pantalla de movimiento complementario con datos precargados
 function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso, guardiaIngreso, fechaSalida, horaSalida, guardiaSalida, modo = 'salida') {
     const params = new URLSearchParams({
         id: salidaId,
@@ -656,7 +642,6 @@ function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso,
     window.location.href = `ocurrencias_salida.html?${params.toString()}`;
 }
 
-// Cargar ocurrencias activas (con ingreso sin salida)
 async function cargarActivos() {
     const container = document.getElementById("tabla-activos");
 
@@ -675,14 +660,12 @@ async function cargarActivos() {
             return;
         }
 
-        // Filtrar las que tienen solo un lado registrado (pendiente de complemento)
         const activas = ocurrencias.filter(o => {
             const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
             const tieneSalida = o.horaSalida !== null && o.horaSalida !== undefined;
             return tieneIngreso !== tieneSalida;
         });
 
-        // Mostrar primero la ocurrencia activa mas reciente segun su movimiento inicial.
         activas.sort((a, b) => {
             const aTieneIngreso = a.horaIngreso !== null && a.horaIngreso !== undefined;
             const bTieneIngreso = b.horaIngreso !== null && b.horaIngreso !== undefined;
@@ -732,7 +715,6 @@ async function cargarActivos() {
                 : (o.fechaSalida ? new Date(o.fechaSalida).toLocaleDateString('es-PE') : 'N/A');
             const guardiaInicial = tieneIngreso ? (datos.guardiaIngreso || '-') : (datos.guardiaSalida || '-');
             
-            // Identificar DNI ficticio (empieza con 99)
             const dniDisplay = o.dni && o.dni.startsWith('99') 
                 ? `<span class="muted" title="DNI Ficticio">${o.dni}</span>` 
                 : (o.dni || '-');
@@ -769,4 +751,6 @@ async function cargarActivos() {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
+
+
 

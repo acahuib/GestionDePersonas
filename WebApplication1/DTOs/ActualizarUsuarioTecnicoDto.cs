@@ -1,3 +1,5 @@
+﻿// Archivo backend para ActualizarUsuarioTecnicoDto.
+
 namespace WebApplication1.DTOs
 {
     public class ActualizarUsuarioTecnicoDto

@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Archivo backend para ReportesController.
+
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ClosedXML.Excel;
 using System.Text.Json;
@@ -10,7 +12,6 @@ namespace WebApplication1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    // [Authorize(Roles = "Admin")] // COMENTADO PARA PRUEBAS EN SWAGGER
     public class ReportesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,11 +21,6 @@ namespace WebApplication1.Controllers
             _context = context;
         }
 
-        // ======================================================
-        // GET: api/reportes
-        // Reporte histórico paginado (uso administrativo)
-        // Soporta rango de fechas (fechaInicio y fechaFin)
-        // ======================================================
         [HttpGet]
         public async Task<IActionResult> ObtenerReporte(
             [FromQuery] DateTime? fechaInicio,
@@ -37,7 +33,6 @@ namespace WebApplication1.Controllers
             if (page <= 0) page = 1;
             if (pageSize <= 0 || pageSize > 200) pageSize = 50;
 
-            // Si no se especifica rango, usar solo fechaInicio como un día
             if (!fechaInicio.HasValue)
                 return BadRequest("Se requiere fechaInicio");
 
@@ -47,7 +42,6 @@ namespace WebApplication1.Controllers
             var query = _context.Movimientos
                 .AsNoTracking()
                 .Include(m => m.Persona)
-                // .Include(m => m.PuntoControl) // Eliminado
                 .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
 
             if (puntoControlId.HasValue)
@@ -81,11 +75,6 @@ namespace WebApplication1.Controllers
             });
         }
 
-        // ======================================================
-        // GET: api/reportes/dashboard
-        // Reporte extendido para dashboard de administrador
-        // Incluye información de Persona.Tipo y OperacionDetalle.TipoOperacion
-        // ======================================================
         [HttpGet("dashboard")]
         public async Task<IActionResult> ObtenerDashboard(
             [FromQuery] DateTime? fechaInicio,
@@ -97,12 +86,10 @@ namespace WebApplication1.Controllers
             if (page <= 0) page = 1;
             if (pageSize <= 0 || pageSize > 50000) pageSize = 50; // Aumentado límite para consultas históricas
 
-            // Si no se especifica rango, usar solo fechaInicio como un día
             if (!fechaInicio.HasValue)
                 return BadRequest("Se requiere fechaInicio");
 
             var inicio = fechaInicio.Value.Date;
-            // Si fechaFin no se especifica, buscar hasta HOY (no solo 1 día)
             var fin = fechaFin.HasValue ? fechaFin.Value.Date.AddDays(1) : DateTime.Now.Date.AddDays(1);
 
             var query = _context.Movimientos
@@ -115,25 +102,21 @@ namespace WebApplication1.Controllers
 
             var total = await query.CountAsync();
 
-            // Obtener movimientos con sus detalles
             var movimientos = await query
                 .OrderByDescending(m => m.FechaHora)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Obtener IDs de movimientos para buscar OperacionDetalle
             var movimientoIds = movimientos.Select(m => m.Id).ToList();
             var salidasDetalle = await _context.OperacionDetalle
                 .Where(s => movimientoIds.Contains(s.MovimientoId))
                 .ToListAsync();
 
-            // Crear diccionario para búsqueda rápida
             var salidasPorMovimiento = salidasDetalle
                 .GroupBy(s => s.MovimientoId)
                 .ToDictionary(g => g.Key, g => g.FirstOrDefault());
 
-            // Mapear a DTO
             var data = movimientos.Select(m => new DashboardMovimientoDto
             {
                 Id = m.Id,
@@ -291,10 +274,6 @@ namespace WebApplication1.Controllers
             return false;
         }
 
-        // ======================================================
-        // GET: api/reportes/export/excel
-        // Exportación a Excel con rango de fechas
-        // ======================================================
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportarExcel(
             [FromQuery] DateTime? fechaInicio,
@@ -311,7 +290,6 @@ namespace WebApplication1.Controllers
             var query = _context.Movimientos
                 .AsNoTracking()
                 .Include(m => m.Persona)
-                // .Include(m => m.PuntoControl) // Eliminado
                 .Where(m => m.FechaHora >= inicio && m.FechaHora < fin);
 
             if (puntoControlId.HasValue)
@@ -335,14 +313,12 @@ namespace WebApplication1.Controllers
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Reporte");
 
-            // Encabezados
             ws.Cell(1, 1).Value = "Fecha y Hora";
             ws.Cell(1, 2).Value = "DNI";
             ws.Cell(1, 3).Value = "Nombre";
             ws.Cell(1, 4).Value = "Punto de Control";
             ws.Cell(1, 5).Value = "Movimiento";
 
-            // Datos
             for (int i = 0; i < data.Count; i++)
             {
                 ws.Cell(i + 2, 1).Value = data[i].FechaHora;
@@ -358,7 +334,6 @@ namespace WebApplication1.Controllers
             workbook.SaveAs(stream);
             stream.Position = 0;
 
-            // Nombre del archivo: Reporte_2026-02-05_a_2026-02-08.xlsx
             var nombreArchivo = fechaFin.HasValue
                 ? $"Reporte_{fechaInicio:yyyyMMdd}_a_{fechaFin:yyyyMMdd}.xlsx"
                 : $"Reporte_{fechaInicio:yyyyMMdd}.xlsx";
@@ -371,3 +346,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

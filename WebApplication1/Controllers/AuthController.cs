@@ -1,3 +1,5 @@
+﻿// Archivo backend para AuthController.
+
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
@@ -25,7 +27,6 @@ namespace WebApplication1.Controllers
             _logger = logger;
         }
 
-        // POST: api/auth/login
         [AllowAnonymous]
         [HttpPost("login")]
         public IActionResult Login(LoginDto dto)
@@ -122,3 +123,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

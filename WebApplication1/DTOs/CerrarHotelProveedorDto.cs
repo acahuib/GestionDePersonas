@@ -1,3 +1,5 @@
+﻿// Archivo backend para CerrarHotelProveedorDto.
+
 namespace WebApplication1.DTOs
 {
     public class CerrarHotelProveedorDto

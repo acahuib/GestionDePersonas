@@ -1,6 +1,4 @@
-// ============================================
-// dias_libre.js - Control de permisos de días libres
-// ============================================
+﻿// Script frontend para dias_libre.
 
 let personaEncontrada = null;
 
@@ -23,12 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Configurar eventos del formulario y botones
 function configurarEventos() {
     const form = document.getElementById('formDiasLibre');
     form.addEventListener('submit', registrarDiasLibre);
 
-    // Buscar persona al salir del campo DNI
     const inputDni = document.getElementById('dni');
     inputDni.addEventListener('blur', buscarPersonaPorDni);
     inputDni.addEventListener('keypress', (e) => {
@@ -38,19 +34,16 @@ function configurarEventos() {
         }
     });
 
-    // Calcular fecha "Trabaja" automáticamente
     const inputAl = document.getElementById('al');
     inputAl.addEventListener('change', calcularFechaTrabaja);
 }
 
-// Buscar persona en tabla Personas
 async function buscarPersonaPorDni() {
     const dni = document.getElementById('dni').value.trim();
     const personaInfo = document.getElementById('persona-info');
     const personaNombre = document.getElementById('persona-nombre');
     const nombreApellidosInput = document.getElementById('nombreApellidos');
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = 'none';
         personaEncontrada = null;
@@ -65,19 +58,15 @@ async function buscarPersonaPorDni() {
         if (response.ok) {
             personaEncontrada = await response.json();
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = 'block';
             
-            // Limpiar y deshabilitar campo de nombre
             nombreApellidosInput.value = '';
             nombreApellidosInput.disabled = true;
             nombreApellidosInput.placeholder = '(Ya registrado)';
             
-            // Saltar a siguiente campo
             document.getElementById('del').focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campo para registro
             personaEncontrada = null;
             personaInfo.style.display = 'none';
             nombreApellidosInput.disabled = false;
@@ -89,7 +78,6 @@ async function buscarPersonaPorDni() {
         }
     } catch (error) {
         console.error('Error al buscar persona:', error);
-        // En caso de error, permitir registro manual
         personaEncontrada = null;
         personaInfo.style.display = 'none';
         nombreApellidosInput.disabled = false;
@@ -97,7 +85,6 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Calcular fecha de regreso al trabajo (Al + 1 día)
 function calcularFechaTrabaja() {
     const fechaAl = document.getElementById('al').value;
     if (fechaAl) {
@@ -110,7 +97,6 @@ function calcularFechaTrabaja() {
     }
 }
 
-// Registrar permiso de días libres
 async function registrarDiasLibre(e) {
     e.preventDefault();
 
@@ -123,18 +109,16 @@ async function registrarDiasLibre(e) {
     const fechaRegistroInput = document.getElementById('fechaRegistro')?.value || obtenerFechaLocalISO();
     const observaciones = document.getElementById('observaciones').value.trim();
 
-    // Validaciones
     if (!numeroBoleta || !dni || !del || !al) {
         alert('Por favor complete todos los campos obligatorios');
         return;
     }
 
     if (dni.length !== 8 || isNaN(dni)) {
-        alert('El DNI debe tener 8 dígitos numéricos');
+        alert('El DNI debe tener 8 dÃ­gitos numÃ©ricos');
         return;
     }
 
-    // Si no hay persona encontrada, validar que se haya ingresado el nombre
     if (!personaEncontrada && !nombreApellidos) {
         alert('DNI no registrado. Complete Nombres y Apellidos para registrar la persona.');
         return;
@@ -176,7 +160,6 @@ async function registrarDiasLibre(e) {
 
             alert(`Permiso registrado exitosamente\n\nDNI: ${data.dni}\nNombre: ${data.nombreCompleto}\nDel: ${new Date(data.del).toLocaleDateString()}\nAl: ${new Date(data.al).toLocaleDateString()}\nTrabaja: ${new Date(data.trabaja).toLocaleDateString()}${advertenciaImagenes}`);
             
-            // Resetear formulario y estado
             document.getElementById('formDiasLibre').reset();
             document.getElementById('trabaja').value = '';
             const fechaRegistro = document.getElementById('fechaRegistro');
@@ -197,7 +180,6 @@ async function registrarDiasLibre(e) {
     }
 }
 
-// Cargar permisos registrados hoy
 function abrirImagenesRegistroDiasLibre(registroId, info = {}) {
     if (typeof window.abrirImagenesRegistroModal !== "function") {
         window.alert("No se pudo abrir el visor de imagenes.");
@@ -228,7 +210,6 @@ async function cargarDiasLibreHoy() {
             return;
         }
 
-        // Filtrar solo registros de hoy
         const registrosHoy = data.filter(item => {
             const fechaSalida = item.fechaSalida || (item.datos && item.datos.fechaSalida);
             return fechaSalida && fechaSalida.split('T')[0] === hoy;
@@ -276,3 +257,4 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+

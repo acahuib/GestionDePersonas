@@ -1,3 +1,5 @@
+﻿// Archivo backend para RegistroInformativoEnseresTurnoDto.
+
 namespace WebApplication1.DTOs
 {
     public class RegistroInformativoEnseresTurnoDto

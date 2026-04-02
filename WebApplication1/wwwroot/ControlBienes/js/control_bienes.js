@@ -1,13 +1,10 @@
-// =========================================
-// CUADERNO DE CONTROL DE BIENES
-// =========================================
+﻿// Script frontend para control_bienes.
 
 let personaEncontrada = null;
 let contadorBienes = 0;
 let bienesPendientes = [];
 let prefillNombreCompleto = null;
 
-// Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
@@ -15,7 +12,6 @@ async function buscarPersonaPorDni() {
     const nombreCompletoInput = document.getElementById("nombreCompleto");
     const pendingInfo = document.getElementById("pendientes-info");
 
-    // Reset si DNI inválido
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
@@ -28,32 +24,28 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`📡 Response status: ${response.status}`);
+        console.log(`ðŸ“¡ Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
+            console.log(`âœ… Persona encontrada:`, personaEncontrada);
             
-            // Mostrar info de persona registrada
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            // Limpiar y deshabilitar campos de nombre/apellido
             nombreCompletoInput.value = "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
 
             await cargarBienesPendientesPorDni(dni);
             
-            // Focus en primer bien
             const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
             if (primerBien) primerBien.focus();
         } else if (response.status === 404) {
-            // DNI no existe, habilitar campos para registro
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -68,11 +60,11 @@ async function buscarPersonaPorDni() {
             }
         } else {
             const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
+            console.error(`âŒ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
+        console.error("âŒ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -121,7 +113,7 @@ async function cargarBienesPendientesPorDni(dni) {
         if (pendingInfo) {
             pendingInfo.style.display = bienesPendientes.length > 0 ? "block" : "none";
             pendingInfo.innerHTML = bienesPendientes.length > 0
-                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarán automáticamente y no son editables.`
+                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarÃ¡n automÃ¡ticamente y no son editables.`
                 : "";
         }
     } catch {
@@ -154,7 +146,6 @@ function renderBienesPendientes() {
     }).join("");
 }
 
-// Agregar un bien al formulario
 function agregarBien() {
     const container = document.getElementById("bienes-container");
     const bienId = ++contadorBienes;
@@ -169,7 +160,7 @@ function agregarBien() {
         <h4 style="margin-top: 0;">Bien #${bienId}</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
-                <label>Descripción *</label>
+                <label>DescripciÃ³n *</label>
                 <input type="text" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
             </div>
             <div>
@@ -190,7 +181,6 @@ function agregarBien() {
     container.appendChild(bienDiv);
 }
 
-// Eliminar un bien
 function eliminarBien(bienId) {
     const bienDiv = document.getElementById(`bien-${bienId}`);
     if (bienDiv) {
@@ -198,7 +188,6 @@ function eliminarBien(bienId) {
     }
 }
 
-// Recopilar bienes del formulario
 function recopilarBienes() {
     const bienes = [];
     const bienesItems = document.querySelectorAll(".bien-item");
@@ -225,7 +214,6 @@ function recopilarBienes() {
     return bienes;
 }
 
-// Registrar INGRESO con bienes
 async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombreCompleto = document.getElementById("nombreCompleto").value.trim();
@@ -237,7 +225,6 @@ async function registrarIngreso() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    // Validaciones
     if (!dni) {
         mensaje.className = "error";
         mensaje.innerText = "Complete el DNI";
@@ -246,7 +233,7 @@ async function registrarIngreso() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
         return;
     }
 
@@ -256,7 +243,6 @@ async function registrarIngreso() {
         return;
     }
 
-    // Recopilar bienes
     const bienes = recopilarBienes();
     
     if (bienes.length === 0 && bienesPendientes.length === 0) {
@@ -275,7 +261,6 @@ async function registrarIngreso() {
             observacion: observacion || null
         };
 
-        // Solo enviar nombre si DNI no existe en tabla Personas
         if (!personaEncontrada) {
             body.nombreCompleto = nombreCompleto;
         }
@@ -306,7 +291,6 @@ async function registrarIngreso() {
         mensaje.className = "success";
         mensaje.innerText = `INGRESO registrado para ${nombreMostrar}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}${advertenciaImagenes}`;
 
-        // Limpiar formulario
         document.getElementById("dni").value = "";
         document.getElementById("nombreCompleto").value = "";
         document.getElementById("observacion").value = "";
@@ -321,11 +305,10 @@ async function registrarIngreso() {
         document.getElementById("pendientes-info").style.display = "none";
         contadorBienes = 0;
         bienesPendientes = [];
-        agregarBien(); // Agregar un bien vacío
+        agregarBien(); // Agregar un bien vacÃ­o
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
-        // Actualizar lista
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -334,7 +317,6 @@ async function registrarIngreso() {
     }
 }
 
-// Navegar a la pantalla de salida con datos precargados
 function irASalida(salidaId) {
     const params = new URLSearchParams({ salidaId });
     window.location.href = `control_bienes_salida.html?${params.toString()}`;
@@ -353,7 +335,6 @@ function abrirImagenesRegistroControlBienes(registroId, info = {}) {
     });
 }
 
-// Cargar personal activo (dentro con bienes, sin salida)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
 
@@ -372,7 +353,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Tomar el último registro por DNI y mostrar solo los que no tengan salida
         const ultimosPorDni = new Map();
 
         salidas.forEach(s => {
@@ -393,7 +373,6 @@ async function cargarActivos() {
             }
         });
 
-        // Filtrar solo los que NO tengan salida
         const activosSinSalida = Array.from(ultimosPorDni.values())
             .filter(s => {
                 if (s.horaSalida) return false;
@@ -410,7 +389,6 @@ async function cargarActivos() {
             return;
         }
 
-        // Ordenar por fecha de ingreso más reciente
         activosSinSalida.sort((a, b) => {
             const dateA = a.fechaIngreso ? new Date(a.fechaIngreso) : new Date(0);
             const dateB = b.fechaIngreso ? new Date(b.fechaIngreso) : new Date(0);
@@ -463,4 +441,6 @@ async function cargarActivos() {
 
     }
 }
+
+
 

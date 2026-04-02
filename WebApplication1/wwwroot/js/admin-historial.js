@@ -1,3 +1,5 @@
+﻿// Script frontend para admin-historial.
+
 const TIPOS_OPERACION = {
     Proveedor: "Proveedores",
     VehiculosProveedores: "Vehiculos Proveedores",
@@ -445,3 +447,4 @@ window.addEventListener("DOMContentLoaded", () => {
     configurarEventos();
     cargarHistorial();
 });
+

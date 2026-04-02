@@ -1,3 +1,5 @@
+﻿// Archivo backend para LoginDto.
+
 namespace WebApplication1.DTOs
 {
     public class LoginDto
@@ -6,3 +8,4 @@ namespace WebApplication1.DTOs
         public required string Password { get; set; }
     }
 }
+

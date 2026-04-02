@@ -1,3 +1,5 @@
+﻿// Archivo backend para PersonalLocalController.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,15 +11,6 @@ using System.Text.Json;
 
 namespace WebApplication1.Controllers
 {
-    /// <summary>
-    /// Controlador para Personal Local (Chala)
-    /// Trabajadores que viven cerca de la mina
-    /// 
-    /// Flujo diario:
-    /// 1. POST /api/personal-local - registra ingreso de la mañana
-    /// 2. PUT /api/personal-local/{id}/almuerzo - actualiza horarios de almuerzo (opcional)
-    /// 3. PUT /api/personal-local/{id}/salida - registra salida final del día
-    /// </summary>
     [ApiController]
     [Route("api/personal-local")]
     [Authorize(Roles = "Admin,Guardia")]
@@ -51,36 +44,26 @@ namespace WebApplication1.Controllers
             };
         }
 
-        /// <summary>
-        /// Registra ingreso de personal local (mañana)
-        /// POST /api/personal-local
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> RegistrarIngreso([FromBody] SalidaPersonalLocalDto dto)
         {
             try
             {
-                // Validación básica
                 if (string.IsNullOrWhiteSpace(dto.Dni))
                     return BadRequest("DNI es requerido");
 
-                // POST es SOLO para ingreso de mañana
-                // La salida final debe registrarse vía PUT /{id}/salida
                 string tipoMovimiento = "Entrada";
                 var tipoPersonaLocal = NormalizarTipoPersonaLocal(dto.TipoPersonaLocal);
 
-                // ===== NUEVO: Buscar o crear en tabla Personas =====
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
                 
                 if (persona == null)
                 {
-                    // DNI no existe: validar que se envíe nombre
                     if (string.IsNullOrWhiteSpace(dto.NombreApellidos))
                         return BadRequest("DNI no registrado. Debe proporcionar Nombre y Apellidos para registrar la persona.");
 
-                    // Crear nuevo registro en tabla Personas
                     persona = new Models.Persona
                     {
                         Dni = dniNormalizado,
@@ -90,9 +73,7 @@ namespace WebApplication1.Controllers
                     _context.Personas.Add(persona);
                     await _context.SaveChangesAsync();
                 }
-                // ===== FIN NUEVO =====
 
-                // Extract usuarioId from token (guardia)
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
@@ -102,25 +83,19 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // CORRECCIÓN: SIEMPRE crear un nuevo movimiento para cada registro
-                // Cada ingreso/salida debe tener su propio MovimientoId único
                 var ultimoMovimiento = await _movimientosService.RegistrarMovimientoEnBD(
                     dniNormalizado, 1, tipoMovimiento, usuarioId);
 
                 if (ultimoMovimiento == null)
                     return StatusCode(500, "Error al registrar movimiento");
 
-                // Obtener hora actual en zona horaria de Perú (hora del servidor, NO del cliente)
                 var fechaHoraActual = dto.HoraIngreso.HasValue 
                     ? ResolverHoraPeru(dto.HoraIngreso) 
                     : ResolverHoraPeru(null);
 
-                // Separar fecha y hora para columnas de base de datos (solo ingreso en POST)
                 DateTime horaIngresoColumna = fechaHoraActual;
                 DateTime fechaIngresoColumna = fechaHoraActual.Date;
 
-                // NUEVO: JSON solo contiene horarios de almuerzo, guardias y observaciones
-                // DNI, nombre, horaIngreso/Salida, fechaIngreso/Salida están en COLUMNAS
                 var datosPersonalLocal = new
                 {
                     tipoPersonaLocal,
@@ -135,7 +110,6 @@ namespace WebApplication1.Controllers
                     observaciones = dto.Observaciones
                 };
 
-                // Crear registro de salida con datos JSON y columnas (solo ingreso)
                 var salidaDetalle = await _salidaService.CrearSalidaDetalle(
                     ultimoMovimiento.Id,
                     "PersonalLocal",
@@ -143,8 +117,8 @@ namespace WebApplication1.Controllers
                     usuarioId,
                     horaIngresoColumna,
                     fechaIngresoColumna,
-                    null,                    // horaSalida (se registra después vía PUT)
-                    null,                    // fechaSalida (se registra después vía PUT)
+                    null,                    // horaSalida (se registra despuÃ©s vÃ­a PUT)
+                    null,                    // fechaSalida (se registra despuÃ©s vÃ­a PUT)
                     dniNormalizado);         // DNI va a columna
 
                 if (salidaDetalle == null)
@@ -162,10 +136,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Registra salida a almuerzo
-        /// PUT /api/personal-local/{id}/almuerzo/salida
-        /// </summary>
         [HttpPut("{id}/almuerzo/salida")]
         public async Task<IActionResult> RegistrarSalidaAlmuerzo(int id, [FromBody] ActualizarAlmuerzoPersonalLocalDto dto)
         {
@@ -178,7 +148,6 @@ namespace WebApplication1.Controllers
                 if (EsTipoRetornando(salidaExistente.DatosJSON))
                     return BadRequest("PersonalLocal retornando no permite salida de almuerzo en este cuaderno");
 
-                // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
@@ -188,17 +157,14 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Obtener hora actual en zona horaria de Perú
                 var fechaHoraActual = dto.HoraSalidaAlmuerzo.HasValue 
                     ? ResolverHoraPeru(dto.HoraSalidaAlmuerzo) 
                     : ResolverHoraPeru(null);
 
-                // Obtener datos actuales y actualizar solo horaSalidaAlmuerzo (en JSON)
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
-                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
@@ -213,7 +179,6 @@ namespace WebApplication1.Controllers
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
-                    // Solo actualizar JSON, NO columnas de BD (los parámetros opcionales se omiten)
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
                     return Ok(salidaActualizada);
                 }
@@ -224,10 +189,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Registra ingreso de almuerzo (regresa del almuerzo)
-        /// PUT /api/personal-local/{id}/almuerzo/ingreso
-        /// </summary>
         [HttpPut("{id}/almuerzo/ingreso")]
         public async Task<IActionResult> RegistrarIngresoAlmuerzo(int id, [FromBody] ActualizarAlmuerzoPersonalLocalDto dto)
         {
@@ -240,7 +201,6 @@ namespace WebApplication1.Controllers
                 if (EsTipoRetornando(salidaExistente.DatosJSON))
                     return BadRequest("PersonalLocal retornando no permite ingreso de almuerzo en este cuaderno");
 
-                // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
@@ -250,17 +210,14 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Obtener hora actual en zona horaria de Perú
                 var fechaHoraActual = dto.HoraEntradaAlmuerzo.HasValue 
                     ? ResolverHoraPeru(dto.HoraEntradaAlmuerzo) 
                     : ResolverHoraPeru(null);
 
-                // Obtener datos actuales y actualizar solo horaEntradaAlmuerzo (en JSON)
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
-                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
@@ -275,7 +232,6 @@ namespace WebApplication1.Controllers
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
-                    // Solo actualizar JSON, NO columnas de BD (los parámetros opcionales se omiten)
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
                     return Ok(salidaActualizada);
                 }
@@ -286,10 +242,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Registra salida final del día
-        /// PUT /api/personal-local/{id}/salida
-        /// </summary>
         [HttpPut("{id}/salida")]
         public async Task<IActionResult> RegistrarSalida(int id, [FromBody] ActualizarSalidaPersonalLocalDto dto)
         {
@@ -305,7 +257,6 @@ namespace WebApplication1.Controllers
                 if (EsCierreAdministrativo(salidaExistente.DatosJSON))
                     return BadRequest("El registro fue cerrado administrativamente. Registre la salida final en el cuaderno correspondiente.");
 
-                // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
@@ -315,24 +266,19 @@ namespace WebApplication1.Controllers
                         : null);
                 guardiaNombre ??= "S/N";
 
-                // Obtener hora actual en zona horaria de Perú
                 var fechaHoraActual = dto.HoraSalida.HasValue 
                     ? ResolverHoraPeru(dto.HoraSalida) 
                     : ResolverHoraPeru(null);
 
-                // Separar fecha y hora para columnas de base de datos
                 DateTime horaSalidaColumna = fechaHoraActual;
                 DateTime fechaSalidaColumna = fechaHoraActual.Date;
 
-                // Obtener datos actuales y actualizar salida final
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
 
-                    // DNI está en columna
                     var dni = salidaExistente.Dni;
                 
-                    // NUEVO: JSON solo contiene horarios de almuerzo y guardias
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
@@ -347,7 +293,6 @@ namespace WebApplication1.Controllers
                         observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
                     };
 
-                    // Actualizar JSON + columnas de salida
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(
                         id, 
                         datosActualizados, 
@@ -357,7 +302,6 @@ namespace WebApplication1.Controllers
                         horaSalidaColumna,
                         fechaSalidaColumna);
 
-                    // Registrar movimiento de salida final
                     var dniMovimiento = dni;
                     if (string.IsNullOrWhiteSpace(dniMovimiento))
                     {
@@ -383,20 +327,12 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Obtiene un registro por ID
-        /// GET /api/personal-local/{id}
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerSalidaPorId(int id)
         {
             return await ObtenerSalidaPorIdCore(id);
         }
 
-        /// <summary>
-        /// Modo tecnico: obtiene un registro por ID (sin autenticacion)
-        /// GET /api/tecnico/personal-local/{id}
-        /// </summary>
         [HttpGet("/api/tecnico/personal-local/{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> ObtenerSalidaPorIdTecnico(int id)
@@ -420,9 +356,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-        /// <summary>
-        /// Extrae el ID de usuario (guardia) desde el token JWT
-        /// </summary>
         private int? ExtractUsuarioIdFromToken()
         {
             var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -480,3 +413,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
+

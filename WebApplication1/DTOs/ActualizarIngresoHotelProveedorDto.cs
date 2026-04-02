@@ -1,3 +1,5 @@
+﻿// Archivo backend para ActualizarIngresoHotelProveedorDto.
+
 namespace WebApplication1.DTOs
 {
     public class ActualizarIngresoHotelProveedorDto
@@ -7,3 +9,4 @@ namespace WebApplication1.DTOs
         public string? Destino { get; set; }
     }
 }
+

@@ -1,3 +1,5 @@
+﻿// Archivo backend para SalidasService.
+
 using WebApplication1.Data;
 using WebApplication1.Models;
 using WebApplication1.DTOs;
@@ -6,10 +8,6 @@ using System.Text.Json;
 
 namespace WebApplication1.Services
 {
-    /// <summary>
-    /// Servicio para manejar detalles de salidas (Proveedor, Vehículo, etc.)
-    /// Almacena datos en formato JSON flexible
-    /// </summary>
     public class SalidasService
     {
         private readonly AppDbContext _context;
@@ -19,10 +17,6 @@ namespace WebApplication1.Services
             _context = context;
         }
 
-        /// <summary>
-        /// Crea un registro de OperacionDetalle con JSON genérico
-        /// NUEVO: Acepta parámetros opcionales para columnas de fecha/hora y DNI
-        /// </summary>
         public async Task<OperacionDetalle> CrearSalidaDetalle(
             int movimientoId, 
             string tipoOperacion, 
@@ -34,7 +28,6 @@ namespace WebApplication1.Services
             DateTime? fechaSalida = null,
             string? dni = null)
         {
-            // Convertir objeto a JSON string
             var datosJSON = JsonSerializer.Serialize(datosObj, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -47,7 +40,6 @@ namespace WebApplication1.Services
                 DatosJSON = datosJSON,
                 FechaCreacion = DateTime.Now,
                 UsuarioId = usuarioId,
-                // NUEVO: Guardar en columnas
                 HoraIngreso = horaIngreso,
                 FechaIngreso = fechaIngreso,
                 HoraSalida = horaSalida,
@@ -61,9 +53,6 @@ namespace WebApplication1.Services
             return salida;
         }
 
-        /// <summary>
-        /// Crea OperacionDetalle desde DTO genérico (si ya tienes JSON serializado)
-        /// </summary>
         public async Task<OperacionDetalle> CrearSalidaDetalleFromDto(OperacionDetalleCreateDto dto, int? usuarioId)
         {
             var salida = new OperacionDetalle
@@ -81,9 +70,6 @@ namespace WebApplication1.Services
             return salida;
         }
 
-        /// <summary>
-        /// Obtiene todas las salidas de un tipo específico
-        /// </summary>
         public async Task<List<OperacionDetalle>> ObtenerSalidasPorTipo(string tipoOperacion)
         {
             return await _context.OperacionDetalle
@@ -92,9 +78,6 @@ namespace WebApplication1.Services
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Obtiene salidas de un movimiento específico
-        /// </summary>
         public async Task<List<OperacionDetalle>> ObtenerSalidasPorMovimiento(int movimientoId)
         {
             return await _context.OperacionDetalle
@@ -102,18 +85,11 @@ namespace WebApplication1.Services
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Obtiene salida por ID
-        /// </summary>
         public async Task<OperacionDetalle?> ObtenerSalidaPorId(int id)
         {
             return await _context.OperacionDetalle.FindAsync(id);
         }
 
-        /// <summary>
-        /// Actualiza los datos JSON de una salida existente
-        /// NUEVO: Acepta parámetros opcionales para actualizar columnas de fecha/hora
-        /// </summary>
         public async Task<OperacionDetalle> ActualizarSalidaDetalle(
             int id, 
             object datosObj, 
@@ -131,9 +107,8 @@ namespace WebApplication1.Services
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            salida.UsuarioId = usuarioId;  // Registra quién hace la actualización
+            salida.UsuarioId = usuarioId;  // Registra quiÃ©n hace la actualizaciÃ³n
 
-            // NUEVO: Actualizar columnas si se proporcionan
             if (horaIngreso.HasValue) salida.HoraIngreso = horaIngreso;
             if (fechaIngreso.HasValue) salida.FechaIngreso = fechaIngreso;
             if (horaSalida.HasValue) salida.HoraSalida = horaSalida;
@@ -145,9 +120,6 @@ namespace WebApplication1.Services
             return salida;
         }
 
-        /// <summary>
-        /// Elimina una OperacionDetalle
-        /// </summary>
         public async Task EliminarSalidaDetalle(int id)
         {
             var salida = await _context.OperacionDetalle.FindAsync(id);
@@ -158,17 +130,12 @@ namespace WebApplication1.Services
             }
         }
 
-        // ===== MÉTODOS DE COMPATIBILIDAD CON FALLBACK =====
         
-        /// <summary>
-        /// Obtiene HoraIngreso desde columna, o desde JSON si columna es null (fallback)
-        /// </summary>
         public DateTime? ObtenerHoraIngreso(OperacionDetalle salida)
         {
             if (salida.HoraIngreso.HasValue)
                 return salida.HoraIngreso.Value;
 
-            // Fallback: leer desde JSON
             try
             {
                 var json = JsonDocument.Parse(salida.DatosJSON);
@@ -180,15 +147,11 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene FechaIngreso desde columna, o desde JSON si columna es null (fallback)
-        /// </summary>
         public DateTime? ObtenerFechaIngreso(OperacionDetalle salida)
         {
             if (salida.FechaIngreso.HasValue)
                 return salida.FechaIngreso.Value;
 
-            // Fallback: leer desde JSON
             try
             {
                 var json = JsonDocument.Parse(salida.DatosJSON);
@@ -200,15 +163,11 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene HoraSalida desde columna, o desde JSON si columna es null (fallback)
-        /// </summary>
         public DateTime? ObtenerHoraSalida(OperacionDetalle salida)
         {
             if (salida.HoraSalida.HasValue)
                 return salida.HoraSalida.Value;
 
-            // Fallback: leer desde JSON
             try
             {
                 var json = JsonDocument.Parse(salida.DatosJSON);
@@ -220,15 +179,11 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene FechaSalida desde columna, o desde JSON si columna es null (fallback)
-        /// </summary>
         public DateTime? ObtenerFechaSalida(OperacionDetalle salida)
         {
             if (salida.FechaSalida.HasValue)
                 return salida.FechaSalida.Value;
 
-            // Fallback: leer desde JSON
             try
             {
                 var json = JsonDocument.Parse(salida.DatosJSON);
@@ -240,11 +195,7 @@ namespace WebApplication1.Services
             return null;
         }
 
-        // ===== MÉTODOS PARA FALLBACK DESDE JSON STRING =====
         
-        /// <summary>
-        /// Obtiene HoraIngreso parseando JSON directamente
-        /// </summary>
         public DateTime? ObtenerHoraIngresoFromJson(string datosJSON)
         {
             try
@@ -257,9 +208,6 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene FechaIngreso parseando JSON directamente
-        /// </summary>
         public DateTime? ObtenerFechaIngresoFromJson(string datosJSON)
         {
             try
@@ -272,9 +220,6 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene HoraSalida parseando JSON directamente
-        /// </summary>
         public DateTime? ObtenerHoraSalidaFromJson(string datosJSON)
         {
             try
@@ -287,9 +232,6 @@ namespace WebApplication1.Services
             return null;
         }
 
-        /// <summary>
-        /// Obtiene FechaSalida parseando JSON directamente
-        /// </summary>
         public DateTime? ObtenerFechaSalidaFromJson(string datosJSON)
         {
             try
@@ -303,3 +245,5 @@ namespace WebApplication1.Services
         }
     }
 }
+
+

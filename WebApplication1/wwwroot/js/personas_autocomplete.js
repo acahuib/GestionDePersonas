@@ -1,3 +1,5 @@
+﻿// Script frontend para personas_autocomplete.
+
 function habilitarAutocompletePersona(config) {
     const dniInput = document.getElementById(config?.dniId || "dni");
     const nombreInput = document.getElementById(config?.nombreId || "nombreCompleto");
@@ -90,3 +92,4 @@ function habilitarAutocompletePersona(config) {
     nombreInput.addEventListener("change", syncDniConNombre);
     nombreInput.addEventListener("blur", syncDniConNombre);
 }
+

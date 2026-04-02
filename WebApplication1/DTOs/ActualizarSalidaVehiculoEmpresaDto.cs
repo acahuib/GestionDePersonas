@@ -1,9 +1,7 @@
+﻿// Archivo backend para ActualizarSalidaVehiculoEmpresaDto.
+
 namespace WebApplication1.DTOs
 {
-    /// <summary>
-    /// DTO para actualizar datos de SALIDA de un vehiculo de empresa
-    /// Se usa cuando el flujo inició con INGRESO y luego se completa la salida
-    /// </summary>
     public class ActualizarSalidaVehiculoEmpresaDto
     {
         public required DateTime HoraSalida { get; set; }
@@ -13,3 +11,4 @@ namespace WebApplication1.DTOs
         public string? Observacion { get; set; }
     }
 }
+

@@ -1,11 +1,8 @@
-// =========================================
-// SALIDA DE VEHÍCULO PROVEEDOR
-// =========================================
+﻿// Script frontend para vehiculos_proveedores_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
 
-    // Detectar si viene desde VehiculoEmpresa (espejo) o salida normal
     const salidaEmpresaId = params.get("salidaEmpresaId");
     const salidaId = params.get("salidaId");
     const modo = params.get("modo") || "normal";
@@ -17,10 +14,8 @@ function cargarDatosDesdeUrl() {
     dniElement.dataset.esEspejo = salidaEmpresaId ? "true" : "false";
     
     if (salidaEmpresaId && modo === "desde-empresa") {
-        // Viene desde VehiculoEmpresa - cargar datos desde API
         cargarDatosDesdeVehiculoEmpresa(salidaEmpresaId);
     } else {
-        // Caso normal - cargar desde parámetros de URL
         cargarDatosDesdeParametros(params);
     }
 }
@@ -37,7 +32,6 @@ function cargarDatosDesdeParametros(params) {
     document.getElementById("procedencia").value = params.get("procedencia") || "";
     document.getElementById("observacion").value = params.get("observacion") || "";
     
-    // Guardar datos de ingreso para usarlos al registrar salida
     document.getElementById("dni").dataset.fechaIngreso = params.get("fechaIngreso") || "";
     document.getElementById("dni").dataset.horaIngreso = params.get("horaIngreso") || "";
     document.getElementById("dni").dataset.guardiaIngreso = params.get("guardiaIngreso") || "";
@@ -56,31 +50,26 @@ async function cargarDatosDesdeVehiculoEmpresa(salidaEmpresaId) {
         const detalle = await response.json();
         const datos = detalle.datos || {};
 
-        // Pre-cargar datos readonly (DNI, nombre, placa)
         document.getElementById("dni").value = detalle.dni || "";
         document.getElementById("nombreCompleto").value = detalle.nombreCompleto || "";
         document.getElementById("placa").value = datos.placa || "";
         
-        // Marcar como readonly
         document.getElementById("dni").readOnly = true;
         document.getElementById("nombreCompleto").readOnly = true;
         document.getElementById("placa").readOnly = true;
         
-        // Pre-cargar datos editables
         document.getElementById("procedencia").value = datos.procedenciaVehiculoEmpresa || "VehiculoEmpresa";
         document.getElementById("observacion").value = datos.observacion || "";
         
-        // Guardar datos de ingreso
         document.getElementById("dni").dataset.fechaIngreso = typeof fechaLocalIso === "function"
             ? fechaLocalIso()
             : obtenerFechaLocalISO();
         document.getElementById("dni").dataset.horaIngreso = new Date().toTimeString().slice(0, 5);
         document.getElementById("dni").dataset.guardiaIngreso = "";
         
-        // Cambiar título del formulario
         const titulo = document.getElementById("titulo-movimiento");
         if (titulo) {
-            titulo.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA (desde Vehículo Empresa)';
+            titulo.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA (desde VehÃ­culo Empresa)';
         }
         
         mensaje.className = "";
@@ -106,7 +95,7 @@ async function registrarSalida() {
 
     if (!salidaId && !salidaEmpresaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
         return;
     }
 
@@ -115,7 +104,6 @@ async function registrarSalida() {
             observacion: observacion || null
         };
 
-        // Enviar horaSalida solo si se especifica
         if (horaSalidaInput) {
             body.horaSalida = combinarFechaHoraLocal(fechaSalidaInput, horaSalidaInput);
         }
@@ -123,17 +111,14 @@ async function registrarSalida() {
         let endpoint, method;
         
         if (salidaId) {
-            // Caso normal de salida en VehiculosProveedores
             endpoint = `${API_BASE}/vehiculos-proveedores/${salidaId}/salida`;
             method = "PUT";
         } else {
-            // No hay salidaId directo - esto no debería ocurrir normalmente
             mensaje.className = "error";
             mensaje.innerText = "No se puede determinar el registro de ingreso";
             return;
         }
 
-        // Usar PUT para actualizar el registro existente
         const responseSalida = await fetchAuth(endpoint, {
             method: method,
             body: JSON.stringify(body)
@@ -145,9 +130,8 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA registrada correctamente" + (esEspejo ? " (cierre sincronizado en VehículoEmpresa)" : "");
+        mensaje.innerText = "âœ… SALIDA registrada correctamente" + (esEspejo ? " (cierre sincronizado en VehÃ­culoEmpresa)" : "");
 
-        // Redirigir automáticamente después de 500ms
         setTimeout(() => {
             const redirect = esEspejo ? "../VehiculoEmpresa/html/vehiculo_empresa.html?refresh=1" : "vehiculos_proveedores.html?refresh=1";
             window.location.href = redirect;
@@ -184,3 +168,4 @@ function combinarFechaHoraLocal(fechaIso, horaTexto) {
         ? `${fechaIso}T${horaLimpia}:00`
         : `${fechaIso}T${horaLimpia}`;
 }
+
