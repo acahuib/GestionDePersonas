@@ -230,6 +230,11 @@ async function cargarActivos() {
             const dni = (s.dni || "").trim();
             if (!dni) return;
 
+            const cierreAdministrativo = s?.datos?.cierreAdministrativo === true;
+            if (cierreAdministrativo) {
+                return;
+            }
+
             // Leer desde columnas primero, luego fallback al JSON
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
             const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
@@ -296,14 +301,14 @@ async function cargarActivos() {
             // Leer desde columnas primero
             const horaIngresoValue = s.horaIngreso || datos.horaIngreso;
             const horaIngreso = horaIngresoValue
-                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
             // Almuerzo (siempre en JSON)
-            const horaSalidaAlmuerzo = datos.horaSalidaAlmuerzo ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE') : "-";
+            const horaSalidaAlmuerzo = datos.horaSalidaAlmuerzo ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : "-";
             const fechaSalidaAlmuerzo = datos.fechaSalidaAlmuerzo ? new Date(datos.fechaSalidaAlmuerzo).toLocaleDateString('es-PE') : "";
-            const horaEntradaAlmuerzo = datos.horaEntradaAlmuerzo ? new Date(datos.horaEntradaAlmuerzo).toLocaleTimeString('es-PE') : "-";
+            const horaEntradaAlmuerzo = datos.horaEntradaAlmuerzo ? new Date(datos.horaEntradaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : "-";
             const observacion = datos.observacion || datos.observaciones || "";
 
             const tieneSalidaAlmuerzo = datos.horaSalidaAlmuerzo !== null && datos.horaSalidaAlmuerzo !== undefined;
@@ -317,6 +322,7 @@ async function cargarActivos() {
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
+            html += `<button class="btn-inline btn-small" onclick="personalLocalCierre?.cerrarRegistroPersonalLocal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}')">Cerrar registro</button> `;
             
             // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {

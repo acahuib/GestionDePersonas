@@ -127,10 +127,25 @@
         clearSelection(inputId);
     };
 
+    const initRegistro = ({ inputId, previewId, resumenId, textoVacio }) => {
+        initPreview({
+            inputId,
+            previewId,
+            resumenId,
+            textoVacio: textoVacio || "No hay imagenes seleccionadas."
+        });
+    };
+
+    const uploadFromInput = async (registroId, inputId) => {
+        await uploadSelected({ registroId, inputId });
+    };
+
     window.imagenesForm = {
         initPreview,
+        initRegistro,
         refreshPreview,
         clearSelection,
-        uploadSelected
+        uploadSelected,
+        uploadFromInput
     };
 })();

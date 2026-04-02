@@ -291,11 +291,20 @@ async function registrarIngreso() {
         }
 
         const result = await response.json();
+        let advertenciaImagenes = "";
+        try {
+            if (result && result.salidaId) {
+                await window.imagenesForm?.uploadFromInput(result.salidaId, "controlBienesImagenes");
+            }
+        } catch (errorImagenes) {
+            advertenciaImagenes = ` (Registro guardado, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
+        }
+
         const nombreMostrar = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         const totalActivos = result?.cantidadBienesActivos ?? (bienesPendientes.length + bienes.length);
         const nuevos = result?.cantidadBienesNuevos ?? bienes.length;
         mensaje.className = "success";
-        mensaje.innerText = `INGRESO registrado para ${nombreMostrar}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}`;
+        mensaje.innerText = `INGRESO registrado para ${nombreMostrar}. Nuevos: ${nuevos}. Activos pendientes: ${totalActivos}${advertenciaImagenes}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -329,6 +338,19 @@ async function registrarIngreso() {
 function irASalida(salidaId) {
     const params = new URLSearchParams({ salidaId });
     window.location.href = `control_bienes_salida.html?${params.toString()}`;
+}
+
+function abrirImagenesRegistroControlBienes(registroId, info = {}) {
+    if (typeof window.abrirImagenesRegistroModal !== "function") {
+        window.alert("No se pudo abrir el visor de imagenes.");
+        return;
+    }
+
+    const subtitulo = `DNI: ${info.dni || "-"} | Nombre: ${info.nombre || "-"}`;
+    window.abrirImagenesRegistroModal(registroId, {
+        titulo: `Control de Bienes - Registro #${registroId}`,
+        subtitulo
+    });
 }
 
 // Cargar personal activo (dentro con bienes, sin salida)
@@ -427,7 +449,8 @@ async function cargarActivos() {
             html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bienesTexto || 'N/A'}">${bienesTexto || 'N/A'}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
-            html += `<button onclick='irASalida(${s.id})' class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+            html += `<button onclick='irASalida(${s.id})' class="btn-danger btn-small btn-inline">Registrar Salida</button> `;
+            html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroControlBienes(${s.id}, { dni: '${(s.dni || '').replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
             html += '</td></tr>';
         });
 

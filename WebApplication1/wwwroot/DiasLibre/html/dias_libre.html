@@ -68,6 +68,13 @@
             <input type="date" id="fechaRegistro" name="fechaRegistro">
             <input type="time" id="horaSalida" name="horaSalida">
 
+            <div class="form-card" style="margin-top:10px;">
+                <label>Imagenes del registro <span class="muted">(opcional, max 20)</span></label>
+                <input type="file" id="diasLibreImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+                <div id="diasLibreImagenesResumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</div>
+                <div id="diasLibreImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+            </div>
+
             <button type="submit" class="btn-success btn-block"><img src="/images/check-lg.svg" class="icon-white"> Registrar Permiso</button>
         </form>
     </div>
@@ -95,6 +102,7 @@
                             <th>Hora Registro</th>
                             <th>Guardia</th>
                             <th>Observaciones</th>
+                            <th>Imagenes</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -109,9 +117,11 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
+<script src="../../js/imagenes_registro.js"></script>
 <script src="../js/dias_libre.js"></script>
 </body>
 </html>

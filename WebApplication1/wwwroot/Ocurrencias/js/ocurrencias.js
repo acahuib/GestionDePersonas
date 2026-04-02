@@ -323,13 +323,6 @@ function construirDetalleTipoHtml(detalle) {
     return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
 }
 
-async function subirImagenesSeleccionadas(ocurrenciaId) {
-    await window.imagenesForm?.uploadSelected({
-        registroId: ocurrenciaId,
-        inputId: "ocurrenciaImagenes"
-    });
-}
-
 function obtenerTurnoActual() {
     const hora = new Date().getHours();
     return (hora >= 7 && hora < 19) ? "7am-7pm" : "7pm-7am";
@@ -620,7 +613,7 @@ async function registrarIngreso() {
         const data = await response.json();
         let advertenciaImagenes = "";
         try {
-            await subirImagenesSeleccionadas(data.salidaId);
+            await window.imagenesForm?.uploadFromInput(data.salidaId, "ocurrenciaImagenes");
         } catch (errorImagenes) {
             advertenciaImagenes = ` (Ocurrencia guardada, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
         }

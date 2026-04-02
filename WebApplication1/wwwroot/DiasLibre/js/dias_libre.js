@@ -11,6 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fechaRegistro) fechaRegistro.value = obtenerFechaLocalISO();
     cargarDiasLibreHoy();
     configurarEventos();
+    window.imagenesForm?.initPreview({
+        inputId: 'diasLibreImagenes',
+        previewId: 'diasLibreImagenesPreview',
+        resumenId: 'diasLibreImagenesResumen',
+        textoVacio: 'No hay imagenes seleccionadas.'
+    });
     habilitarAutocompletePersona({
         dniId: 'dni',
         nombreId: 'nombreApellidos'
@@ -159,7 +165,16 @@ async function registrarDiasLibre(e) {
 
         if (response && response.ok) {
             const data = await response.json();
-            alert(`Permiso registrado exitosamente\n\nDNI: ${data.dni}\nNombre: ${data.nombreCompleto}\nDel: ${new Date(data.del).toLocaleDateString()}\nAl: ${new Date(data.al).toLocaleDateString()}\nTrabaja: ${new Date(data.trabaja).toLocaleDateString()}`);
+            let advertenciaImagenes = "";
+            try {
+                if (data && data.salidaId) {
+                    await window.imagenesForm?.uploadFromInput(data.salidaId, "diasLibreImagenes");
+                }
+            } catch (errorImagenes) {
+                advertenciaImagenes = `\n\nNota: El permiso se registro, pero no se pudieron subir imagenes (${errorImagenes?.message || 'Error desconocido'}).`;
+            }
+
+            alert(`Permiso registrado exitosamente\n\nDNI: ${data.dni}\nNombre: ${data.nombreCompleto}\nDel: ${new Date(data.del).toLocaleDateString()}\nAl: ${new Date(data.al).toLocaleDateString()}\nTrabaja: ${new Date(data.trabaja).toLocaleDateString()}${advertenciaImagenes}`);
             
             // Resetear formulario y estado
             document.getElementById('formDiasLibre').reset();
@@ -183,6 +198,19 @@ async function registrarDiasLibre(e) {
 }
 
 // Cargar permisos registrados hoy
+function abrirImagenesRegistroDiasLibre(registroId, info = {}) {
+    if (typeof window.abrirImagenesRegistroModal !== "function") {
+        window.alert("No se pudo abrir el visor de imagenes.");
+        return;
+    }
+
+    const subtitulo = `DNI: ${info.dni || "-"} | Nombre: ${info.nombre || "-"}`;
+    window.abrirImagenesRegistroModal(registroId, {
+        titulo: `Dias Libres - Registro #${registroId}`,
+        subtitulo
+    });
+}
+
 async function cargarDiasLibreHoy() {
     try {
         const hoy = obtenerFechaLocalISO();
@@ -190,13 +218,13 @@ async function cargarDiasLibreHoy() {
 
         const tbody = document.querySelector('#tablaDiasLibre tbody');
         if (!response || !response.ok) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay permisos registrados hoy</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No hay permisos registrados hoy</td></tr>';
             return;
         }
 
         const data = await response.json();
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay permisos registrados hoy</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No hay permisos registrados hoy</td></tr>';
             return;
         }
 
@@ -207,7 +235,7 @@ async function cargarDiasLibreHoy() {
         });
 
         if (registrosHoy.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay permisos registrados hoy</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No hay permisos registrados hoy</td></tr>';
             return;
         }
 
@@ -230,13 +258,14 @@ async function cargarDiasLibreHoy() {
                     <td>${horaSalida}</td>
                     <td>${datos.guardiaSalida || '-'}</td>
                     <td>${datos.observaciones || '-'}</td>
+                    <td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroDiasLibre(${item.id}, { dni: '${(item.dni || '').replace(/'/g, "\\'")}', nombre: '${(item.nombreCompleto || '').replace(/'/g, "\\'")}' })">Ver imagenes</button></td>
                 </tr>
             `;
         }).join('');
     } catch (error) {
         console.error('Error al cargar permisos:', error);
         document.querySelector('#tablaDiasLibre tbody').innerHTML = 
-            '<tr><td colspan="9" class="text-center text-danger">Error al cargar permisos</td></tr>';
+            '<tr><td colspan="10" class="text-center text-danger">Error al cargar permisos</td></tr>';
     }
 }
 

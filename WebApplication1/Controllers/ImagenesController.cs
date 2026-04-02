@@ -25,7 +25,7 @@ namespace WebApplication1.Controllers
             ".jpg", ".jpeg", ".png", ".webp"
         };
 
-        private const int MaxImagenesPorRegistro = 10;
+        private const int MaxImagenesPorRegistro = 20;
         private const long MaxBytesPorImagen = 5 * 1024 * 1024;
 
         public ImagenesController(AppDbContext context, IWebHostEnvironment env, IConfiguration configuration)

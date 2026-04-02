@@ -60,6 +60,13 @@
         <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
         <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
+        <div class="form-card" style="margin-top:10px;">
+            <label>Imagenes del registro <span class="muted">(opcional, max 20)</span></label>
+            <input type="file" id="proveedorImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+            <div id="proveedorImagenesResumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</div>
+            <div id="proveedorImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+        </div>
+
         <div>
             <button onclick="registrarEntrada()" class="btn-success btn-block">
                 <img src="/images/check-circle.svg" class="icon-white"> Registrar ENTRADA
@@ -85,9 +92,11 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
+<script src="../../js/imagenes_registro.js"></script>
 <script src="../js/proveedor.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -120,6 +129,13 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("nombreCompleto", () => document.getElementById("procedencia").focus());
     addEnterListener("procedencia", () => document.getElementById("destino").focus());
     addEnterListener("destino", registrarEntrada);
+
+    window.imagenesForm?.initPreview({
+        inputId: "proveedorImagenes",
+        previewId: "proveedorImagenesPreview",
+        resumenId: "proveedorImagenesResumen",
+        textoVacio: "No hay imagenes seleccionadas."
+    });
 
     habilitarAutocompletePersona({
         dniId: "dni",

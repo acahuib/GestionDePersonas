@@ -34,13 +34,6 @@ function inicializarPreviewImagenesVehiculoEmpresa() {
     });
 }
 
-async function subirImagenesSeleccionadasVehiculoEmpresa(registroId) {
-    await window.imagenesForm?.uploadSelected({
-        registroId,
-        inputId: "vehiculoEmpresaImagenes"
-    });
-}
-
 function abrirImagenesRegistroVehiculoEmpresa(registroId, contexto = {}) {
     if (!registroId || typeof window.abrirImagenesRegistroModal !== "function") return;
     const titulo = `Vehiculo Empresa - Registro #${registroId}`;
@@ -229,7 +222,7 @@ async function registrarMovimientoInicial() {
         let textoImagenes = "";
         try {
             if (result && result.salidaId) {
-                await subirImagenesSeleccionadasVehiculoEmpresa(result.salidaId);
+                await window.imagenesForm?.uploadFromInput(result.salidaId, "vehiculoEmpresaImagenes");
             }
         } catch (errorImagen) {
             textoImagenes = ` | Registro guardado, pero no se subieron imagenes: ${getPlainErrorMessage(errorImagen)}`;

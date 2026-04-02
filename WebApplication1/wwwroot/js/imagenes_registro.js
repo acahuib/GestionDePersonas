@@ -36,7 +36,7 @@
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
 
-    const MAX_IMAGENES = 10;
+    const MAX_IMAGENES = 20;
 
     window.abrirImagenesRegistroModal = async function (registroId, opciones = {}) {
         if (!registroId) return;

@@ -302,6 +302,9 @@ namespace WebApplication1.Controllers
                 if (EsTipoRetornando(salidaExistente.DatosJSON))
                     return BadRequest("PersonalLocal retornando no permite salida final en este cuaderno");
 
+                if (EsCierreAdministrativo(salidaExistente.DatosJSON))
+                    return BadRequest("El registro fue cerrado administrativamente. Registre la salida final en el cuaderno correspondiente.");
+
                 // Extract usuarioId from token
                 var usuarioId = ExtractUsuarioIdFromToken();
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -454,6 +457,21 @@ namespace WebApplication1.Controllers
             {
                 using var doc = JsonDocument.Parse(datosJson);
                 return string.Equals(LeerTipoPersonaLocal(doc.RootElement), "Retornando", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool EsCierreAdministrativo(string datosJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(datosJson);
+                var root = doc.RootElement;
+                return root.TryGetProperty("cierreAdministrativo", out var cierre) &&
+                       cierre.ValueKind == JsonValueKind.True;
             }
             catch
             {

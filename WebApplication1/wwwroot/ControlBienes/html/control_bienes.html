@@ -66,6 +66,13 @@
         <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
         <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
+        <div class="form-card" style="margin-top:10px;">
+            <label>Imagenes del registro <span class="muted">(opcional, max 20)</span></label>
+            <input type="file" id="controlBienesImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+            <div id="controlBienesImagenesResumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</div>
+            <div id="controlBienesImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+        </div>
+
         <label>Observación</label>
         <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
 
@@ -97,9 +104,11 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
+<script src="../../js/imagenes_registro.js"></script>
 <script src="../js/control_bienes.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -133,6 +142,13 @@ document.addEventListener("DOMContentLoaded", () => {
     addEnterListener("nombreCompleto", () => {
         const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
         if (primerBien) primerBien.focus();
+    });
+
+    window.imagenesForm?.initPreview({
+        inputId: "controlBienesImagenes",
+        previewId: "controlBienesImagenesPreview",
+        resumenId: "controlBienesImagenesResumen",
+        textoVacio: "No hay imagenes seleccionadas."
     });
 
     habilitarAutocompletePersona({

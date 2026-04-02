@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Tecnico - Gestion de Personas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tecnico-usuarios.css">
+</head>
+<body>
+    <div class="tech-shell">
+        <header class="tech-header">
+            <div>
+                <p class="eyebrow">MODO TECNICO</p>
+                <h1>Gestion de Personas</h1>
+                <p class="subtitle">Corregir DNI, nombre y tipo de la tabla maestra de personas.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn secondary" id="btnIrUsuarios">Gestion de Usuarios</button>
+                <button type="button" class="btn ghost" id="btnVolver">Volver a Registro Manual</button>
+                <button type="button" class="btn danger" id="btnCerrarSesion">Cerrar sesion</button>
+            </div>
+        </header>
+
+        <main class="tech-grid">
+            <section class="card card-form">
+                <h2>Agregar Persona</h2>
+                <form id="formCrearPersona" class="form-grid">
+                    <label>
+                        DNI
+                        <input id="crearDni" maxlength="8" inputmode="numeric" required>
+                    </label>
+                    <label>
+                        Nombre completo
+                        <input id="crearNombre" maxlength="200" required>
+                    </label>
+                    <label>
+                        Tipo (opcional)
+                        <input id="crearTipo" maxlength="100" placeholder="Ej: Proveedor, PersonalLocal, Visitante">
+                    </label>
+                    <button type="submit" class="btn primary">Agregar persona</button>
+                </form>
+            </section>
+
+            <section class="card card-table">
+                <div class="table-head" style="flex-wrap: wrap;">
+                    <h2>Personas Registradas</h2>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <input id="filtroPersonas" maxlength="100" placeholder="Buscar por DNI o nombre" style="min-width:220px;">
+                        <button type="button" class="btn secondary" id="btnBuscar">Buscar</button>
+                        <button type="button" class="btn secondary" id="btnRecargar">Recargar</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPersonasBody">
+                            <tr><td colspan="4">Cargando personas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="modalEditar" class="modal">
+        <form method="dialog" class="modal-content" id="formEditarPersona">
+            <h3>Editar persona</h3>
+            <input type="hidden" id="editarDniOriginal">
+            <label>
+                DNI
+                <input id="editarDni" maxlength="8" inputmode="numeric" required>
+            </label>
+            <label>
+                Nombre completo
+                <input id="editarNombre" maxlength="200" required>
+            </label>
+            <label>
+                Tipo (opcional)
+                <input id="editarTipo" maxlength="100">
+            </label>
+
+            <div class="modal-actions">
+                <button type="button" class="btn ghost" id="btnCancelarEditar">Cancelar</button>
+                <button type="submit" class="btn primary">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/tecnico-personas.js"></script>
+</body>
+</html>

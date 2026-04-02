@@ -153,9 +153,20 @@ async function registrarEntrada() {
             throw new Error(error);
         }
 
+        const result = await response.json();
+        let advertenciaImagenes = "";
+
+        try {
+            if (result && result.salidaId) {
+                await window.imagenesForm?.uploadFromInput(result.salidaId, "vehiculosProveedoresImagenes");
+            }
+        } catch (errorImagenes) {
+            advertenciaImagenes = ` (Registro guardado, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
+        }
+
         const nombreCompletoRegistro = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
-        mensaje.innerText = `ENTRADA registrada para ${nombreCompletoRegistro} - Placa: ${placa}`;
+        mensaje.innerText = `ENTRADA registrada para ${nombreCompletoRegistro} - Placa: ${placa}${advertenciaImagenes}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -203,6 +214,19 @@ function irASalida(salidaId, dni, nombreCompleto, proveedor, placa, tipo, lote, 
         guardiaIngreso
     });
     window.location.href = `vehiculos_proveedores_salida.html?${params.toString()}`;
+}
+
+function abrirImagenesRegistroVehiculosProveedores(registroId, info = {}) {
+    if (typeof window.abrirImagenesRegistroModal !== "function") {
+        window.alert("No se pudo abrir el visor de imagenes.");
+        return;
+    }
+
+    const subtitulo = `DNI: ${info.dni || "-"} | Conductor: ${info.nombre || "-"} | Placa: ${info.placa || "-"}`;
+    window.abrirImagenesRegistroModal(registroId, {
+        titulo: `Vehiculos Proveedores - Registro #${registroId}`,
+        subtitulo
+    });
 }
 
 // Cargar vehículos activos (sin salida)
@@ -291,7 +315,10 @@ async function cargarActivos() {
             html += `<td>${cantidad}</td>`;
             html += `<td>${procedencia}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
-            html += `<td><button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button></td>`;
+            html += '<td>';
+            html += `<button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button> `;
+            html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroVehiculosProveedores(${s.id}, { dni: '${dni.replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}', placa: '${placa.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
+            html += '</td>';
             html += '</tr>';
         });
 

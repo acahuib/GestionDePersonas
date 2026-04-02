@@ -208,7 +208,7 @@ async function cargarActivosRetornando() {
             const nombre = s.nombreCompleto || "N/A";
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
             const horaIngreso = horaIngresoValue
-                ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
+                ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE") : "N/A";
 

@@ -149,9 +149,20 @@ async function registrarEntrada() {
             throw new Error(error);
         }
 
+        const result = await response.json();
+        let advertenciaImagenes = "";
+
+        try {
+            if (result && result.salidaId) {
+                await window.imagenesForm?.uploadFromInput(result.salidaId, "proveedorImagenes");
+            }
+        } catch (errorImagenes) {
+            advertenciaImagenes = ` (Registro guardado, pero no se pudieron subir imagenes: ${obtenerMensajeUsuario(errorImagenes)})`;
+        }
+
         const nombreMostrar = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
-        mensaje.innerText = `ENTRADA registrada para ${nombreMostrar}`;
+        mensaje.innerText = `ENTRADA registrada para ${nombreMostrar}${advertenciaImagenes}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -245,6 +256,19 @@ function irAHotelDesdeProveedor(dni, nombreCompleto) {
     });
 
     window.location.href = `../../HotelProveedor/html/hotel_proveedor.html?${params.toString()}`;
+}
+
+function abrirImagenesRegistroProveedor(registroId, info = {}) {
+    if (typeof window.abrirImagenesRegistroModal !== "function") {
+        window.alert("No se pudo abrir el visor de imagenes.");
+        return;
+    }
+
+    const subtitulo = `DNI: ${info.dni || "-"} | Nombre: ${info.nombre || "-"}`;
+    window.abrirImagenesRegistroModal(registroId, {
+        titulo: `Proveedor - Registro #${registroId}`,
+        subtitulo
+    });
 }
 
 async function solicitarDestinoRetorno(destinoActual) {
@@ -568,6 +592,7 @@ async function cargarActivos() {
                 html += `<td><span class="estado-etiqueta ${claseEstado}">${textoEstado}</span>${esFueraTemporal && ultimaSalida ? `<div class="retorno-meta">Ultima salida: ${ultimaSalida}</div>` : ''}</td>`;
                 html += '<td>';
                 html += '<div class="acciones-proveedor">';
+                html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroProveedor(${p.id}, { dni: '${(p.dni || '').replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
                 if (esFueraTemporal) {
                     html += `<select id="retorno-destino-${p.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoRetorno(destinoRetorno)}</select>`;
                     html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="Observación" class="retorno-input retorno-input-observacion">`;
