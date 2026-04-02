@@ -315,6 +315,7 @@ function torreRenderizar() {
                         <div class="campo"><span class="k">Nombre:</span><span class="v">${torreEscapeHtml(item.nombre)}</span></div>
                         <div class="campo"><span class="k">Ingreso/Salida:</span><span class="v">${torreEscapeHtml(item.fechaIngreso)} ${torreEscapeHtml(item.horaIngreso)} | ${torreEscapeHtml(item.fechaSalida)} ${torreEscapeHtml(item.horaSalida)}</span></div>
                     </div>
+                    <div class="detalle-item"><button type="button" class="btn btn-soft" data-ver-imagenes="${item.id}">Ver imagenes</button></div>
                     <div class="detalle-grid">${detalleHtml}</div>
                 </article>
             `;
@@ -336,6 +337,19 @@ function torreActualizarHora() {
     el.textContent = `Ult. act: ${ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 }
 
+function torreAbrirImagenesSoloLectura(item) {
+    if (!item || !item.id || typeof window.abrirImagenesRegistroModal !== "function") return;
+
+    const titulo = `${item.tipoLabel} - Registro #${item.id}`;
+    const subtitulo = `DNI: ${item.dni || "-"} | Nombre: ${item.nombre || "-"} | Fecha: ${item.fechaRef || "-"} ${item.horaRef || "-"}`;
+
+    window.abrirImagenesRegistroModal(item.id, {
+        soloLectura: true,
+        titulo,
+        subtitulo
+    });
+}
+
 function torreConfigurarEventos() {
     const btnBuscar = document.getElementById("btnBuscar");
     const btnLimpiar = document.getElementById("btnLimpiar");
@@ -343,9 +357,24 @@ function torreConfigurarEventos() {
     const btnPrev = document.getElementById("btnPrev");
     const btnNext = document.getElementById("btnNext");
     const busqueda = document.getElementById("busquedaTexto");
+    const lista = document.getElementById("listaRegistros");
 
     if (btnBuscar) btnBuscar.addEventListener("click", torreAplicarFiltros);
     if (btnRecargar) btnRecargar.addEventListener("click", torreCargarHistorial);
+
+    if (lista) {
+        lista.addEventListener("click", (e) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            const btn = target.closest("[data-ver-imagenes]");
+            if (!btn) return;
+            const id = Number(btn.getAttribute("data-ver-imagenes"));
+            if (!Number.isFinite(id) || id <= 0) return;
+            const item = torreRegistrosFiltrados.find((r) => r.id === id);
+            if (!item) return;
+            torreAbrirImagenesSoloLectura(item);
+        });
+    }
 
     if (btnLimpiar) {
         btnLimpiar.addEventListener("click", () => {

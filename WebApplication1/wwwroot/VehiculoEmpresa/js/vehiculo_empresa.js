@@ -4,6 +4,50 @@
 
 let personaEncontrada = null;
 
+function escaparHtmlBasico(texto) {
+    return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function obtenerInputImagenesVehiculoEmpresa() {
+    const input = document.getElementById("vehiculoEmpresaImagenes");
+    return input instanceof HTMLInputElement ? input : null;
+}
+
+function actualizarPreviewImagenesVehiculoEmpresa() {
+    window.imagenesForm?.refreshPreview("vehiculoEmpresaImagenes");
+}
+
+function removerImagenSeleccionadaVehiculoEmpresa(index) {
+    // La eliminacion se maneja en el modulo compartido por evento de click.
+}
+
+function inicializarPreviewImagenesVehiculoEmpresa() {
+    window.imagenesForm?.initPreview({
+        inputId: "vehiculoEmpresaImagenes",
+        resumenId: "vehiculoEmpresaImagenesResumen",
+        previewId: "vehiculoEmpresaImagenesPreview"
+    });
+}
+
+async function subirImagenesSeleccionadasVehiculoEmpresa(registroId) {
+    await window.imagenesForm?.uploadSelected({
+        registroId,
+        inputId: "vehiculoEmpresaImagenes"
+    });
+}
+
+function abrirImagenesRegistroVehiculoEmpresa(registroId, contexto = {}) {
+    if (!registroId || typeof window.abrirImagenesRegistroModal !== "function") return;
+    const titulo = `Vehiculo Empresa - Registro #${registroId}`;
+    const subtitulo = `DNI: ${contexto.dni || "-"} | Conductor: ${contexto.conductor || "-"} | Placa: ${contexto.placa || "-"}`;
+    window.abrirImagenesRegistroModal(registroId, { titulo, subtitulo });
+}
+
 function formatearTipoRegistro(tipoRegistro) {
     return tipoRegistro === "Almacen" ? "Almacen" : "Normal";
 }
@@ -180,10 +224,20 @@ async function registrarMovimientoInicial() {
             throw new Error(error);
         }
 
+        const result = await response.json();
         const nombreConductor = personaEncontrada ? personaEncontrada.nombre : conductor;
+        let textoImagenes = "";
+        try {
+            if (result && result.salidaId) {
+                await subirImagenesSeleccionadasVehiculoEmpresa(result.salidaId);
+            }
+        } catch (errorImagen) {
+            textoImagenes = ` | Registro guardado, pero no se subieron imagenes: ${getPlainErrorMessage(errorImagen)}`;
+        }
+
         mensaje.className = "success";
         const tipoTexto = esSalidaInicial ? "SALIDA" : "INGRESO";
-        mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}`;
+        mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}${textoImagenes}`;
 
         // Limpiar formulario
         document.getElementById("dni").value = "";
@@ -202,6 +256,9 @@ async function registrarMovimientoInicial() {
         document.getElementById("tipoRegistro").value = "Normal";
         actualizarFormularioPorTipoInicial();
         document.getElementById("dni").focus();
+        const inputImagenes = obtenerInputImagenesVehiculoEmpresa();
+        if (inputImagenes) window.imagenesForm?.clearSelection("vehiculoEmpresaImagenes");
+        actualizarPreviewImagenesVehiculoEmpresa();
 
         // Actualizar lista
         setTimeout(cargarActivos, 500);
@@ -323,12 +380,25 @@ async function cargarActivos() {
             html += `<td>${origen}</td>`;
             html += `<td>${destino}</td>`;
             html += `<td>${construirFechaHoraCelda(fecha, hora)}</td>`;
-            html += `<td><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button></td>`;
+            html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button><button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
             html += '</tr>';
         });
 
         html += '</tbody></table></div>';
         container.innerHTML = html;
+
+        container.querySelectorAll(".btn-ver-imagenes").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const registroId = Number(btn.getAttribute("data-registro-id"));
+                if (!Number.isFinite(registroId) || registroId <= 0) return;
+
+                abrirImagenesRegistroVehiculoEmpresa(registroId, {
+                    dni: btn.getAttribute("data-dni") || "-",
+                    conductor: btn.getAttribute("data-conductor") || "-",
+                    placa: btn.getAttribute("data-placa") || "-"
+                });
+            });
+        });
 
     } catch (error) {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;

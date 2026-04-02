@@ -354,43 +354,12 @@ namespace WebApplication1.Controllers
                         fechaActual         // fechaSalida
                     );
 
-                    var salidaProveedorRegistrada = false;
-
-                    if (!esInformativoPersonalMina && proveedorSalidaId.HasValue && !string.IsNullOrWhiteSpace(dniNormalizado))
-                    {
-                        var proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, proveedorSalidaId);
-                        if (proveedorActivo != null)
-                        {
-                            using var proveedorDoc = JsonDocument.Parse(proveedorActivo.DatosJSON);
-
-                            await _salidasService.ActualizarSalidaDetalle(
-                                proveedorActivo.Id,
-                                ConstruirDatosProveedorActualizados(proveedorDoc.RootElement, nombreGuardia),
-                                usuarioId,
-                                null,
-                                null,
-                                ahoraLocal,
-                                fechaActual
-                            );
-
-                            var movimientoSalida = await _movimientosService.RegistrarMovimientoEnBD(
-                                dniNormalizado,
-                                1,
-                                "Salida",
-                                usuarioId);
-
-                            proveedorActivo.MovimientoId = movimientoSalida.Id;
-                            await _context.SaveChangesAsync();
-                            salidaProveedorRegistrada = true;
-                        }
-                    }
-
                     return Ok(new
                     {
                         mensaje = "Salida de Habitación Proveedor registrada",
                         salidaId = id,
                         guardiaSalida = nombreGuardia,
-                        salidaProveedorRegistrada,
+                        salidaProveedorRegistrada = false,
                         estado = "Completado"
                     });
                 }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cuaderno de Asistencia Personal de Mina - Control de Accesos</title>
+    <title>Cuaderno Personal Retornando - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
 </head>
@@ -11,13 +11,13 @@
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>👷 Cuaderno de Asistencia Personal de Mina</h2>
+            <h2>👷 Cuaderno de Retornando de Vacaciones</h2>
             <div class="header-actions">
                 <a href="../../index.html">
                     <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menú</button>
                 </a>
-                <a href="personal_local_retornando.html">
-                    <button class="btn-inline btn-warning"><img src="/images/arrow-clockwise.svg" class="icon-white"> Ir a Retornando</button>
+                <a href="personal_local.html">
+                    <button class="btn-inline btn-success"><img src="/images/check-circle.svg" class="icon-white"> Ir a Local normal</button>
                 </a>
                 <a href="personal_local_historial.html">
                     <button class="btn-inline btn-secondary"><img src="/images/book.svg" class="icon-white"> Ver historial</button>
@@ -27,19 +27,18 @@
 
         <hr>
 
-    <!-- Formulario de ingreso (mañana) -->
         <div class="form-card">
-            <h3>Registrar Ingreso de Asistencia Personal de Mina</h3>
-            
-            <form id="form-ingreso" onsubmit="event.preventDefault(); registrarIngreso();">
+            <h3>Registrar Ingreso de Personal Retornando</h3>
+
+            <form id="form-ingreso-retornando" onsubmit="event.preventDefault(); registrarIngresoRetornando();">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="dni">DNI: (*)</label>
-                        <input 
-                            type="text" 
-                            id="dni" 
-                            maxlength="8" 
-                            required 
+                        <input
+                            type="text"
+                            id="dni"
+                            maxlength="8"
+                            required
                             placeholder="12345678"
                             onblur="buscarPersonaPorDni()"
                             onkeypress="if(event.key==='Enter'){event.preventDefault(); buscarPersonaPorDni();}">
@@ -50,9 +49,9 @@
 
                     <div class="form-group">
                         <label for="nombreApellidos">Nombre y Apellidos:</label>
-                        <input 
-                            type="text" 
-                            id="nombreApellidos" 
+                        <input
+                            type="text"
+                            id="nombreApellidos"
                             placeholder="Solo si DNI no está registrado"
                             onkeypress="if(event.key==='Enter'){event.preventDefault(); document.getElementById('observaciones').focus();}">
                     </div>
@@ -60,36 +59,37 @@
 
                 <div class="form-group">
                     <label for="observaciones">Observaciones:</label>
-                    <textarea 
-                        id="observaciones" 
-                        rows="2" 
+                    <textarea
+                        id="observaciones"
+                        rows="2"
                         placeholder="Opcional"></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="horaIngreso">Hora de Ingreso:</label>
                     <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
-                    <input 
-                        type="time" 
-                        id="horaIngreso" 
+                    <input
+                        type="time"
+                        id="horaIngreso"
                         placeholder="Dejar vacío para usar hora actual">
                 </div>
 
+                <p class="muted" style="margin-top: 8px;">En este cuaderno solo se registra el ingreso de personal retornando.</p>
+
                 <div id="mensaje" class="message"></div>
 
-                <button type="submit" class="btn-primary"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
+                <button type="submit" class="btn-primary"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO RETORNANDO</button>
             </form>
         </div>
 
         <hr>
 
-        <!-- Lista de personal activo (con ingreso, sin salida final) -->
         <div class="table-card">
             <div class="table-header">
-                <h3>Asistencia Personal de Mina Activo (Sin salida final)</h3>
-                <button onclick="cargarActivos()" class="btn-secondary btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
+                <h3>Retornando Activo (Sin salida final)</h3>
+                <button onclick="cargarActivosRetornando()" class="btn-secondary btn-small"><img src="/images/arrow-clockwise.svg" class="icon-white"> Actualizar</button>
             </div>
-            <div id="lista-activos">
+            <div id="lista-activos-retornando">
                 <p class="text-center">Cargando...</p>
             </div>
         </div>
@@ -102,17 +102,16 @@
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
-<script src="../js/personal_local.js"></script>
+<script src="../js/personal_local_retornando.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
-    cargarActivos();
+    cargarActivosRetornando();
 
-    // Auto-refresh si viene con parámetro
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('refresh') === '1') {
         setTimeout(() => {
-            cargarActivos();
+            cargarActivosRetornando();
         }, 500);
     }
 

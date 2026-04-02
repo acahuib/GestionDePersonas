@@ -69,6 +69,13 @@
             <label>Observación</label>
             <textarea id="observacion" placeholder="Observación (opcional)" rows="4"></textarea>
 
+            <div class="form-card" style="margin-top:10px;">
+                <label>Imagenes del registro <span class="muted">(opcional, max 10)</span></label>
+                <input type="file" id="vehiculoEmpresaImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+                <div id="vehiculoEmpresaImagenesResumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</div>
+                <div id="vehiculoEmpresaImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+            </div>
+
             <div>
                 <button onclick="registrarMovimientoInicial()" id="btn-registrar" class="btn-danger btn-block">
                     <img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA
@@ -95,7 +102,9 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
 <script src="../../js/auth.js"></script>
+<script src="../../js/imagenes_registro.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/vehiculo_empresa.js"></script>
@@ -122,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const tipoInicial = document.getElementById("tipoInicial");
     tipoInicial.addEventListener("change", actualizarFormularioPorTipoInicial);
     actualizarFormularioPorTipoInicial();
+    inicializarPreviewImagenesVehiculoEmpresa();
 
     dniInput.addEventListener("blur", buscarPersonaPorDni);
     dniInput.addEventListener("keypress", (e) => {

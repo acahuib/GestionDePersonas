@@ -434,11 +434,15 @@ async function fetchAuth(url, options = {}) {
         return;
     }
 
+    const isFormData = options.body instanceof FormData;
     const headers = {
-        "Content-Type": "application/json",
         ...(options.headers || {}),
         "Authorization": `Bearer ${token}`
     };
+
+    if (!isFormData && !headers["Content-Type"] && !headers["content-type"]) {
+        headers["Content-Type"] = "application/json";
+    }
 
     const method = String(options.method || "GET").toUpperCase();
     const bodyNormalizado = normalizarBodyMayusculas(options.body, method, url);
@@ -514,6 +518,7 @@ function normalizarBodyMayusculas(body, method, url) {
     if (!esPaginaCuadernoFormulario()) return body;
     if (["GET", "HEAD", "OPTIONS"].includes(String(method || "").toUpperCase())) return body;
     if (String(url || "").toLowerCase().includes("/auth/login")) return body;
+    if (body instanceof FormData || body instanceof Blob || body instanceof ArrayBuffer) return body;
 
     try {
         if (typeof body === "string") {
@@ -522,9 +527,7 @@ function normalizarBodyMayusculas(body, method, url) {
             return JSON.stringify(normalizado);
         }
 
-        if (typeof body === "object") {
-            return JSON.stringify(normalizarObjetoMayusculas(body));
-        }
+        if (typeof body === "object") return body;
     } catch {
         return body;
     }

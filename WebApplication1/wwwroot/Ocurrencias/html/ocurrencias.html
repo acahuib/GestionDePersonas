@@ -50,6 +50,14 @@
             </select>
 
             <div id="bloquePersona">
+                <div id="bloqueMovimientoInicialPersona" style="margin-bottom:10px;">
+                    <label style="margin-bottom:6px;display:block;">Movimiento inicial (solo Persona) *</label>
+                    <select id="movimientoInicialPersona">
+                        <option value="Ingreso">Ingreso</option>
+                        <option value="Salida">Salida</option>
+                    </select>
+                </div>
+
                 <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
                 <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
 
@@ -113,12 +121,18 @@
                 <textarea id="encapsuladoObservacion" placeholder="Detalle de la ocurrencia encapsulada" rows="4"></textarea>
             </div>
 
-            <label>Hora de Ingreso</label>
+            <label id="labelFechaMovimientoInicial">Fecha de Ingreso</label>
             <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
+            <label id="labelHoraMovimientoInicial">Hora de Ingreso</label>
             <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
 
+            <label>Imagenes <span class="muted">(Opcional, max 10 | JPG/PNG/WEBP)</span></label>
+            <input type="file" id="ocurrenciaImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+            <p id="imagenes-preview-resumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</p>
+            <div id="imagenes-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px 0;"></div>
+
             <div style="margin-top: 10px;">
-                <button onclick="registrarIngreso()" class="btn-success btn-block">
+                <button id="btnRegistrarOcurrencia" onclick="registrarIngreso()" class="btn-success btn-block">
                     <img src="/images/check-lg.svg" class="icon-white"> Registrar INGRESO
                 </button>
             </div>
@@ -145,6 +159,8 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
+<script src="../../js/imagenes_registro.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../../js/activos_buscador.js"></script>
 <script src="../../js/personas_autocomplete.js"></script>
@@ -163,6 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(cargarInfoGuardiasTurno, 60000);
 
     cambiarTipoOcurrencia();
+    inicializarSelectorMovimientoPersona();
 
     // Enter listeners
     const dniInput = document.getElementById("dni");
@@ -181,6 +198,9 @@ document.addEventListener("DOMContentLoaded", () => {
         dniId: "dni",
         nombreId: "nombre"
     });
+
+    inicializarAutocompletadoDniOcurrencias();
+    inicializarPreviewImagenes();
 });
 </script>
 

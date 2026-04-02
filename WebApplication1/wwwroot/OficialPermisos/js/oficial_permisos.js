@@ -175,6 +175,32 @@ function irAIngreso(salidaId, dni, nombreCompleto, deDonde, tipo, quienAutoriza,
     window.location.href = `oficial_permisos_ingreso.html?${params.toString()}`;
 }
 
+function irAIngresoDesdePayload(payloadCodificado) {
+    try {
+        const texto = decodeURIComponent(payloadCodificado || "");
+        const datos = JSON.parse(texto);
+        irAIngreso(
+            datos.salidaId,
+            datos.dni,
+            datos.nombreCompleto,
+            datos.deDonde,
+            datos.tipo,
+            datos.quienAutoriza,
+            datos.observacion,
+            datos.fechaSalidaParam,
+            datos.horaSalidaParam,
+            datos.guardiaSalida
+        );
+    } catch (error) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "No se pudo abrir el registro de ingreso. Intente actualizar la lista.";
+        }
+        console.error("Error al procesar datos para ingreso:", error);
+    }
+}
+
 // Cargar personal activo (fuera, sin ingreso)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
@@ -260,6 +286,18 @@ async function cargarActivos() {
             // Preparar parámetros para pasar a la función
             const fechaSalidaParam = s.fechaSalida || "";
             const horaSalidaParam = s.horaSalida || "";
+            const payload = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni: s.dni || "",
+                nombreCompleto,
+                deDonde,
+                tipo,
+                quienAutoriza,
+                observacion,
+                fechaSalidaParam,
+                horaSalidaParam,
+                guardiaSalida
+            }));
             
             html += '<tr>';
             html += `<td>${s.dni || 'N/A'}</td>`;
@@ -269,7 +307,7 @@ async function cargarActivos() {
             html += `<td>${quienAutoriza}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaSalida, horaSalida)}</td>`;
             html += '<td>';
-            html += `<button onclick="irAIngreso(${s.id}, '${s.dni}', '${nombreCompleto.replace(/'/g, "\\'")}', '${deDonde.replace(/'/g, "\\'")}', '${tipo.replace(/'/g, "\\'")}', '${quienAutoriza.replace(/'/g, "\\'")}', '${observacion.replace(/'/g, "\\'")}', '${fechaSalidaParam}', '${horaSalidaParam}', '${guardiaSalida.replace(/'/g, "\\'")}')" class="btn-success btn-small btn-inline">Registrar Ingreso</button>`;
+            html += `<button onclick="irAIngresoDesdePayload('${payload}')" class="btn-success btn-small btn-inline">Registrar Ingreso</button>`;
             html += '</td></tr>';
         });
 

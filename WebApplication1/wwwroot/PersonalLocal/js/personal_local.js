@@ -4,13 +4,6 @@
 
 let personaEncontrada = null;
 
-function actualizarHintRetornando() {
-    const tipo = document.getElementById("tipoPersonaLocal")?.value || "Normal";
-    const hint = document.getElementById("hint-retornando");
-    if (!hint) return;
-    hint.style.display = tipo === "Retornando" ? "block" : "none";
-}
-
 // Buscar persona por DNI en tabla maestra
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
@@ -76,7 +69,6 @@ async function registrarIngreso() {
     const dni = document.getElementById("dni").value.trim();
     const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
     const observaciones = document.getElementById("observaciones").value.trim();
-    const tipoPersonaLocal = document.getElementById("tipoPersonaLocal")?.value || "Normal";
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
@@ -107,7 +99,7 @@ async function registrarIngreso() {
     try {
         const body = {
             dni,
-            tipoPersonaLocal,
+            tipoPersonaLocal: "Normal",
             observaciones: observaciones || null
         };
 
@@ -142,9 +134,6 @@ async function registrarIngreso() {
         document.getElementById("horaIngreso").value = "";
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
-        const tipoSelect = document.getElementById("tipoPersonaLocal");
-        if (tipoSelect) tipoSelect.value = "Normal";
-        actualizarHintRetornando();
         document.getElementById("persona-info").style.display = "none";
         document.getElementById("nombreApellidos").disabled = false;
         personaEncontrada = null;
@@ -269,8 +258,19 @@ async function cargarActivos() {
             return;
         }
 
-        // Convertir a array y ordenar por hora de ingreso (más recientes primero)
-        const activos = Array.from(ultimosPorDni.values()).sort((a, b) => {
+        // Convertir a array y mantener solo registros Normal
+        const activosNormal = Array.from(ultimosPorDni.values()).filter((s) => {
+            const tipo = s?.datos?.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
+            return tipo === "Normal";
+        });
+
+        if (activosNormal.length === 0) {
+            container.innerHTML = '<p class="text-center muted">No hay personal local activo en este momento</p>';
+            return;
+        }
+
+        // Ordenar por hora de ingreso (más recientes primero)
+        const activos = activosNormal.sort((a, b) => {
             const timeA = new Date(a.horaIngreso || a.datos?.horaIngreso || 0).getTime();
             const timeB = new Date(b.horaIngreso || b.datos?.horaIngreso || 0).getTime();
             return timeB - timeA;
@@ -282,7 +282,6 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>Tipo</th>';
         html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Salida Almuerzo</th>';
         html += '<th>Ingreso Almuerzo</th>';
@@ -301,8 +300,6 @@ async function cargarActivos() {
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
-            const tipoPersonaLocal = datos.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
-            
             // Almuerzo (siempre en JSON)
             const horaSalidaAlmuerzo = datos.horaSalidaAlmuerzo ? new Date(datos.horaSalidaAlmuerzo).toLocaleTimeString('es-PE') : "-";
             const fechaSalidaAlmuerzo = datos.fechaSalidaAlmuerzo ? new Date(datos.fechaSalidaAlmuerzo).toLocaleDateString('es-PE') : "";
@@ -315,24 +312,11 @@ async function cargarActivos() {
             html += '<tr>';
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
-            html += `<td>${tipoPersonaLocal}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
-
-
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
-}
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
-
-            if (tipoPersonaLocal === "Retornando") {
-                html += '<span class="muted">Sin salida en este cuaderno</span>';
-                html += '</td>';
-                html += '</tr>';
-                return;
-            }
             
             // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {
@@ -359,14 +343,13 @@ function construirFechaHoraCelda(fechaTexto, horaTexto) {
     }
 }
 
+function construirFechaHoraCelda(fechaTexto, horaTexto) {
+    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-    const tipoSelect = document.getElementById("tipoPersonaLocal");
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
-    if (tipoSelect) {
-        tipoSelect.addEventListener("change", actualizarHintRetornando);
-        actualizarHintRetornando();
-    }
 });
 
 function obtenerFechaLocalISO() {

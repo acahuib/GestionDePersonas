@@ -190,6 +190,19 @@ function volverOrigen() {
     window.location.href = origen || "index.html";
 }
 
+function tieneValorFechaHora(valor) {
+    return valor !== null && valor !== undefined && String(valor).trim() !== "";
+}
+
+function determinarLadoEditableTiempo(data) {
+    const tieneIngreso = tieneValorFechaHora(data?.horaIngreso) || tieneValorFechaHora(data?.fechaIngreso);
+    const tieneSalida = tieneValorFechaHora(data?.horaSalida) || tieneValorFechaHora(data?.fechaSalida);
+
+    if (tieneIngreso && !tieneSalida) return "ingreso";
+    if (!tieneIngreso && tieneSalida) return "salida";
+    return "ambos";
+}
+
 function construirCampo(key, value) {
     const readonly = CAMPOS_BLOQUEADOS.has(key) ? "readonly" : "";
     const label = escaparHtml(obtenerEtiquetaCampo(key));
@@ -235,7 +248,7 @@ function construirCampo(key, value) {
     if (key.toLowerCase().includes("fecha")) {
         return `
             <label>${label}${readonly ? " (solo lectura)" : ""}</label>
-            <input type="date" data-dato-key="${safeKey}" data-dato-tipo="date" value="${toDateLocal(value)}" ${readonly}>
+            <input type="date" data-dato-key="${safeKey}" data-dato-tipo="date" data-auto-now="off" value="${toDateLocal(value)}" ${readonly}>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
     }
@@ -243,7 +256,7 @@ function construirCampo(key, value) {
     if (key.toLowerCase().includes("hora")) {
         return `
             <label>${label}${readonly ? " (solo lectura)" : ""}</label>
-            <input type="time" data-dato-key="${safeKey}" data-dato-tipo="time" value="${toTimeLocal(value) || String(value ?? "")}" ${readonly}>
+            <input type="time" data-dato-key="${safeKey}" data-dato-tipo="time" data-auto-now="off" value="${toTimeLocal(value) || String(value ?? "")}" ${readonly}>
             <small class="muted formato-ayuda">${ayuda}</small>
         `;
     }
@@ -356,17 +369,28 @@ async function cargarRegistro() {
             html += construirCampo(k, datosOriginales[k]);
         });
 
+        const ladoEditableTiempo = determinarLadoEditableTiempo(data);
+        const bloquearIngreso = ladoEditableTiempo === "salida";
+        const bloquearSalida = ladoEditableTiempo === "ingreso";
+
         html += `
             <hr>
             <h4>Fechas/Horas de columna (editable)</h4>
+            <p class="muted" style="margin-top:-4px;">
+                ${ladoEditableTiempo === "ingreso"
+                    ? "Este registro se creo como ENTRADA: en edicion solo se puede corregir ingreso."
+                    : ladoEditableTiempo === "salida"
+                        ? "Este registro se creo como SALIDA: en edicion solo se puede corregir salida."
+                        : "Puede corregir ingreso y salida en este registro."}
+            </p>
             <label>Hora Ingreso</label>
-            <input type="time" id="edit-hora-ingreso" value="${toTimeLocal(data.horaIngreso)}">
+            <input type="time" id="edit-hora-ingreso" data-auto-now="off" value="${toTimeLocal(data.horaIngreso)}" ${bloquearIngreso ? "disabled" : ""}>
             <label>Fecha Ingreso</label>
-            <input type="date" id="edit-fecha-ingreso" value="${toDateLocal(data.fechaIngreso)}">
+            <input type="date" id="edit-fecha-ingreso" data-auto-now="off" value="${toDateLocal(data.fechaIngreso)}" ${bloquearIngreso ? "disabled" : ""}>
             <label>Hora Salida</label>
-            <input type="time" id="edit-hora-salida" value="${toTimeLocal(data.horaSalida)}">
+            <input type="time" id="edit-hora-salida" data-auto-now="off" value="${toTimeLocal(data.horaSalida)}" ${bloquearSalida ? "disabled" : ""}>
             <label>Fecha Salida</label>
-            <input type="date" id="edit-fecha-salida" value="${toDateLocal(data.fechaSalida)}">
+            <input type="date" id="edit-fecha-salida" data-auto-now="off" value="${toDateLocal(data.fechaSalida)}" ${bloquearSalida ? "disabled" : ""}>
         `;
 
         form.innerHTML = html;
@@ -439,6 +463,9 @@ async function guardarCambios() {
 
         mensaje.className = "success";
         mensaje.innerText = "Registro actualizado correctamente";
+        setTimeout(() => {
+            volverOrigen();
+        }, 500);
     } catch (error) {
         mensaje.className = "error";
         mensaje.innerText = `${getPlainErrorMessage(error)}`;

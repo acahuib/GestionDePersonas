@@ -200,6 +200,34 @@ async function initCuadernoHistorial() {
         return base;
     };
 
+    const construirDetalleTipoOcurrenciaHtml = (detalle) => {
+        const tipo = detalle?.tipo || "Persona";
+        const partes = [];
+        const pushIf = (label, valor) => {
+            const texto = String(valor || "").trim();
+            if (!texto) return;
+            partes.push(`<div class="detalle-item"><strong>${escaparHtml(label)}:</strong> ${escaparHtml(texto)}</div>`);
+        };
+
+        if (tipo === "Vehicular") {
+            pushIf("Placa", detalle.placa);
+            pushIf("Chofer", detalle.chofer);
+            pushIf("Empresa", detalle.empresa);
+            pushIf("Procedencia", detalle.procedencia);
+            pushIf("Destino", detalle.destino);
+        } else if (tipo === "Encapsulado") {
+            pushIf("Tracto", detalle.tractoPlaca);
+            pushIf("Plataforma", detalle.plataformaPlaca);
+            pushIf("Chofer", detalle.chofer);
+            pushIf("Empresa", detalle.empresa);
+            pushIf("Procedencia", detalle.procedencia);
+            pushIf("Destino", detalle.destino);
+        }
+
+        pushIf("Observacion", detalle?.observacion);
+        return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
+    };
+
     const renderHeaders = () => {
         if (!thead) return;
 
@@ -214,12 +242,8 @@ async function initCuadernoHistorial() {
                         <th>Salida</th>
                         <th>Guardia Salida</th>
                         <th>Tipo</th>
-                        <th>Placa(s)</th>
-                        <th>Chofer</th>
-                        <th>Empresa/Proveedor</th>
-                        <th>Procedencia</th>
-                        <th>Destino</th>
-                        <th>Observacion</th>
+                        <th>Detalle</th>
+                        <th>Imagenes</th>
                     </tr>
                 `;
                 return;
@@ -230,6 +254,9 @@ async function initCuadernoHistorial() {
                 : "";
             const columnaKmVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
                 ? "<th>Km (Sal/Ing)</th>"
+                : "";
+            const columnaImagenesVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
+                ? "<th>Imagenes</th>"
                 : "";
 
             thead.innerHTML = `
@@ -242,6 +269,7 @@ async function initCuadernoHistorial() {
                     <th>Guardia Salida</th>
                     ${columnaMovimientosProveedor}
                     ${columnaKmVehiculoEmpresa}
+                    ${columnaImagenesVehiculoEmpresa}
                     <th>Detalle</th>
                 </tr>
             `;
@@ -400,7 +428,7 @@ async function initCuadernoHistorial() {
         if (!tbody) return;
 
         const totalColumnas = vistaHistorial === "entradas-salidas"
-            ? (tipoOperacion === "Ocurrencias" ? 13 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7))
+            ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : 7))
             : 6;
 
         if (!items.length) {
@@ -425,9 +453,7 @@ async function initCuadernoHistorial() {
                 if (vistaHistorial === "entradas-salidas") {
                     if (tipoOperacion === "Ocurrencias") {
                         const detalle = item.ocurrenciaDetalle || {};
-                        const placas = detalle.tipo === "Encapsulado"
-                            ? [detalle.tractoPlaca, detalle.plataformaPlaca].filter(Boolean).join(" / ")
-                            : (detalle.placa || "");
+                        const detalleTipoHtml = construirDetalleTipoOcurrenciaHtml(detalle);
 
                         return `
                             <tr>
@@ -438,12 +464,8 @@ async function initCuadernoHistorial() {
                                 <td>${construirFechaHoraCelda(item.fechaSalida, item.horaSalida)}</td>
                                 <td>${item.guardiaSalida || "-"}</td>
                                 <td>${detalle.tipo || "Persona"}</td>
-                                <td>${placas || "-"}</td>
-                                <td>${detalle.chofer || "-"}</td>
-                                <td>${detalle.empresa || "-"}</td>
-                                <td>${detalle.procedencia || "-"}</td>
-                                <td>${detalle.destino || "-"}</td>
-                                <td class="cell-wrap" style="max-width: 240px;">${detalle.observacion || "-"}</td>
+                                <td class="cell-wrap" style="max-width: 320px;">${detalleTipoHtml}</td>
+                                <td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>
                             </tr>
                         `;
                     }
@@ -453,6 +475,9 @@ async function initCuadernoHistorial() {
                         : "";
                     const columnaKmVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
                         ? `<td>${construirKmCelda(item.kmSalida, item.kmIngreso)}</td>`
+                        : "";
+                    const columnaImagenesVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
+                        ? `<td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>`
                         : "";
 
                     return `
@@ -465,6 +490,7 @@ async function initCuadernoHistorial() {
                             <td>${item.guardiaSalida || "-"}</td>
                             ${columnaMovimientosProveedor}
                             ${columnaKmVehiculoEmpresa}
+                            ${columnaImagenesVehiculoEmpresa}
                             <td>${item.detalle}</td>
                         </tr>
                     `;
@@ -515,7 +541,7 @@ async function initCuadernoHistorial() {
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
                 const totalColumnas = vistaHistorial === "entradas-salidas"
-                    ? (tipoOperacion === "Ocurrencias" ? 13 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 8 : 7))
+                    ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : 7))
                     : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }

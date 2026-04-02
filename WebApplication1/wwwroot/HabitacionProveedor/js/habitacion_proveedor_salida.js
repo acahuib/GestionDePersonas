@@ -55,9 +55,7 @@ async function registrarSalida() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = data.salidaProveedorRegistrada
-            ? `✅ ${data.mensaje}. También se registró la salida del proveedor en mina.`
-            : `✅ ${data.mensaje}`;
+        mensaje.innerText = `✅ ${data.mensaje}`;
 
         // Redirigir después de 2 segundos
         setTimeout(() => {

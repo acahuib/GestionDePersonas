@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrar Salida - Ocurrencias</title>
+    <title>Completar Movimiento - Ocurrencias</title>
     <link rel="stylesheet" href="../../css/styles.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <div class="main-content">
     <div class="container">
         <div class="page-header">
-            <h2>Registrar Salida de Ocurrencia</h2>
+                <h2 id="tituloPagina">Registrar Salida de Ocurrencia</h2>
             <div class="header-actions">
                 <a href="ocurrencias.html">
                     <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver</button>
@@ -30,24 +30,29 @@
         <label>Nombre</label>
         <input type="text" id="readonly-nombre" readonly>
 
-        <label>Fecha de Ingreso</label>
+        <label id="labelFechaInicial">Fecha de Ingreso</label>
         <input type="text" id="readonly-fecha-ingreso" readonly>
 
-        <label>Hora de Ingreso</label>
+        <label id="labelHoraInicial">Hora de Ingreso</label>
         <input type="text" id="readonly-hora-ingreso" readonly>
 
-        <label>Guardia de Ingreso</label>
+        <label id="labelGuardiaInicial">Guardia de Ingreso</label>
         <input type="text" id="readonly-guardia-ingreso" readonly>
 
         <label>Ocurrencia</label>
         <textarea id="readonly-ocurrencia" rows="4" readonly></textarea>
 
-        <label>Hora de Salida <span class="muted">(Opcional)</span></label>
+        <label id="labelHoraComplemento">Hora de Salida <span class="muted">(Opcional)</span></label>
         <input type="date" id="fechaSalida" placeholder="Fecha de salida">
         <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
 
+        <label>Imagenes <span class="muted">(Opcional, max 10 | JPG/PNG/WEBP)</span></label>
+        <input type="file" id="ocurrenciaComplementoImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+        <p id="imagenes-complemento-preview-resumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</p>
+        <div id="imagenes-complemento-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px 0;"></div>
+
         <div>
-            <button onclick="registrarSalida()" class="btn-danger btn-block"><img src="/images/x-circle.svg" class="icon-white"> Registrar SALIDA</button>
+            <button id="btnRegistrarComplemento" onclick="registrarSalida()" class="btn-danger btn-block"><img src="/images/x-circle.svg" class="icon-white"> Registrar SALIDA</button>
         </div>
         <div>
             <button onclick="volver()" class="btn-secondary btn-block">
@@ -61,6 +66,8 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
+<script src="../../js/imagenes_complemento.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../js/ocurrencias_salida.js"></script>
 <script>
@@ -70,6 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const fechaSalida = document.getElementById("fechaSalida");
     if (fechaSalida) fechaSalida.value = hoy;
     cargarDatos();
+    window.imagenesComplemento?.init({
+        inputId: "ocurrenciaComplementoImagenes",
+        resumenId: "imagenes-complemento-preview-resumen",
+        previewId: "imagenes-complemento-preview",
+        mensajeId: "mensaje",
+        maxImagenes: 10
+    });
 });
 </script>
 </body>

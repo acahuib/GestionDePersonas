@@ -4,9 +4,90 @@
 
 let personaEncontrada = null;
 
+function obtenerInputImagenes() {
+    const input = document.getElementById("ocurrenciaImagenes");
+    return input instanceof HTMLInputElement ? input : null;
+}
+
+function actualizarPreviewImagenes() {
+    window.imagenesForm?.refreshPreview("ocurrenciaImagenes");
+}
+
+function removerImagenSeleccionada(index) {
+    // La eliminacion se maneja en el modulo compartido por evento de click.
+}
+
+function inicializarPreviewImagenes() {
+    window.imagenesForm?.initPreview({
+        inputId: "ocurrenciaImagenes",
+        resumenId: "imagenes-preview-resumen",
+        previewId: "imagenes-preview"
+    });
+}
+
 function obtenerTipoOcurrenciaSeleccionado() {
     const tipo = document.getElementById("tipoOcurrencia")?.value || "Persona";
     return tipo;
+}
+
+function obtenerMovimientoInicialPersona() {
+    const selector = document.getElementById("movimientoInicialPersona");
+    return selector?.value === "Salida" ? "Salida" : "Ingreso";
+}
+
+function actualizarUIRegistroInicial() {
+    const tipo = obtenerTipoOcurrenciaSeleccionado();
+    const bloqueMovimientoPersona = document.getElementById("bloqueMovimientoInicialPersona");
+    const labelFecha = document.getElementById("labelFechaMovimientoInicial");
+    const labelHora = document.getElementById("labelHoraMovimientoInicial");
+    const btnRegistrar = document.getElementById("btnRegistrarOcurrencia");
+
+    if (bloqueMovimientoPersona) {
+        bloqueMovimientoPersona.style.display = tipo === "Persona" ? "block" : "none";
+    }
+
+    if (tipo !== "Persona") {
+        const selector = document.getElementById("movimientoInicialPersona");
+        if (selector instanceof HTMLSelectElement) selector.value = "Ingreso";
+    }
+
+    const movimiento = tipo === "Persona" ? obtenerMovimientoInicialPersona() : "Ingreso";
+    const esSalida = movimiento === "Salida";
+
+    if (labelFecha) {
+        labelFecha.textContent = esSalida ? "Fecha de Salida" : "Fecha de Ingreso";
+    }
+
+    if (labelHora) {
+        labelHora.textContent = esSalida ? "Hora de Salida" : "Hora de Ingreso";
+    }
+
+    if (btnRegistrar) {
+        btnRegistrar.className = esSalida ? "btn-danger btn-block" : "btn-success btn-block";
+        btnRegistrar.innerHTML = esSalida
+            ? '<img src="/images/x-circle.svg" class="icon-white"> Registrar SALIDA'
+            : '<img src="/images/check-lg.svg" class="icon-white"> Registrar INGRESO';
+    }
+}
+
+function inicializarSelectorMovimientoPersona() {
+    const selector = document.getElementById("movimientoInicialPersona");
+    if (selector instanceof HTMLSelectElement) {
+        selector.addEventListener("change", actualizarUIRegistroInicial);
+    }
+    actualizarUIRegistroInicial();
+}
+
+async function consultarPersonaPorDni(dni) {
+    if (!dni || dni.length !== 8 || isNaN(dni)) return null;
+    const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
+    if (!response) throw new Error("No se pudo consultar DNI");
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        const error = await readApiError(response);
+        throw new Error(error || "Error al consultar DNI");
+    }
+    return await response.json();
 }
 
 function cambiarTipoOcurrencia() {
@@ -31,6 +112,8 @@ function cambiarTipoOcurrencia() {
             nombreInput.placeholder = "Nombre o descripción de la persona";
         }
     }
+
+    actualizarUIRegistroInicial();
 }
 
 function leerValor(id) {
@@ -161,6 +244,12 @@ function limpiarFormularioPorTipo() {
         nombreInput.disabled = false;
         nombreInput.placeholder = "Nombre o descripción de la persona";
     }
+
+    const inputImagenes = obtenerInputImagenes();
+    if (inputImagenes) {
+        window.imagenesForm?.clearSelection("ocurrenciaImagenes");
+    }
+    actualizarPreviewImagenes();
 }
 
 function parsearDetalleOcurrencia(ocurrenciaTexto) {
@@ -203,6 +292,42 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     detalleBase.observacion = extraer("Observacion") || raw;
 
     return detalleBase;
+}
+
+function construirDetalleTipoHtml(detalle) {
+    const tipo = detalle?.tipo || "Persona";
+    const partes = [];
+    const pushIf = (label, valor) => {
+        const texto = String(valor || "").trim();
+        if (!texto) return;
+        partes.push(`<div><strong>${label}:</strong> ${texto}</div>`);
+    };
+
+    if (tipo === "Vehicular") {
+        pushIf("Placa", detalle.placa);
+        pushIf("Chofer", detalle.chofer);
+        pushIf("Empresa", detalle.empresa);
+        pushIf("Procedencia", detalle.procedencia);
+        pushIf("Destino", detalle.destino);
+    } else if (tipo === "Encapsulado") {
+        pushIf("Tracto", detalle.tractoPlaca);
+        pushIf("Plataforma", detalle.plataformaPlaca);
+        pushIf("Chofer", detalle.chofer);
+        pushIf("Empresa", detalle.empresa);
+        pushIf("Procedencia", detalle.procedencia);
+        pushIf("Destino", detalle.destino);
+    }
+
+    pushIf("Observacion", detalle?.observacion);
+
+    return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
+}
+
+async function subirImagenesSeleccionadas(ocurrenciaId) {
+    await window.imagenesForm?.uploadSelected({
+        registroId: ocurrenciaId,
+        inputId: "ocurrenciaImagenes"
+    });
 }
 
 function obtenerTurnoActual() {
@@ -358,38 +483,24 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        console.log(`Response status: ${response.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`Persona encontrada:`, personaEncontrada);
-            
-            // Mostrar info de persona registrada
+        const persona = await consultarPersonaPorDni(dni);
+        if (persona) {
+            personaEncontrada = persona;
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
-            
-            // Limpiar y deshabilitar campo de nombre
-            nombreInput.value = "";
+
+            // Completar nombre automaticamente cuando el DNI existe.
+            nombreInput.value = personaEncontrada.nombre || "";
             nombreInput.disabled = true;
-            nombreInput.placeholder = "(Ya registrado)";
-            
-            // Saltar a ocurrencia
+            nombreInput.placeholder = "(Autocompletado por DNI)";
+
             document.getElementById("ocurrencia").focus();
-        } else if (response.status === 404) {
-            // DNI no existe, habilitar campo para registro
-            console.log(`DNI no encontrado en tabla Personas - permitir registro nuevo`);
+        } else {
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreInput.disabled = false;
             nombreInput.placeholder = "Nombre o descripción de la persona";
             nombreInput.focus();
-        } else {
-            const error = await readApiError(response);
-            console.error(`Error del servidor: ${error}`);
-            throw new Error(error);
         }
     } catch (error) {
         console.error("Error al buscar persona:", error);
@@ -401,7 +512,56 @@ async function buscarPersonaPorDni() {
     }
 }
 
-// Registrar INGRESO
+async function autocompletarChoferDesdeDni(dniId, choferId) {
+    const dniInput = document.getElementById(dniId);
+    const choferInput = document.getElementById(choferId);
+    if (!(dniInput instanceof HTMLInputElement) || !(choferInput instanceof HTMLInputElement)) return;
+
+    const dni = dniInput.value.trim();
+    if (!dni || dni.length !== 8 || isNaN(dni)) return;
+
+    try {
+        const persona = await consultarPersonaPorDni(dni);
+        if (persona?.nombre) {
+            choferInput.value = persona.nombre;
+        }
+    } catch {
+        // Mantener edición manual en caso de error o DNI no existente.
+    }
+}
+
+function inicializarAutocompletadoDniOcurrencias() {
+    const dniPersona = document.getElementById("dni");
+    if (dniPersona instanceof HTMLInputElement) {
+        dniPersona.addEventListener("blur", () => {
+            if (obtenerTipoOcurrenciaSeleccionado() === "Persona") {
+                buscarPersonaPorDni();
+            }
+        });
+    }
+
+    const vehiculoDni = document.getElementById("vehiculoDni");
+    if (vehiculoDni instanceof HTMLInputElement) {
+        vehiculoDni.addEventListener("blur", () => autocompletarChoferDesdeDni("vehiculoDni", "vehiculoChofer"));
+        vehiculoDni.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            autocompletarChoferDesdeDni("vehiculoDni", "vehiculoChofer");
+        });
+    }
+
+    const encapsuladoDni = document.getElementById("encapsuladoDni");
+    if (encapsuladoDni instanceof HTMLInputElement) {
+        encapsuladoDni.addEventListener("blur", () => autocompletarChoferDesdeDni("encapsuladoDni", "encapsuladoChofer"));
+        encapsuladoDni.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            autocompletarChoferDesdeDni("encapsuladoDni", "encapsuladoChofer");
+        });
+    }
+}
+
+// Registrar movimiento inicial
 async function registrarIngreso() {
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
@@ -422,10 +582,17 @@ async function registrarIngreso() {
             ocurrencia: datos.ocurrencia
         };
 
-        if (horaIngresoInput) {
-            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
+        const movimientoInicial = (datos.tipo === "Persona") ? obtenerMovimientoInicialPersona() : "Ingreso";
+        const esSalidaInicial = movimientoInicial === "Salida";
+
+        if (esSalidaInicial) {
+            body.horaSalida = horaIngresoInput
+                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
+                : ahoraLocalDateTime();
         } else {
-            body.horaIngreso = ahoraLocalDateTime();
+            body.horaIngreso = horaIngresoInput
+                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
+                : ahoraLocalDateTime();
         }
 
         // Agregar DNI solo si se proporcionó
@@ -447,12 +614,18 @@ async function registrarIngreso() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al registrar ingreso");
+            throw new Error(error || "Error al registrar movimiento inicial");
         }
 
         const data = await response.json();
+        let advertenciaImagenes = "";
+        try {
+            await subirImagenesSeleccionadas(data.salidaId);
+        } catch (errorImagenes) {
+            advertenciaImagenes = ` (Ocurrencia guardada, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
+        }
         mensaje.className = "success";
-        mensaje.innerText = `Ingreso registrado correctamente`;
+        mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}`;
 
         // Limpiar formulario
         limpiarFormularioPorTipo();
@@ -472,8 +645,8 @@ async function registrarIngreso() {
     }
 }
 
-// Navegar a la pantalla de salida con datos precargados
-function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso, guardiaIngreso) {
+// Navegar a la pantalla de movimiento complementario con datos precargados
+function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso, guardiaIngreso, fechaSalida, horaSalida, guardiaSalida, modo = 'salida') {
     const params = new URLSearchParams({
         id: salidaId,
         dni: dni || '',
@@ -481,7 +654,11 @@ function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso,
         ocurrencia: ocurrencia || '',
         fechaIngreso: fechaIngreso || '',
         horaIngreso: horaIngreso || '',
-        guardiaIngreso: guardiaIngreso || ''
+        guardiaIngreso: guardiaIngreso || '',
+        fechaSalida: fechaSalida || '',
+        horaSalida: horaSalida || '',
+        guardiaSalida: guardiaSalida || '',
+        modo: modo || 'salida'
     });
     window.location.href = `ocurrencias_salida.html?${params.toString()}`;
 }
@@ -505,11 +682,11 @@ async function cargarActivos() {
             return;
         }
 
-        // Filtrar solo las que tienen ingreso sin salida
+        // Filtrar las que tienen solo un lado registrado (pendiente de complemento)
         const activas = ocurrencias.filter(o => {
             const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
             const tieneSalida = o.horaSalida !== null && o.horaSalida !== undefined;
-            return tieneIngreso && !tieneSalida;
+            return tieneIngreso !== tieneSalida;
         });
 
         if (activas.length === 0) {
@@ -522,24 +699,28 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>Fecha / Hora Ingreso</th>';
-        html += '<th>Guardia Ingreso</th>';
+        html += '<th>Fecha / Hora Inicial</th>';
+        html += '<th>Guardia Inicial</th>';
         html += '<th>Tipo</th>';
-        html += '<th>Placa(s)</th>';
-        html += '<th>Chofer</th>';
-        html += '<th>Empresa/Proveedor</th>';
-        html += '<th>Procedencia</th>';
-        html += '<th>Destino</th>';
-        html += '<th>Observacion</th>';
+        html += '<th>Detalle</th>';
+        html += '<th>Imagenes</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
         activas.forEach(o => {
             const datos = o.datos || {};
-            
-            const horaIngreso = o.horaIngreso ? new Date(o.horaIngreso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const fechaIngreso = o.fechaIngreso ? new Date(o.fechaIngreso).toLocaleDateString('es-PE') : 'N/A';
-            const guardiaIngreso = datos.guardiaIngreso || '-';
+
+            const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
+            const pendienteDe = tieneIngreso ? 'Salida' : 'Ingreso';
+            const modo = pendienteDe.toLowerCase();
+
+            const horaInicial = tieneIngreso
+                ? (o.horaIngreso ? new Date(o.horaIngreso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'N/A')
+                : (o.horaSalida ? new Date(o.horaSalida).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'N/A');
+            const fechaInicial = tieneIngreso
+                ? (o.fechaIngreso ? new Date(o.fechaIngreso).toLocaleDateString('es-PE') : 'N/A')
+                : (o.fechaSalida ? new Date(o.fechaSalida).toLocaleDateString('es-PE') : 'N/A');
+            const guardiaInicial = tieneIngreso ? (datos.guardiaIngreso || '-') : (datos.guardiaSalida || '-');
             
             // Identificar DNI ficticio (empieza con 99)
             const dniDisplay = o.dni && o.dni.startsWith('99') 
@@ -549,27 +730,25 @@ async function cargarActivos() {
             const nombreCompleto = o.nombreCompleto || datos.nombre || '-';
             const ocurrencia = datos.ocurrencia || '-';
             const detalleOcurrencia = parsearDetalleOcurrencia(ocurrencia);
-            const placaTexto = detalleOcurrencia.tipo === 'Encapsulado'
-                ? [detalleOcurrencia.tractoPlaca, detalleOcurrencia.plataformaPlaca].filter(Boolean).join(' / ')
-                : detalleOcurrencia.placa;
+            const detalleTipoHtml = construirDetalleTipoHtml(detalleOcurrencia);
             
             const fechaIngresoParam = o.fechaIngreso || '';
             const horaIngresoParam = o.horaIngreso || '';
+            const fechaSalidaParam = o.fechaSalida || '';
+            const horaSalidaParam = o.horaSalida || '';
+            const guardiaSalida = datos.guardiaSalida || '-';
 
             html += '<tr>';
             html += `<td>${dniDisplay}</td>`;
             html += `<td>${nombreCompleto}</td>`;
-            html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
-            html += `<td>${guardiaIngreso}</td>`;
+            html += `<td>${construirFechaHoraCelda(fechaInicial, horaInicial)}</td>`;
+            html += `<td>${guardiaInicial}</td>`;
             html += `<td>${detalleOcurrencia.tipo || '-'}</td>`;
-            html += `<td class="cell-wrap" style="max-width: 130px;">${placaTexto || '-'}</td>`;
-            html += `<td>${detalleOcurrencia.chofer || '-'}</td>`;
-            html += `<td>${detalleOcurrencia.empresa || '-'}</td>`;
-            html += `<td>${detalleOcurrencia.procedencia || '-'}</td>`;
-            html += `<td>${detalleOcurrencia.destino || '-'}</td>`;
-            html += `<td class="cell-wrap" style="max-width: 240px;">${detalleOcurrencia.observacion || '-'}</td>`;
+                html += `<td class="cell-wrap" style="max-width: 280px;">${detalleTipoHtml}</td>`;
+                html += `<td><button onclick="abrirImagenesRegistroModal(${o.id})" class="btn-inline btn-small">Ver imagenes</button></td>`;
             html += '<td>';
-            html += `<button onclick="irASalida(${o.id}, '${o.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${ocurrencia.replace(/'/g, "\\'")}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngreso}')" class="btn-danger btn-small btn-inline">Registrar Salida</button>`;
+                const claseBotonPendiente = pendienteDe === 'Ingreso' ? 'btn-success btn-small btn-inline' : 'btn-danger btn-small btn-inline';
+                html += `<button onclick="irASalida(${o.id}, '${o.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${ocurrencia.replace(/'/g, "\\'")}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaInicial}', '${fechaSalidaParam}', '${horaSalidaParam}', '${guardiaSalida}', '${modo}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
             html += '</td></tr>';
         });
 

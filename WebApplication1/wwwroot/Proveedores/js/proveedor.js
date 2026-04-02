@@ -204,6 +204,40 @@ function irAHabitacion(proveedorSalidaId, dni, nombreCompleto, origen) {
     window.location.href = `../../HabitacionProveedor/html/habitacion_proveedor.html?${params.toString()}`;
 }
 
+async function liberarHabitacionDesdeProveedor(habitacionSalidaId, nombreCompleto) {
+    const mensaje = document.getElementById("mensaje");
+
+    if (!habitacionSalidaId) return;
+
+    const confirmar = window.confirm(`Se registrara la salida de habitación para ${nombreCompleto || "el proveedor"}. ¿Desea continuar?`);
+    if (!confirmar) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/habitacion-proveedor/${habitacionSalidaId}/salida`, {
+            method: "PUT",
+            body: JSON.stringify({})
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo registrar la salida de habitación");
+        }
+
+        const data = await response.json();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = data?.mensaje || "Salida de habitación registrada";
+        }
+
+        await cargarActivos();
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = obtenerMensajeUsuario(error);
+        }
+    }
+}
+
 function irAHotelDesdeProveedor(dni, nombreCompleto) {
     const params = new URLSearchParams({
         dni: dni || "",
@@ -467,7 +501,7 @@ async function cargarActivos() {
                 const actual = habitacionesActivasPorDni.get(dniHabitacion);
 
                 if (!actual || fecha >= actual._fecha) {
-                    habitacionesActivasPorDni.set(dniHabitacion, { cuarto, _fecha: fecha });
+                    habitacionesActivasPorDni.set(dniHabitacion, { id: h.id, cuarto, _fecha: fecha });
                 }
             });
 
@@ -545,7 +579,7 @@ async function cargarActivos() {
                     html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
                     html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
                     html += estaEnHabitacion
-                        ? `<span class="estado-etiqueta estado-habitacion">Con habitación</span>`
+                        ? `<button onclick="liberarHabitacionDesdeProveedor(${estadoHabitacion.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small">Dejar Habitación</button><span class="estado-etiqueta estado-habitacion">Con habitación</span>`
                         : `<button onclick="irAHabitacion(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${(origenHabitacion || '').replace(/'/g, "\\'")}')" class="btn-success btn-small">Enviar a Habitación</button>`;
                 }
                 html += '</div>';

@@ -13,6 +13,40 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Dispositivo> Dispositivos { get; set; }
     public DbSet<OperacionDetalle> OperacionDetalle { get; set; }
+    public DbSet<ImagenRegistro> ImagenesRegistro { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ImagenRegistro>(entity =>
+        {
+            entity.ToTable("ImagenesRegistro");
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.NombreOriginal)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            entity.Property(x => x.NombreArchivo)
+                .IsRequired()
+                .HasMaxLength(260);
+
+            entity.Property(x => x.RutaRelativa)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.ContentType)
+                .HasMaxLength(120);
+
+            entity.HasOne(x => x.OperacionDetalle)
+                .WithMany()
+                .HasForeignKey(x => x.OperacionDetalleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => x.OperacionDetalleId);
+        });
+    }
 
 }
 

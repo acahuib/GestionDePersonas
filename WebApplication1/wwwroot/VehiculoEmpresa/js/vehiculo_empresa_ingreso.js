@@ -58,6 +58,10 @@ async function cargarDetalleOperacion(salidaId) {
         return;
     }
 
+    if (!window.imagenesComplemento?.validate("vehiculoEmpresaComplementoImagenes")) {
+        return;
+    }
+
     try {
         const response = await fetchAuth(`${API_BASE}/salidas/${salidaId}`);
         if (!response.ok) {
@@ -169,6 +173,11 @@ async function registrarMovimientoComplementario() {
             const error = await readApiError(response);
             throw new Error(error);
         }
+
+        await window.imagenesComplemento?.uploadSelected({
+            registroId: salidaId,
+            inputId: "vehiculoEmpresaComplementoImagenes"
+        });
 
         mensaje.className = "success";
         mensaje.innerText = esIngreso

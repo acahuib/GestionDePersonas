@@ -90,6 +90,11 @@
                 <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
             </div>
 
+            <label>Imagenes <span class="muted">(Opcional, max 10 | JPG/PNG/WEBP)</span></label>
+            <input type="file" id="vehiculoEmpresaComplementoImagenes" accept="image/png,image/jpeg,image/webp" multiple>
+            <div id="vehiculoEmpresaComplementoImagenesResumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</div>
+            <div id="vehiculoEmpresaComplementoImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+
             <div>
                 <button onclick="registrarMovimientoComplementario()" id="btn-guardar" class="btn-success btn-block"><img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO</button>
             </div>
@@ -101,6 +106,8 @@
 
 <script src="../../js/sidebar.js"></script>
 <script src="../../js/api.js"></script>
+<script src="../../js/imagenes_form.js"></script>
+<script src="../../js/imagenes_complemento.js"></script>
 <script src="../../js/auth.js"></script>
 <script src="../js/vehiculo_empresa_ingreso.js"></script>
 <script>
@@ -112,6 +119,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (fechaIngreso) fechaIngreso.value = hoy;
     if (fechaSalida) fechaSalida.value = hoy;
     cargarDatosDesdeUrl();
+    window.imagenesComplemento?.init({
+        inputId: "vehiculoEmpresaComplementoImagenes",
+        resumenId: "vehiculoEmpresaComplementoImagenesResumen",
+        previewId: "vehiculoEmpresaComplementoImagenesPreview",
+        mensajeId: "mensaje",
+        maxImagenes: 10
+    });
 });
 </script>
 

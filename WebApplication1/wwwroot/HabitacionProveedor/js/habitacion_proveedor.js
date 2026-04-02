@@ -60,10 +60,9 @@ function actualizarUIByTipoIngreso() {
 
     if (tipo === "InformativoPersonalMina") {
         if (infoProveedor) infoProveedor.style.display = "none";
-        if (ayuda) ayuda.innerText = "Modo informativo: no requiere proveedor activo y no cierra proveedor al liberar habitacion.";
-    } else {
-        if (ayuda) ayuda.innerText = "Modo sincronizado: requiere proveedor activo y al salir puede cerrar Proveedor.";
     }
+
+    if (ayuda) ayuda.innerText = "Modo informativo: registro de habitación sin cierre espejo en Proveedores.";
 }
 
 async function cargarPrefillDesdeProveedor() {
