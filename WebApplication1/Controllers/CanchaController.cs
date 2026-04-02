@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Models;
 using WebApplication1.Services;
 
@@ -75,8 +76,7 @@ namespace WebApplication1.Controllers
                 .ToList();
 
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             string? guardiaNombre = null;
             string? guardiaDni = null;
@@ -182,8 +182,7 @@ namespace WebApplication1.Controllers
                 datos = new Dictionary<string, object?>();
             }
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             string? guardiaNombre = null;
             string? guardiaDni = null;

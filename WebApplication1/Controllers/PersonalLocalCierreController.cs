@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 
 namespace WebApplication1.Controllers
 {
@@ -73,8 +74,7 @@ namespace WebApplication1.Controllers
 
         private int? ExtraerUsuarioId()
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(claim, out var id) ? id : null;
+            return UserClaimsHelper.GetUserId(User);
         }
 
         private static bool EsCierreAdministrativo(JsonObject datos)

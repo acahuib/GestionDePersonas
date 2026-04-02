@@ -2,10 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Models;
 using WebApplication1.Services;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace WebApplication1.Controllers
 {
@@ -94,8 +94,7 @@ namespace WebApplication1.Controllers
             // =========================
             // REGISTRAR MOVIMIENTO
             // =========================
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             await _movimientosService.RegistrarMovimientoEnBD(dto.Dni, dto.PuntoControlId, dto.TipoMovimiento, usuarioId);
 

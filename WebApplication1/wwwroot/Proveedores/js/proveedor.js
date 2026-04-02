@@ -204,6 +204,25 @@ function irASalida(salidaId, dni, nombreCompleto, procedencia, destino, observac
     window.location.href = `proveedor_salida.html?${params.toString()}`;
 }
 
+function irASalidaDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irASalida(
+            datos.salidaId,
+            datos.dni,
+            datos.nombreCompleto,
+            datos.procedencia,
+            datos.destino,
+            datos.observacion,
+            datos.fechaIngreso,
+            datos.horaIngreso,
+            datos.guardiaIngreso
+        );
+    } catch (error) {
+        console.error("Error al abrir salida de proveedor:", error);
+    }
+}
+
 function irAHabitacion(proveedorSalidaId, dni, nombreCompleto, origen) {
     const params = new URLSearchParams({
         proveedorSalidaId,
@@ -256,6 +275,33 @@ function irAHotelDesdeProveedor(dni, nombreCompleto) {
     });
 
     window.location.href = `../../HotelProveedor/html/hotel_proveedor.html?${params.toString()}`;
+}
+
+function irAHotelDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irAHotelDesdeProveedor(datos.dni, datos.nombreCompleto);
+    } catch (error) {
+        console.error("Error al abrir hotel proveedor:", error);
+    }
+}
+
+function irAHabitacionDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irAHabitacion(datos.proveedorSalidaId, datos.dni, datos.nombreCompleto, datos.origen);
+    } catch (error) {
+        console.error("Error al abrir habitacion proveedor:", error);
+    }
+}
+
+function liberarHabitacionDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        liberarHabitacionDesdeProveedor(datos.habitacionSalidaId, datos.nombreCompleto);
+    } catch (error) {
+        console.error("Error al liberar habitacion proveedor:", error);
+    }
 }
 
 function abrirImagenesRegistroProveedor(registroId, info = {}) {
@@ -361,6 +407,18 @@ async function registrarIngresoRetornoConOpciones(salidaId, destinoActual, opcio
             mensaje.className = "error";
             mensaje.innerText = obtenerMensajeUsuario(error);
         }
+    }
+}
+
+function abrirImagenesRegistroProveedorDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        abrirImagenesRegistroProveedor(datos.registroId, {
+            dni: datos.dni,
+            nombre: datos.nombre
+        });
+    } catch (error) {
+        console.error("Error al abrir imagenes del proveedor:", error);
     }
 }
 
@@ -581,6 +639,38 @@ async function cargarActivos() {
                 const observacionRetorno = (datos.observacion || '').replace(/"/g, '&quot;');
                 const hoy = obtenerFechaLocalISO();
                 const horaActual = obtenerHoraLocalHHMM();
+                const payloadSalida = encodeURIComponent(JSON.stringify({
+                    salidaId: p.id,
+                    dni: p.dni || "",
+                    nombreCompleto,
+                    procedencia: datos.procedencia || "",
+                    destino: datos.destino || "",
+                    observacion: datos.observacion || "",
+                    fechaIngreso: fechaIngresoParam,
+                    horaIngreso: horaIngresoParam,
+                    guardiaIngreso: guardiaIngresoParam
+                }));
+                const payloadHotel = encodeURIComponent(JSON.stringify({
+                    dni: p.dni || "",
+                    nombreCompleto
+                }));
+                const payloadHabitacion = encodeURIComponent(JSON.stringify({
+                    proveedorSalidaId: p.id,
+                    dni: p.dni || "",
+                    nombreCompleto,
+                    origen: origenHabitacion || ""
+                }));
+                const payloadLiberarHabitacion = estadoHabitacion
+                    ? encodeURIComponent(JSON.stringify({
+                        habitacionSalidaId: estadoHabitacion.id,
+                        nombreCompleto
+                    }))
+                    : "";
+                const payloadImagenes = encodeURIComponent(JSON.stringify({
+                    registroId: p.id,
+                    dni: p.dni || "",
+                    nombre: nombreCompleto
+                }));
                 
                 html += '<tr>';
                 html += `<td>${p.dni || 'N/A'}</td>`;
@@ -592,7 +682,7 @@ async function cargarActivos() {
                 html += `<td><span class="estado-etiqueta ${claseEstado}">${textoEstado}</span>${esFueraTemporal && ultimaSalida ? `<div class="retorno-meta">Ultima salida: ${ultimaSalida}</div>` : ''}</td>`;
                 html += '<td>';
                 html += '<div class="acciones-proveedor">';
-                html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroProveedor(${p.id}, { dni: '${(p.dni || '').replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
+                html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroProveedorDesdePayload('${payloadImagenes}')">Ver imagenes</button>`;
                 if (esFueraTemporal) {
                     html += `<select id="retorno-destino-${p.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoRetorno(destinoRetorno)}</select>`;
                     html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="Observación" class="retorno-input retorno-input-observacion">`;
@@ -601,11 +691,11 @@ async function cargarActivos() {
                     html += `<button onclick="registrarIngresoRetornoDesdeFila(${p.id})" class="btn-success btn-small">Ingreso (retorno)</button>`;
                     html += `<button onclick="cancelarRetornoDesdeFila(${p.id})" class="btn-danger btn-small">Cerrar sin retorno</button>`;
                 } else {
-                    html += `<button onclick="irASalida(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}'  , '${datos.procedencia || ''}', '${datos.destino || ''}', '${datos.observacion || ''}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaIngresoParam}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
-                    html += `<button onclick="irAHotelDesdeProveedor('${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
+                    html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
+                    html += `<button onclick="irAHotelDesdePayload('${payloadHotel}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
                     html += estaEnHabitacion
-                        ? `<button onclick="liberarHabitacionDesdeProveedor(${estadoHabitacion.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-warning btn-small">Dejar Habitación</button><span class="estado-etiqueta estado-habitacion">Con habitación</span>`
-                        : `<button onclick="irAHabitacion(${p.id}, '${p.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${(origenHabitacion || '').replace(/'/g, "\\'")}')" class="btn-success btn-small">Enviar a Habitación</button>`;
+                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar Habitación</button><span class="estado-etiqueta estado-habitacion">Con habitación</span>`
+                        : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a Habitación</button>`;
                 }
                 html += '</div>';
                 html += '</td></tr>';
@@ -706,17 +796,3 @@ function asegurarEstilosVistaProveedores() {
     document.head.appendChild(style);
 }
 
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
-
-function obtenerHoraLocalHHMM() {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
-}

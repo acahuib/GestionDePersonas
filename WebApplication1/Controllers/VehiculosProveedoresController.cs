@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Text.Json;
 using System.Security.Claims;
@@ -89,8 +90,7 @@ namespace WebApplication1.Controllers
                 // Si persona ya existe, se usa el nombre de la tabla
                 // ===== FIN NUEVO =====
 
-                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                int? usuarioId = UserClaimsHelper.GetUserId(User);
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
                 var guardiaNombre = usuarioId.HasValue
                     ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -188,13 +188,13 @@ namespace WebApplication1.Controllers
 
             return Ok(new
             {
-                placa = datos.TryGetProperty("placa", out var placa) && placa.ValueKind == JsonValueKind.String ? placa.GetString() : null,
-                tipo = datos.TryGetProperty("tipo", out var tipo) && tipo.ValueKind == JsonValueKind.String ? tipo.GetString() : null,
-                lote = datos.TryGetProperty("lote", out var lote) && lote.ValueKind == JsonValueKind.String ? lote.GetString() : null,
-                cantidad = datos.TryGetProperty("cantidad", out var cantidad) && cantidad.ValueKind == JsonValueKind.String ? cantidad.GetString() : null,
-                procedencia = datos.TryGetProperty("procedencia", out var procedencia) && procedencia.ValueKind == JsonValueKind.String ? procedencia.GetString() : null,
-                proveedor = datos.TryGetProperty("proveedor", out var proveedor) && proveedor.ValueKind == JsonValueKind.String ? proveedor.GetString() : null,
-                observacion = datos.TryGetProperty("observacion", out var observacion) && observacion.ValueKind == JsonValueKind.String ? observacion.GetString() : null
+                placa = JsonElementHelper.GetString(datos, "placa"),
+                tipo = JsonElementHelper.GetString(datos, "tipo"),
+                lote = JsonElementHelper.GetString(datos, "lote"),
+                cantidad = JsonElementHelper.GetString(datos, "cantidad"),
+                procedencia = JsonElementHelper.GetString(datos, "procedencia"),
+                proveedor = JsonElementHelper.GetString(datos, "proveedor"),
+                observacion = JsonElementHelper.GetString(datos, "observacion")
             });
         }
 
@@ -227,8 +227,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -246,17 +245,15 @@ namespace WebApplication1.Controllers
                 return new
                 {
                     nombreApellidos = datos.TryGetProperty("nombreApellidos", out var na) && na.ValueKind == JsonValueKind.String ? na.GetString() : null,
-                    proveedor = datos.TryGetProperty("proveedor", out var prov) && prov.ValueKind == JsonValueKind.String ? prov.GetString() : null,
-                    placa = datos.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
-                    tipo = datos.TryGetProperty("tipo", out var tip) && tip.ValueKind == JsonValueKind.String ? tip.GetString() : null,
-                    lote = datos.TryGetProperty("lote", out var lot) && lot.ValueKind == JsonValueKind.String ? lot.GetString() : null,
-                    cantidad = datos.TryGetProperty("cantidad", out var cant) && cant.ValueKind == JsonValueKind.String ? cant.GetString() : null,
-                    procedencia = datos.TryGetProperty("procedencia", out var proc) && proc.ValueKind == JsonValueKind.String ? proc.GetString() : null,
-                    guardiaIngreso = datos.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind == JsonValueKind.String
-                        ? gi.GetString()
-                        : null,
+                    proveedor = JsonElementHelper.GetString(datos, "proveedor"),
+                    placa = JsonElementHelper.GetString(datos, "placa"),
+                    tipo = JsonElementHelper.GetString(datos, "tipo"),
+                    lote = JsonElementHelper.GetString(datos, "lote"),
+                    cantidad = JsonElementHelper.GetString(datos, "cantidad"),
+                    procedencia = JsonElementHelper.GetString(datos, "procedencia"),
+                    guardiaIngreso = JsonElementHelper.GetString(datos, "guardiaIngreso"),
                     guardiaSalida = guardiaNombre,
-                    observacion = observacionNueva ?? (datos.TryGetProperty("observacion", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
+                    observacion = observacionNueva ?? JsonElementHelper.GetString(datos, "observacion")
                 };
             }
 
@@ -323,30 +320,5 @@ namespace WebApplication1.Controllers
             });
         }
 
-        private static string? LeerString(JsonElement root, params string[] keys)
-        {
-            foreach (var key in keys)
-            {
-                if (root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String)
-                {
-                    return value.GetString();
-                }
-            }
-
-            return null;
-        }
-
-        private static int? LeerInt(JsonElement root, params string[] keys)
-        {
-            foreach (var key in keys)
-            {
-                if (root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var numero))
-                {
-                    return numero;
-                }
-            }
-
-            return null;
-        }
     }
 }

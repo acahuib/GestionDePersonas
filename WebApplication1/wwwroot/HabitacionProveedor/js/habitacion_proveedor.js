@@ -8,14 +8,6 @@ function tieneValor(v) {
     return v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
 }
 
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
-
 function fechaLocalIso() {
     return obtenerFechaLocalISO();
 }
@@ -292,6 +284,25 @@ function irASalida(salidaId, dni, nombreCompleto, origen, cuarto, frazadas, fech
     window.location.href = `habitacion_proveedor_salida.html?${params.toString()}`;
 }
 
+function irASalidaDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irASalida(
+            datos.salidaId,
+            datos.dni,
+            datos.nombreCompleto,
+            datos.origen,
+            datos.cuarto,
+            datos.frazadas,
+            datos.fechaIngreso,
+            datos.horaIngreso,
+            datos.guardiaIngreso
+        );
+    } catch (error) {
+        console.error("Error al abrir salida de habitacion proveedor:", error);
+    }
+}
+
 function irAEditarActivo(salidaId) {
     const origen = "HabitacionProveedor/html/habitacion_proveedor.html";
     window.location.href = `/edicion_activo.html?id=${encodeURIComponent(salidaId)}&tipo=HabitacionProveedor&origen=${encodeURIComponent(origen)}`;
@@ -544,9 +555,20 @@ async function cargarActivos() {
                     const textoSalida = o.tipoIngreso === "InformativoPersonalMina"
                         ? "Liberar (informativo)"
                         : "Salida proveedor";
+                    const payloadSalida = encodeURIComponent(JSON.stringify({
+                        salidaId: o.id,
+                        dni: o.dni,
+                        nombreCompleto: o.nombreCompleto,
+                        origen: o.origen,
+                        cuarto: o.cuarto,
+                        frazadas: o.frazadas,
+                        fechaIngreso: o.fechaIngresoParam,
+                        horaIngreso: o.horaIngresoParam,
+                        guardiaIngreso: o.guardiaIngreso
+                    }));
                     return `
                         <div class="hp-acciones-item">
-                            <button class="btn-danger btn-small btn-inline" onclick="irASalida(${o.id}, '${escapar(o.dni)}', '${escapar(o.nombreCompleto)}', '${escapar(o.origen)}', '${escapar(o.cuarto)}', '${escapar(o.frazadas)}', '${escapar(o.fechaIngresoParam)}', '${escapar(o.horaIngresoParam)}', '${escapar(o.guardiaIngreso)}')">${textoSalida}</button>
+                            <button class="btn-danger btn-small btn-inline" onclick="irASalidaDesdePayload('${payloadSalida}')">${textoSalida}</button>
                             <button class="btn-warning btn-small btn-inline" onclick="irAEditarActivo(${o.id})">Editar</button>
                         </div>
                     `;

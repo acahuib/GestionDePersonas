@@ -770,15 +770,3 @@ async function cargarActivos() {
     }
 }
 
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
-}
-
-
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Text.Json;
 using System.Security.Claims;
@@ -102,8 +103,7 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                int? usuarioId = UserClaimsHelper.GetUserId(User);
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
 
                 var guardiaNombre = usuarioId.HasValue
@@ -150,7 +150,7 @@ namespace WebApplication1.Controllers
                         bienesExistentes.AddRange(bienesNormalizadosNuevos);
 
                     var datosActuales = JsonDocument.Parse(operacionAbierta.DatosJSON).RootElement;
-                    var observacionActual = LeerString(datosActuales, "observacion");
+                    var observacionActual = JsonElementHelper.GetString(datosActuales, "observacion");
 
                     var observacionCombinada = observacionActual;
                     if (!string.IsNullOrWhiteSpace(dto.Observacion))
@@ -165,10 +165,10 @@ namespace WebApplication1.Controllers
                         new
                         {
                             bienes = bienesExistentes,
-                            guardiaIngreso = LeerString(datosActuales, "guardiaIngreso") ?? guardiaNombre,
-                            guardiaSalida = LeerString(datosActuales, "guardiaSalida"),
+                            guardiaIngreso = JsonElementHelper.GetString(datosActuales, "guardiaIngreso") ?? guardiaNombre,
+                            guardiaSalida = JsonElementHelper.GetString(datosActuales, "guardiaSalida"),
                             observacion = observacionCombinada,
-                            observacionSalida = LeerString(datosActuales, "observacionSalida")
+                            observacionSalida = JsonElementHelper.GetString(datosActuales, "observacionSalida")
                         },
                         usuarioId
                     );
@@ -251,8 +251,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -293,7 +292,7 @@ namespace WebApplication1.Controllers
 
             var quedanActivos = bienesActuales.Any(b => string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase));
 
-            var observacionSalidaActual = LeerString(datosActuales, "observacionSalida");
+            var observacionSalidaActual = JsonElementHelper.GetString(datosActuales, "observacionSalida");
             var observacionSalidaCombinada = observacionSalidaActual;
             if (!string.IsNullOrWhiteSpace(dto.Observacion))
             {
@@ -307,9 +306,9 @@ namespace WebApplication1.Controllers
                 new
                 {
                     bienes = bienesActuales,
-                    guardiaIngreso = LeerString(datosActuales, "guardiaIngreso"),
+                    guardiaIngreso = JsonElementHelper.GetString(datosActuales, "guardiaIngreso"),
                     guardiaSalida = guardiaNombre,
-                    observacion = LeerString(datosActuales, "observacion"),
+                    observacion = JsonElementHelper.GetString(datosActuales, "observacion"),
                     observacionSalida = observacionSalidaCombinada
                 },
                 usuarioId,
@@ -487,30 +486,30 @@ namespace WebApplication1.Controllers
                         continue;
                     }
 
-                    var descripcion = LeerString(bien, "descripcion");
+                    var descripcion = JsonElementHelper.GetString(bien, "descripcion");
                     if (string.IsNullOrWhiteSpace(descripcion))
                     {
                         indiceBien++;
                         continue;
                     }
 
-                    var id = LeerString(bien, "id");
-                    var fechaIngreso = LeerFecha(bien, "fechaIngreso");
-                    var fechaSalida = LeerFecha(bien, "fechaSalida");
-                    var estado = LeerString(bien, "estado");
-                    var cantidad = LeerInt(bien, "cantidad") ?? 1;
+                    var id = JsonElementHelper.GetString(bien, "id");
+                    var fechaIngreso = JsonElementHelper.GetDateTime(bien, "fechaIngreso");
+                    var fechaSalida = JsonElementHelper.GetDateTime(bien, "fechaSalida");
+                    var estado = JsonElementHelper.GetString(bien, "estado");
+                    var cantidad = JsonElementHelper.GetInt(bien, "cantidad") ?? 1;
 
                     var estaRetirado = string.Equals(estado, EstadoRetirado, StringComparison.OrdinalIgnoreCase) || fechaSalida.HasValue;
                     var idNormalizado = string.IsNullOrWhiteSpace(id)
-                        ? GenerarIdBienLegacy(indiceBien, descripcion, LeerString(bien, "marca"), LeerString(bien, "serie"), cantidad, fechaIngreso)
+                        ? GenerarIdBienLegacy(indiceBien, descripcion, JsonElementHelper.GetString(bien, "marca"), JsonElementHelper.GetString(bien, "serie"), cantidad, fechaIngreso)
                         : id;
 
                     resultado.Add(new BienControlEstado
                     {
                         Id = idNormalizado,
                         Descripcion = descripcion.Trim(),
-                        Marca = LeerString(bien, "marca"),
-                        Serie = LeerString(bien, "serie"),
+                        Marca = JsonElementHelper.GetString(bien, "marca"),
+                        Serie = JsonElementHelper.GetString(bien, "serie"),
                         Cantidad = cantidad,
                         FechaIngreso = fechaIngreso,
                         FechaSalida = fechaSalida,
@@ -545,38 +544,5 @@ namespace WebApplication1.Controllers
             return $"legacy-{hash[..24]}";
         }
 
-        private static DateTime? LeerFecha(JsonElement element, string propiedad)
-        {
-            if (!element.TryGetProperty(propiedad, out var valor))
-                return null;
-
-            if (valor.ValueKind == JsonValueKind.String &&
-                DateTime.TryParse(valor.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
-                return parsed;
-
-            return null;
-        }
-
-        private static int? LeerInt(JsonElement element, string propiedad)
-        {
-            if (!element.TryGetProperty(propiedad, out var valor))
-                return null;
-
-            if (valor.ValueKind == JsonValueKind.Number && valor.TryGetInt32(out var numero))
-                return numero;
-
-            if (valor.ValueKind == JsonValueKind.String && int.TryParse(valor.GetString(), out var numeroTexto))
-                return numeroTexto;
-
-            return null;
-        }
-
-        private static string? LeerString(JsonElement element, string propiedad)
-        {
-            if (!element.TryGetProperty(propiedad, out var valor) || valor.ValueKind != JsonValueKind.String)
-                return null;
-
-            return valor.GetString();
-        }
     }
 }

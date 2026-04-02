@@ -216,6 +216,35 @@ function irASalida(salidaId, dni, nombreCompleto, proveedor, placa, tipo, lote, 
     window.location.href = `vehiculos_proveedores_salida.html?${params.toString()}`;
 }
 
+function irASalidaDesdePayload(payloadCodificado) {
+    try {
+        const texto = decodeURIComponent(payloadCodificado || "");
+        const datos = JSON.parse(texto);
+        irASalida(
+            datos.salidaId,
+            datos.dni,
+            datos.nombreCompleto,
+            datos.proveedor,
+            datos.placa,
+            datos.tipo,
+            datos.lote,
+            datos.cantidad,
+            datos.procedencia,
+            datos.observacion,
+            datos.fechaIngreso,
+            datos.horaIngreso,
+            datos.guardiaIngreso
+        );
+    } catch (error) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "No se pudo abrir el registro de salida. Actualice la lista e intente nuevamente.";
+        }
+        console.error("Error al procesar salida de vehiculos proveedores:", error);
+    }
+}
+
 function abrirImagenesRegistroVehiculosProveedores(registroId, info = {}) {
     if (typeof window.abrirImagenesRegistroModal !== "function") {
         window.alert("No se pudo abrir el visor de imagenes.");
@@ -304,6 +333,21 @@ async function cargarActivos() {
                 : "N/A";
             const fechaIngreso = fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
+            const payloadSalida = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni,
+                nombreCompleto,
+                proveedor,
+                placa,
+                tipo,
+                lote,
+                cantidad,
+                procedencia,
+                observacion,
+                fechaIngreso,
+                horaIngreso,
+                guardiaIngreso
+            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
@@ -316,7 +360,7 @@ async function cargarActivos() {
             html += `<td>${procedencia}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
-            html += `<button class="btn-danger btn-small" onclick="irASalida(${s.id}, '${dni}', '${nombreCompleto.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${proveedor.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${placa}', '${tipo}', '${lote}', '${cantidad}', '${procedencia.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${observacion.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${fechaIngreso}', '${horaIngreso}', '${guardiaIngreso}')">Salida</button> `;
+            html += `<button class="btn-danger btn-small" onclick="irASalidaDesdePayload('${payloadSalida}')">Salida</button> `;
             html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroVehiculosProveedores(${s.id}, { dni: '${dni.replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}', placa: '${placa.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
             html += '</td>';
             html += '</tr>';
@@ -328,18 +372,6 @@ async function cargarActivos() {
     } catch (error) {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
-}
-
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
-}
-
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
 }
 
 function combinarFechaHoraLocal(fechaIso, horaTexto) {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Security.Claims;
 using System.Text.Json;
@@ -63,8 +64,7 @@ namespace WebApplication1.Controllers
 
         private int? ExtractUsuarioIdFromToken()
         {
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            return UserClaimsHelper.GetUserId(User);
         }
 
         private async Task<Models.OperacionDetalle?> ObtenerProveedorActivo(string dni, int? proveedorSalidaId = null)
@@ -87,16 +87,9 @@ namespace WebApplication1.Controllers
             return candidatos.FirstOrDefault(ProveedorDisponibleParaDerivacion);
         }
 
-        private static string? LeerString(JsonElement root, string propiedad)
-        {
-            return root.TryGetProperty(propiedad, out var valor) && valor.ValueKind == JsonValueKind.String
-                ? valor.GetString()
-                : null;
-        }
-
         private static string LeerEstadoProveedor(JsonElement root)
         {
-            var estado = LeerString(root, "estadoActual");
+            var estado = JsonElementHelper.GetString(root, "estadoActual");
             return string.IsNullOrWhiteSpace(estado) ? "EnMina" : estado;
         }
 

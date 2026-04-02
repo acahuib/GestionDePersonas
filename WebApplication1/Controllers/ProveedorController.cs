@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Text.Json;
 using System.Security.Claims;
@@ -48,9 +49,7 @@ namespace WebApplication1.Controllers
 
         private static string? LeerString(JsonElement root, string propiedad)
         {
-            return root.TryGetProperty(propiedad, out var valor) && valor.ValueKind == JsonValueKind.String
-                ? valor.GetString()
-                : null;
+            return JsonElementHelper.GetString(root, propiedad);
         }
 
         private static string LeerEstadoActual(JsonElement root)
@@ -61,17 +60,7 @@ namespace WebApplication1.Controllers
 
         private static DateTime? LeerDateTime(JsonElement root, string propiedad)
         {
-            if (!root.TryGetProperty(propiedad, out var valor) || valor.ValueKind == JsonValueKind.Null)
-                return null;
-
-            try
-            {
-                return valor.GetDateTime();
-            }
-            catch
-            {
-                return null;
-            }
+            return JsonElementHelper.GetDateTime(root, propiedad);
         }
 
         private static bool EstaFueraTemporal(JsonElement datosActuales)
@@ -192,8 +181,7 @@ namespace WebApplication1.Controllers
                 // Si persona ya existe, se usa el nombre de la tabla
                 // ===== FIN NUEVO =====
 
-                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                int? usuarioId = UserClaimsHelper.GetUserId(User);
                 var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
 
                 var guardiaNombre = usuarioId.HasValue
@@ -290,8 +278,7 @@ namespace WebApplication1.Controllers
             if (estadoActual == "FueraTemporal")
                 return BadRequest("Este proveedor ya está fuera. Registre el ingreso de retorno.");
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -378,8 +365,7 @@ namespace WebApplication1.Controllers
             if (!EstaFueraTemporal(datosActuales))
                 return BadRequest("Solo se puede registrar ingreso si el proveedor está fuera temporalmente.");
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -492,8 +478,7 @@ namespace WebApplication1.Controllers
             if (!EstaFueraTemporal(datosActuales))
                 return BadRequest("Solo se puede cancelar retorno si el proveedor está fuera temporalmente.");
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -567,8 +552,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
             var guardiaNombre = usuarioId.HasValue
                 ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
@@ -737,8 +721,7 @@ namespace WebApplication1.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                int? usuarioId = UserClaimsHelper.GetUserId(User);
 
                 // ===== Crear Movimiento con fecha manual =====
                 var movimiento = new Models.Movimiento

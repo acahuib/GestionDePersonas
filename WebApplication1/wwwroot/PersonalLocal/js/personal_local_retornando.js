@@ -132,8 +132,13 @@ function irAControlBienes(dni, nombre) {
     window.location.href = `/ControlBienes/html/control_bienes.html?${params.toString()}`;
 }
 
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || "N/A"}</span><span class="hora-linea">${horaTexto || "N/A"}</span></div>`;
+function irAControlBienesDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irAControlBienes(datos.dni, datos.nombre);
+    } catch (error) {
+        console.error("Error al abrir Control de Bienes (retornando):", error);
+    }
 }
 
 async function cargarActivosRetornando() {
@@ -206,6 +211,10 @@ async function cargarActivosRetornando() {
         activos.forEach((s) => {
             const dni = (s.dni || "").trim();
             const nombre = s.nombreCompleto || "N/A";
+            const payloadControlBienes = encodeURIComponent(JSON.stringify({
+                dni,
+                nombre
+            }));
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
             const horaIngreso = horaIngresoValue
                 ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })
@@ -217,7 +226,7 @@ async function cargarActivosRetornando() {
             html += `<td>${nombre}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
-            html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
+            html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
             html += '<span class="muted">Sin salida en este cuaderno</span>';
             html += '</td>';
             html += '</tr>';
@@ -234,11 +243,3 @@ document.addEventListener("DOMContentLoaded", () => {
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
 });
-
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -181,8 +182,7 @@ namespace WebApplication1.Controllers
                 }
             }
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
 
             string? guardiaNombre = null;
@@ -678,19 +678,19 @@ namespace WebApplication1.Controllers
                     if (string.IsNullOrWhiteSpace(descripcion))
                         continue;
 
-                    var id = LeerString(bien, "id");
-                    var fechaIngreso = LeerFecha(bien, "fechaIngreso");
-                    var fechaSalida = LeerFecha(bien, "fechaSalida");
-                    var estado = LeerString(bien, "estado");
+                    var id = JsonElementHelper.GetString(bien, "id");
+                    var fechaIngreso = JsonElementHelper.GetDateTime(bien, "fechaIngreso");
+                    var fechaSalida = JsonElementHelper.GetDateTime(bien, "fechaSalida");
+                    var estado = JsonElementHelper.GetString(bien, "estado");
                     var estaRetirado = string.Equals(estado, EstadoRetirado, StringComparison.OrdinalIgnoreCase) || fechaSalida.HasValue;
 
                     resultado.Add(new BienControlEstado
                     {
                         Id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id,
                         Descripcion = descripcion.Trim(),
-                        Marca = LeerString(bien, "marca"),
-                        Serie = LeerString(bien, "serie"),
-                        Cantidad = LeerInt(bien, "cantidad") ?? 1,
+                        Marca = JsonElementHelper.GetString(bien, "marca"),
+                        Serie = JsonElementHelper.GetString(bien, "serie"),
+                        Cantidad = JsonElementHelper.GetInt(bien, "cantidad") ?? 1,
                         FechaIngreso = fechaIngreso,
                         FechaSalida = fechaSalida,
                         Estado = estaRetirado ? EstadoRetirado : EstadoActivo
@@ -707,36 +707,17 @@ namespace WebApplication1.Controllers
 
         private static DateTime? LeerFecha(JsonElement element, string propiedad)
         {
-            if (!element.TryGetProperty(propiedad, out var valor))
-                return null;
-
-            if (valor.ValueKind == JsonValueKind.String &&
-                DateTime.TryParse(valor.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
-                return parsed;
-
-            return null;
+            return JsonElementHelper.GetDateTime(element, propiedad);
         }
 
         private static int? LeerInt(JsonElement element, string propiedad)
         {
-            if (!element.TryGetProperty(propiedad, out var valor))
-                return null;
-
-            if (valor.ValueKind == JsonValueKind.Number && valor.TryGetInt32(out var numero))
-                return numero;
-
-            if (valor.ValueKind == JsonValueKind.String && int.TryParse(valor.GetString(), out var numeroTexto))
-                return numeroTexto;
-
-            return null;
+            return JsonElementHelper.GetInt(element, propiedad);
         }
 
         private static string? LeerString(JsonElement element, string propiedad)
         {
-            if (!element.TryGetProperty(propiedad, out var valor) || valor.ValueKind != JsonValueKind.String)
-                return null;
-
-            return valor.GetString();
+            return JsonElementHelper.GetString(element, propiedad);
         }
 
         private static string ObtenerTipoPersonaLocalDesdeJson(string datosJson)
@@ -770,8 +751,7 @@ namespace WebApplication1.Controllers
             if (movimiento == null)
                 return BadRequest("Movimiento no encontrado");
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             var salida = await _salidasService.CrearSalidaDetalleFromDto(dto, usuarioId);
 
@@ -867,8 +847,7 @@ namespace WebApplication1.Controllers
                 }
             }
 
-            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
 
             await _salidasService.ActualizarSalidaDetalle(
                 id,
@@ -901,29 +880,22 @@ namespace WebApplication1.Controllers
                     if (!string.Equals(tipo, "Proveedor", StringComparison.OrdinalIgnoreCase))
                         return datosJson;
 
-                    string? LeerString(string prop)
-                    {
-                        return datosJson.TryGetProperty(prop, out var value) && value.ValueKind == JsonValueKind.String
-                            ? value.GetString()
-                            : null;
-                    }
-
                     return JsonSerializer.SerializeToElement(new
                     {
-                        procedencia = LeerString("procedencia"),
-                        destino = LeerString("destino"),
-                        guardiaIngreso = LeerString("guardiaIngreso"),
-                        guardiaSalida = LeerString("guardiaSalida"),
-                        observacion = LeerString("observacion"),
-                        estadoActual = LeerString("estadoActual"),
+                        procedencia = JsonElementHelper.GetString(datosJson, "procedencia"),
+                        destino = JsonElementHelper.GetString(datosJson, "destino"),
+                        guardiaIngreso = JsonElementHelper.GetString(datosJson, "guardiaIngreso"),
+                        guardiaSalida = JsonElementHelper.GetString(datosJson, "guardiaSalida"),
+                        observacion = JsonElementHelper.GetString(datosJson, "observacion"),
+                        estadoActual = JsonElementHelper.GetString(datosJson, "estadoActual"),
                         ultimaSalidaTemporal = datosJson.TryGetProperty("ultimaSalidaTemporal", out var ultimaSalidaTemporal)
                             ? ultimaSalidaTemporal
                             : (JsonElement?)null,
                         ultimoIngresoRetorno = datosJson.TryGetProperty("ultimoIngresoRetorno", out var ultimoIngresoRetorno)
                             ? ultimoIngresoRetorno
                             : (JsonElement?)null,
-                        guardiaUltimaSalidaTemporal = LeerString("guardiaUltimaSalidaTemporal"),
-                        guardiaUltimoIngresoRetorno = LeerString("guardiaUltimoIngresoRetorno")
+                        guardiaUltimaSalidaTemporal = JsonElementHelper.GetString(datosJson, "guardiaUltimaSalidaTemporal"),
+                        guardiaUltimoIngresoRetorno = JsonElementHelper.GetString(datosJson, "guardiaUltimoIngresoRetorno")
                     });
                 }
 

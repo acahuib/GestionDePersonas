@@ -204,6 +204,80 @@ function irAControlBienes(dni, nombre) {
     window.location.href = `/ControlBienes/html/control_bienes.html?${params.toString()}`;
 }
 
+function irAControlBienesDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irAControlBienes(datos.dni, datos.nombre);
+    } catch (error) {
+        console.error("Error al abrir Control de Bienes:", error);
+    }
+}
+
+function irASalidaAlmuerzoDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irASalidaAlmuerzo(
+            datos.salidaId,
+            datos.dni,
+            datos.nombre,
+            datos.horaIngreso,
+            datos.fechaIngreso,
+            datos.guardiaIngreso,
+            datos.observacion
+        );
+    } catch (error) {
+        console.error("Error al abrir salida almuerzo:", error);
+    }
+}
+
+function irAIngresoAlmuerzoDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irAIngresoAlmuerzo(
+            datos.salidaId,
+            datos.dni,
+            datos.nombre,
+            datos.horaIngreso,
+            datos.fechaIngreso,
+            datos.horaSalidaAlmuerzo,
+            datos.fechaSalidaAlmuerzo,
+            datos.guardiaIngreso,
+            datos.guardiaSalidaAlmuerzo,
+            datos.observacion
+        );
+    } catch (error) {
+        console.error("Error al abrir ingreso almuerzo:", error);
+    }
+}
+
+function irASalidaFinalDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irASalidaFinal(
+            datos.salidaId,
+            datos.dni,
+            datos.nombre,
+            datos.horaIngreso,
+            datos.fechaIngreso,
+            datos.horaSalidaAlmuerzo,
+            datos.horaEntradaAlmuerzo,
+            datos.guardiaIngreso,
+            datos.observacion
+        );
+    } catch (error) {
+        console.error("Error al abrir salida final:", error);
+    }
+}
+
+function cerrarRegistroDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        personalLocalCierre?.cerrarRegistroPersonalLocal(datos.id, datos.dni, datos.nombre);
+    } catch (error) {
+        console.error("Error al cerrar registro:", error);
+    }
+}
+
 // Cargar personal activo (con ingreso, sin salida final)
 async function cargarActivos() {
     const container = document.getElementById("lista-activos");
@@ -313,6 +387,58 @@ async function cargarActivos() {
 
             const tieneSalidaAlmuerzo = datos.horaSalidaAlmuerzo !== null && datos.horaSalidaAlmuerzo !== undefined;
             const tieneEntradaAlmuerzo = datos.horaEntradaAlmuerzo !== null && datos.horaEntradaAlmuerzo !== undefined;
+            const payloadControlBienes = encodeURIComponent(JSON.stringify({
+                dni,
+                nombre
+            }));
+            const payloadCierre = encodeURIComponent(JSON.stringify({
+                id: s.id,
+                dni,
+                nombre
+            }));
+            const payloadSalidaAlmuerzo = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni,
+                nombre,
+                horaIngreso,
+                fechaIngreso,
+                guardiaIngreso,
+                observacion
+            }));
+            const payloadIngresoAlmuerzo = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni,
+                nombre,
+                horaIngreso,
+                fechaIngreso,
+                horaSalidaAlmuerzo,
+                fechaSalidaAlmuerzo,
+                guardiaIngreso,
+                guardiaSalidaAlmuerzo: datos.guardiaSalidaAlmuerzo || "",
+                observacion
+            }));
+            const payloadSalidaDirecta = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni,
+                nombre,
+                horaIngreso,
+                fechaIngreso,
+                horaSalidaAlmuerzo: "",
+                horaEntradaAlmuerzo: "",
+                guardiaIngreso,
+                observacion
+            }));
+            const payloadSalidaFinal = encodeURIComponent(JSON.stringify({
+                salidaId: s.id,
+                dni,
+                nombre,
+                horaIngreso,
+                fechaIngreso,
+                horaSalidaAlmuerzo,
+                horaEntradaAlmuerzo,
+                guardiaIngreso,
+                observacion
+            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
@@ -321,20 +447,20 @@ async function cargarActivos() {
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';
-            html += `<button class="btn-secondary btn-small" onclick="irAControlBienes('${dni}', '${nombre.replace(/'/g, "\\'")}')">Registrar Bienes</button> `;
-            html += `<button class="btn-inline btn-small" onclick="personalLocalCierre?.cerrarRegistroPersonalLocal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}')">Cerrar registro</button> `;
+            html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
+            html += `<button class="btn-inline btn-small" onclick="cerrarRegistroDesdePayload('${payloadCierre}')">Cerrar registro</button> `;
             
             // Botones según estado de almuerzo
             if (!tieneSalidaAlmuerzo) {
                 // No ha salido a almuerzo: puede salir a almuerzo O salir directo
-                html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">Salida Almuerzo</button> `;
-                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '', '', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">Salida</button>`;
+                html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzoDesdePayload('${payloadSalidaAlmuerzo}')">Salida Almuerzo</button> `;
+                html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaDirecta}')">Salida</button>`;
             } else if (!tieneEntradaAlmuerzo) {
                 // Ha salido a almuerzo pero no ha regresado: debe registrar ingreso de almuerzo
-                html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzo(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${fechaSalidaAlmuerzo}', '${guardiaIngreso}', '${datos.guardiaSalidaAlmuerzo || ""}', '${observacion.replace(/'/g, "\\'")}')">Ingreso Almuerzo</button>`;
+                html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzoDesdePayload('${payloadIngresoAlmuerzo}')">Ingreso Almuerzo</button>`;
             } else {
                 // Ya regresó del almuerzo: solo puede salir
-                html += `<button class="btn-danger btn-small" onclick="irASalidaFinal(${s.id}, '${dni}', '${nombre.replace(/'/g, "\\'")}', '${horaIngreso}', '${fechaIngreso}', '${horaSalidaAlmuerzo}', '${horaEntradaAlmuerzo}', '${guardiaIngreso}', '${observacion.replace(/'/g, "\\'")}')">+Salida</button>`;
+                html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaFinal}')">+Salida</button>`;
             }
             
             html += '</td>';
@@ -349,19 +475,7 @@ async function cargarActivos() {
     }
 }
 
-function construirFechaHoraCelda(fechaTexto, horaTexto) {
-    return `<div class="fecha-hora-celda"><span class="fecha-linea">${fechaTexto || 'N/A'}</span><span class="hora-linea">${horaTexto || 'N/A'}</span></div>`;
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
 });
-
-function obtenerFechaLocalISO() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
