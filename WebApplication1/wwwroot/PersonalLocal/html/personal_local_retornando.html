@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -29,6 +29,8 @@
 
         <div class="form-card">
             <h3>Registrar Ingreso de Personal Retornando</h3>
+            <p class="muted" style="margin-top: 8px;">Modo escaner: lea DNI y registre. Nombre, fecha y hora se completan automaticamente.</p>
+            <p class="muted" style="margin-top: 6px;">Fecha/Hora actual: <strong id="fecha-hora-actual"></strong></p>
 
             <form id="form-ingreso-retornando" onsubmit="event.preventDefault(); registrarIngresoRetornando();">
                 <div class="form-row">
@@ -47,25 +49,17 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" id="grupo-nombre-manual" style="display:none;">
                         <label for="nombreApellidos">Nombre y Apellidos:</label>
                         <input
                             type="text"
                             id="nombreApellidos"
-                            placeholder="Solo si DNI no está registrado"
-                            onkeypress="if(event.key==='Enter'){event.preventDefault(); document.getElementById('observaciones').focus();}">
+                            placeholder="Solo si DNI no esta registrado"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault(); registrarIngresoRetornando();}">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="observaciones">Observaciones:</label>
-                    <textarea
-                        id="observaciones"
-                        rows="2"
-                        placeholder="Opcional"></textarea>
-                </div>
-
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label for="horaIngreso">Hora de Ingreso:</label>
                     <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
                     <input
@@ -124,3 +118,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
+

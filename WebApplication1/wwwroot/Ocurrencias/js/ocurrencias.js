@@ -106,7 +106,7 @@ function cambiarTipoOcurrencia() {
         if (personaInfo) personaInfo.style.display = "none";
         if (nombreInput) {
             nombreInput.disabled = false;
-            nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
+            nombreInput.placeholder = "Nombre o descripción de la persona";
         }
     }
 
@@ -130,11 +130,11 @@ function construirDescripcionPorTipo() {
         const ocurrencia = leerValor("ocurrencia");
 
         if (!ocurrencia) {
-            return { ok: false, error: "La descripciÃ³n de ocurrencia es obligatoria" };
+            return { ok: false, error: "La descripción de ocurrencia es obligatoria" };
         }
 
         if (!validarDniOpcional(dni)) {
-            return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
+            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
         }
 
         return {
@@ -156,7 +156,7 @@ function construirDescripcionPorTipo() {
         const observacion = leerValor("vehiculoObservacion");
 
         if (!validarDniOpcional(dni)) {
-            return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
+            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
         }
 
         if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
@@ -193,7 +193,7 @@ function construirDescripcionPorTipo() {
     const observacion = leerValor("encapsuladoObservacion");
 
     if (!validarDniOpcional(dni)) {
-        return { ok: false, error: "DNI debe tener 8 dÃ­gitos numÃ©ricos" };
+        return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
     }
 
     if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
@@ -239,7 +239,7 @@ function limpiarFormularioPorTipo() {
     if (personaInfo) personaInfo.style.display = "none";
     if (nombreInput) {
         nombreInput.disabled = false;
-        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
+        nombreInput.placeholder = "Nombre o descripción de la persona";
     }
 
     const inputImagenes = obtenerInputImagenes();
@@ -466,7 +466,7 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         nombreInput.disabled = false;
         nombreInput.value = "";
-        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
+        nombreInput.placeholder = "Nombre o descripción de la persona";
         return;
     }
 
@@ -486,7 +486,7 @@ async function buscarPersonaPorDni() {
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreInput.disabled = false;
-            nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
+            nombreInput.placeholder = "Nombre o descripción de la persona";
             nombreInput.focus();
         }
     } catch (error) {
@@ -494,7 +494,7 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreInput.disabled = false;
-        nombreInput.placeholder = "Nombre o descripciÃ³n de la persona";
+        nombreInput.placeholder = "Nombre o descripción de la persona";
     }
 }
 
@@ -751,6 +751,7 @@ async function cargarActivos() {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
+
 
 
 

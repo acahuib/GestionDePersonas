@@ -68,10 +68,10 @@ namespace WebApplication1.Controllers
                 .FirstOrDefaultAsync();
 
             if (ultimoMovimiento == null)
-                return BadRequest("No se puede registrar DÃ­as Libres: la persona no tiene movimiento previo de entrada.");
+                return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
 
             if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("No se puede registrar DÃ­as Libres: la persona no estÃ¡ dentro de la mina (Ãºltimo movimiento no es Entrada).");
+                return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
 
             var persona = await _context.Personas
                 .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -154,5 +154,6 @@ namespace WebApplication1.Controllers
 
     }
 }
+
 
 

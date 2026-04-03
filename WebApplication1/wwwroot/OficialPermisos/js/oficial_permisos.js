@@ -17,14 +17,14 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`ðŸ“¡ Response status: ${response.status}`);
+        console.log(`📡 Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`âœ… Persona encontrada:`, personaEncontrada);
+            console.log(`✅ Persona encontrada:`, personaEncontrada);
             
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
@@ -35,7 +35,7 @@ async function buscarPersonaPorDni() {
             
             document.getElementById("deDonde").focus();
         } else if (response.status === 404) {
-            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -43,11 +43,11 @@ async function buscarPersonaPorDni() {
             nombreCompletoInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`âŒ Error del servidor: ${error}`);
+            console.error(`❌ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("âŒ Error al buscar persona:", error);
+        console.error("❌ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -71,13 +71,13 @@ async function registrarSalida() {
 
     if (!dni || !deDonde || !tipo || !quienAutoriza) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, De DÃ³nde, Tipo y QuiÃ©n Autoriza";
+        mensaje.innerText = "Complete DNI, De Dónde, Tipo y Quién Autoriza";
         return;
     }
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
@@ -243,7 +243,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>De DÃ³nde</th>';
+        html += '<th>De Dónde</th>';
         html += '<th>Tipo</th>';
         html += '<th>Autorizado por</th>';
         html += '<th>Fecha / Hora Salida</th>';
@@ -307,4 +307,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

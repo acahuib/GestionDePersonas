@@ -157,11 +157,11 @@ namespace WebApplication1.Controllers
                 {
                     proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, dto.ProveedorSalidaId);
                     if (proveedorActivo == null)
-                        return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a HabitaciÃ³n.");
+                        return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a Habitación.");
                 }
 
                 if (await TieneHabitacionActiva(dniNormalizado))
-                    return BadRequest("Este proveedor ya tiene una habitaciÃ³n activa.");
+                    return BadRequest("Este proveedor ya tiene una habitación activa.");
 
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -207,7 +207,7 @@ namespace WebApplication1.Controllers
 
                 if (!movimientoIdReferencia.HasValue || movimientoIdReferencia.Value <= 0)
                 {
-                    return BadRequest("No se encontrÃ³ un movimiento base para el DNI indicado. Registre primero su ingreso/salida en el cuaderno correspondiente.");
+                    return BadRequest("No se encontró un movimiento base para el DNI indicado. Registre primero su ingreso/salida en el cuaderno correspondiente.");
                 }
 
                 var salidaDetalle = await _salidasService.CrearSalidaDetalle(
@@ -224,10 +224,10 @@ namespace WebApplication1.Controllers
                         guardiaSalida = (string?)null
                     },
                     usuarioId,
-                    ahoraLocal,          // horaIngreso (momento de ingreso a habitaciÃ³n)
+                    ahoraLocal,          // horaIngreso (momento de ingreso a habitación)
                     fechaActual,         // fechaIngreso
-                    null,                // horaSalida (se llenarÃ¡ despuÃ©s con PUT)
-                    null,                // fechaSalida (se llenarÃ¡ despuÃ©s con PUT)
+                    null,                // horaSalida (se llenará después con PUT)
+                    null,                // fechaSalida (se llenará después con PUT)
                     dniNormalizado       // DNI va a columna
                 );
 
@@ -240,8 +240,8 @@ namespace WebApplication1.Controllers
                     new
                     {
                         mensaje = esInformativoPersonalMina
-                            ? "Ingreso informativo a HabitaciÃ³n registrado"
-                            : "Ingreso a HabitaciÃ³n Proveedor registrado",
+                            ? "Ingreso informativo a Habitación registrado"
+                            : "Ingreso a Habitación Proveedor registrado",
                         salidaId = salidaDetalle.Id,
                         tipoOperacion = "HabitacionProveedor",
                         tipoIngreso,
@@ -314,13 +314,13 @@ namespace WebApplication1.Controllers
                         usuarioId,
                         null,               // horaIngreso (no se actualiza)
                         null,               // fechaIngreso (no se actualiza)
-                        ahoraLocal,         // horaSalida (momento de salida de habitaciÃ³n)
+                        ahoraLocal,         // horaSalida (momento de salida de habitación)
                         fechaActual         // fechaSalida
                     );
 
                     return Ok(new
                     {
-                        mensaje = "Salida de HabitaciÃ³n Proveedor registrada",
+                        mensaje = "Salida de Habitación Proveedor registrada",
                         salidaId = id,
                         guardiaSalida = nombreGuardia,
                         salidaProveedorRegistrada = false,
@@ -357,5 +357,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

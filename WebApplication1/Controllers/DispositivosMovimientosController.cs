@@ -39,7 +39,7 @@ namespace WebApplication1.Controllers
                     d.Activo);
 
             if (dispositivo == null)
-                return Unauthorized("Dispositivo no vÃ¡lido, inactivo o API key incorrecta.");
+                return Unauthorized("Dispositivo no válido, inactivo o API key incorrecta.");
 
             var persona = await _context.Personas.FindAsync(dto.Dni);
             if (persona == null)
@@ -84,7 +84,7 @@ namespace WebApplication1.Controllers
                 var res = await validator.ValidateAsync(dtoNormal);
                 if (!res.IsValid)
                 {
-                    return BadRequest(res.ErrorMessage ?? "Movimiento invÃ¡lido.");
+                    return BadRequest(res.ErrorMessage ?? "Movimiento inválido.");
                 }
             }
 
@@ -92,7 +92,7 @@ namespace WebApplication1.Controllers
                 dto.Dni,
                 dtoNormal.PuntoControlId,
                 dtoNormal.TipoMovimiento,
-                null  // Registrado por dispositivo (escÃ¡ner)
+                null  // Registrado por dispositivo (escáner)
             );
 
             return Ok(new
@@ -104,5 +104,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

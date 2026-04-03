@@ -51,7 +51,7 @@ namespace WebApplication1.Controllers
             try
             {
                 if (dto.HoraSalida.HasValue && dto.HoraIngreso.HasValue)
-                    return BadRequest("OficialPermisos: solo envÃ­e horaSalida O horaIngreso, no ambos");
+                    return BadRequest("OficialPermisos: solo envíe horaSalida O horaIngreso, no ambos");
 
                 if (!dto.HoraSalida.HasValue && !dto.HoraIngreso.HasValue)
                     return BadRequest("OficialPermisos: debe enviar horaSalida O horaIngreso");
@@ -75,7 +75,7 @@ namespace WebApplication1.Controllers
                         string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
 
                     if (!estaDentro)
-                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (Ãºltimo movimiento no es Entrada).");
+                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (último movimiento no es Entrada).");
                 }
 
                 var dniNormalizado = dto.Dni.Trim();
@@ -324,5 +324,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

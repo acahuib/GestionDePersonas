@@ -44,7 +44,7 @@ function cargarDatos() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontrÃ³ el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 
@@ -79,7 +79,7 @@ async function registrarSalida() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontrÃ³ el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 
@@ -125,8 +125,8 @@ async function registrarSalida() {
 
         mensaje.className = 'success';
         mensaje.innerText = modoComplemento === 'ingreso'
-            ? 'âœ… INGRESO registrado correctamente'
-            : 'âœ… SALIDA registrada correctamente';
+            ? '✅ INGRESO registrado correctamente'
+            : '✅ SALIDA registrada correctamente';
 
         setTimeout(() => {
             window.location.href = 'ocurrencias.html?refresh=1';
@@ -149,4 +149,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

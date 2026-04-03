@@ -115,7 +115,7 @@ async function registrarDiasLibre(e) {
     }
 
     if (dni.length !== 8 || isNaN(dni)) {
-        alert('El DNI debe tener 8 dÃ­gitos numÃ©ricos');
+        alert('El DNI debe tener 8 dígitos numéricos');
         return;
     }
 
@@ -257,4 +257,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

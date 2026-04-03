@@ -27,7 +27,7 @@ namespace WebApplication1.Controllers
             var dniNormalizado = dni.Trim();
             
             if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI debe tener 8 dÃ­gitos numÃ©ricos" });
+                return BadRequest(new { mensaje = "DNI debe tener 8 dígitos numéricos" });
 
             var persona = await _context.Personas
                 .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -42,12 +42,12 @@ namespace WebApplication1.Controllers
         public async Task<ActionResult<IEnumerable<Persona>>> BuscarPorDni([FromQuery] string dni)
         {
             if (string.IsNullOrWhiteSpace(dni))
-                return BadRequest(new { mensaje = "DNI es requerido para bÃºsqueda" });
+                return BadRequest(new { mensaje = "DNI es requerido para búsqueda" });
 
             var dniNormalizado = dni.Trim();
 
             if (!dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI debe contener solo nÃºmeros" });
+                return BadRequest(new { mensaje = "DNI debe contener solo números" });
 
             var personas = await _context.Personas
                 .Where(p => p.Dni.StartsWith(dniNormalizado))
@@ -79,5 +79,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

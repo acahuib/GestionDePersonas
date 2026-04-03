@@ -121,7 +121,7 @@ async function registrarSalidaHotel() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
@@ -188,7 +188,7 @@ async function registrarSalidaHotel() {
 async function registrarIngresoHotel(id) {
     if (!id) return;
 
-    const confirmar = await window.appDialog.confirm("Â¿Registrar ingreso (retorno) desde hotel para este proveedor?", "Confirmar ingreso");
+    const confirmar = await window.appDialog.confirm("¿Registrar ingreso (retorno) desde hotel para este proveedor?", "Confirmar ingreso");
     if (!confirmar) return;
 
     try {
@@ -243,7 +243,7 @@ async function cerrarDefinitivoHotel(id) {
         return;
     }
 
-    const confirmar = await window.appDialog.confirm("Este registro se cerrara sin retorno. Â¿Desea continuar?", "Confirmar cierre");
+    const confirmar = await window.appDialog.confirm("Este registro se cerrara sin retorno. ¿Desea continuar?", "Confirmar cierre");
     if (!confirmar) return;
 
     try {
@@ -291,7 +291,7 @@ async function cargarPendientesIngreso() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo HabitaciÃ³n</th><th>NÃºmero Personas</th><th>Fecha / Hora Salida</th><th>Guardia Salida</th><th>Retorno</th>';
+        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo Habitación</th><th>Número Personas</th><th>Fecha / Hora Salida</th><th>Guardia Salida</th><th>Retorno</th>';
         html += '</tr></thead><tbody>';
 
         pendientes
@@ -315,7 +315,7 @@ async function cargarPendientesIngreso() {
                 html += `<td>${datos.guardiaSalida || "-"}</td>`;
                 html += '<td style="display:flex; gap:6px; flex-wrap:wrap;">';
                 html += `<select id="hotel-destino-${item.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoHotel("EN ESPERA")}</select>`;
-                html += `<input type="text" id="hotel-observacion-${item.id}" class="retorno-input retorno-input-observacion" placeholder="ObservaciÃ³n (opcional)">`;
+                html += `<input type="text" id="hotel-observacion-${item.id}" class="retorno-input retorno-input-observacion" placeholder="Observación (opcional)">`;
                 html += `<button class="btn-success btn-small" onclick="registrarIngresoHotel(${item.id})">Ingreso (retorno)</button>`;
                 html += `<button class="btn-danger btn-small" onclick="cerrarDefinitivoHotel(${item.id})">Cerrar sin retorno</button>`;
                 html += '</td>';
@@ -362,3 +362,4 @@ function asegurarEstilosRetornoHotel() {
 
     document.head.appendChild(style);
 }
+

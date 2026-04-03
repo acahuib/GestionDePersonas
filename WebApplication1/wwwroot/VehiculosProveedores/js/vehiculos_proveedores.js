@@ -17,18 +17,18 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`ðŸ” Buscando DNI en tabla Personas y Ãºltimo registro: '${dni}'`);
+        console.log(`🔍 Buscando DNI en tabla Personas y último registro: '${dni}'`);
 
         const [response, ultimoResponse] = await Promise.all([
             fetchAuth(`${API_BASE}/personas/${dni}`),
             fetchAuth(`${API_BASE}/vehiculos-proveedores/ultimo/${dni}`)
         ]);
         
-        console.log(`ðŸ“¡ Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
+        console.log(`📡 Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`âœ… Persona encontrada:`, personaEncontrada);
+            console.log(`✅ Persona encontrada:`, personaEncontrada);
             
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
@@ -37,20 +37,20 @@ async function buscarPersonaPorDni() {
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
         } else if (response.status === 404) {
-            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
             nombreCompletoInput.placeholder = "Nombre completo del conductor";
         } else {
             const error = await readApiError(response);
-            console.error(`âŒ Error del servidor: ${error}`);
+            console.error(`❌ Error del servidor: ${error}`);
             throw new Error(error);
         }
 
         if (ultimoResponse.ok) {
             const ultimo = await ultimoResponse.json();
-            console.log(`ðŸ“‹ Precargando datos del Ãºltimo registro:`, ultimo);
+            console.log(`📋 Precargando datos del último registro:`, ultimo);
             if (ultimo.placa)       document.getElementById("placa").value = ultimo.placa;
             if (ultimo.tipo)        document.getElementById("tipo").value = ultimo.tipo;
             if (ultimo.lote)        document.getElementById("lote").value = ultimo.lote;
@@ -63,7 +63,7 @@ async function buscarPersonaPorDni() {
         document.getElementById("placa").focus();
 
     } catch (error) {
-        console.error("âŒ Error al buscar persona:", error);
+        console.error("❌ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -97,7 +97,7 @@ async function registrarEntrada() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
@@ -247,13 +247,13 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehÃ­culos activos");
+            throw new Error(error || "Error al cargar vehículos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
             return;
         }
 
@@ -272,7 +272,7 @@ async function cargarActivos() {
             });
 
         if (activos.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
             return;
         }
 
@@ -364,6 +364,7 @@ function combinarFechaHoraLocal(fechaIso, horaTexto) {
         ? `${fechaIso}T${horaLimpia}:00`
         : `${fechaIso}T${horaLimpia}`;
 }
+
 
 
 

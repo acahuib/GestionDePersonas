@@ -51,7 +51,7 @@ namespace WebApplication1.Controllers
             try
             {
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("VehiculosProveedores: solo envÃ­e horaIngreso O horaSalida, no ambos");
+                    return BadRequest("VehiculosProveedores: solo envíe horaIngreso O horaSalida, no ambos");
 
                 if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
                     return BadRequest("VehiculosProveedores: debe enviar horaIngreso O horaSalida");
@@ -284,5 +284,6 @@ namespace WebApplication1.Controllers
 
     }
 }
+
 
 

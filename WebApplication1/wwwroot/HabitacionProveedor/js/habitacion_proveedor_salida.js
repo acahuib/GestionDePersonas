@@ -51,7 +51,7 @@ async function registrarSalida() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = `âœ… ${data.mensaje}`;
+        mensaje.innerText = `✅ ${data.mensaje}`;
 
         setTimeout(() => {
             window.location.href = "habitacion_proveedor.html?refresh=1";
@@ -70,4 +70,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

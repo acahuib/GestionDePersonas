@@ -288,7 +288,7 @@ function valorDesdeCampo(el) {
         try {
             return JSON.parse(raw);
         } catch {
-            throw new Error(`JSON invÃ¡lido en campo ${el.getAttribute("data-dato-key")}`);
+            throw new Error(`JSON inválido en campo ${el.getAttribute("data-dato-key")}`);
         }
     }
 
@@ -344,7 +344,7 @@ async function cargarRegistro() {
     const titulo = document.getElementById("titulo-registro");
 
     if (!registroId) {
-        form.innerHTML = '<p class="text-center error">Falta parÃ¡metro id.</p>';
+        form.innerHTML = '<p class="text-center error">Falta parámetro id.</p>';
         return;
     }
 
@@ -414,7 +414,7 @@ async function guardarCambios() {
 
     if (!registroId) {
         mensaje.className = "error";
-        mensaje.innerText = "ID invÃ¡lido";
+        mensaje.innerText = "ID inválido";
         return;
     }
 
@@ -478,4 +478,5 @@ document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
     cargarRegistro();
 });
+
 

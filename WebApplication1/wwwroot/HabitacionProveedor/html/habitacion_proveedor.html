@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -75,7 +75,7 @@
 
         <label>Hora de Ingreso</label>
         <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
-        <input type="time" id="horaIngreso" placeholder="Hora actual por defecto (editable)">
+        <input type="text" id="horaIngreso" placeholder="HH:mm (24h)" inputmode="numeric" maxlength="5" autocomplete="off">
 
         <div>
             <button onclick="registrarIngreso()" class="btn-success btn-block">
@@ -111,18 +111,48 @@
 <script src="../../js/personas_autocomplete.js"></script>
 <script src="../js/habitacion_proveedor.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    verificarAutenticacion();
-    const hoy = (typeof fechaLocalIso === "function") ? fechaLocalIso() : new Date().toISOString().split("T")[0];
+function prellenarFechaHoraActualHabitacion() {
+    const hoy = (typeof obtenerFechaLocalISO === "function")
+        ? obtenerFechaLocalISO()
+        : new Date().toISOString().split("T")[0];
+    const horaActual = (typeof horaLocalHHmm === "function")
+        ? horaLocalHHmm()
+        : new Date().toTimeString().slice(0, 5);
+
     const fechaIngreso = document.getElementById("fechaIngreso");
-    if (fechaIngreso) fechaIngreso.value = hoy;
-    const horaIngreso = document.getElementById("horaIngreso");
-    if (horaIngreso && typeof horaLocalHHmm === "function" && !horaIngreso.value) {
-        horaIngreso.value = horaLocalHHmm();
+    if (fechaIngreso && !fechaIngreso.value) {
+        fechaIngreso.value = hoy;
     }
+
+    const horaIngreso = document.getElementById("horaIngreso");
+    if (horaIngreso && !horaIngreso.value) {
+        horaIngreso.value = horaActual;
+    }
+}
+
+async function cargarActivosConReintento() {
+    if (typeof cargarActivos !== "function") return;
+
+    await cargarActivos();
+
+    const lista = document.getElementById("lista-activos");
+    const sigueCargando = lista && /Cargando/i.test((lista.textContent || "").trim());
+    if (sigueCargando) {
+        setTimeout(() => {
+            cargarActivos();
+        }, 400);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof cargarPrefillDesdeProveedor === "function") {
+        cargarPrefillDesdeProveedor();
+    }
+    verificarAutenticacion();
+    prellenarFechaHoraActualHabitacion();
     crearSidebar();
     cargarPrefillDesdeProveedor();
-    cargarActivos();
+    cargarActivosConReintento();
 
     // Auto-actualizar lista cada 15 segundos
     setInterval(cargarActivos, 15000);
@@ -147,8 +177,19 @@ document.addEventListener("DOMContentLoaded", () => {
         dniId: "dni",
         nombreId: "nombreApellidos"
     });
+
+    const fechaIngreso = document.getElementById("fechaIngreso");
+    if (fechaIngreso) {
+        fechaIngreso.addEventListener("focus", prellenarFechaHoraActualHabitacion);
+    }
+
+    const horaIngreso = document.getElementById("horaIngreso");
+    if (horaIngreso) {
+        horaIngreso.addEventListener("focus", prellenarFechaHoraActualHabitacion);
+    }
 });
 </script>
 
 </body>
 </html>
+

@@ -39,12 +39,12 @@ const PLANTILLA_ENSERES_BASE = [
 let enseresItems = [];
 
 function obtenerMensajePlano(error) {
-    if (!error) return "No se pudo completar la operaciÃ³n.";
+    if (!error) return "No se pudo completar la operación.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operaciÃ³n.";
+    if (!base) return "No se pudo completar la operación.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operaciÃ³n.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
@@ -418,7 +418,7 @@ async function cargarUltimoRegistroEnseres() {
             cargarPlantillaBaseEnseres();
             if (mensaje) {
                 mensaje.className = "";
-                mensaje.innerText = "No hay registro previo con enseres. Se cargÃ³ la plantilla base.";
+                mensaje.innerText = "No hay registro previo con enseres. Se cargó la plantilla base.";
             }
             return;
         }
@@ -540,7 +540,7 @@ async function registrarEnseres() {
 
     if (objetos.length === 0) {
         mensaje.className = "error";
-        mensaje.innerText = "Debe registrar al menos un Ã­tem";
+        mensaje.innerText = "Debe registrar al menos un ítem";
         return;
     }
 
@@ -550,7 +550,7 @@ async function registrarEnseres() {
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "Revise los Ã­tems: nombre obligatorio y cantidad no negativa";
+        mensaje.innerText = "Revise los ítems: nombre obligatorio y cantidad no negativa";
         return;
     }
 
@@ -663,4 +663,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

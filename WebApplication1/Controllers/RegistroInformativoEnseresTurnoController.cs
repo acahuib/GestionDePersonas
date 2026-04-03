@@ -82,7 +82,6 @@ namespace WebApplication1.Controllers
                 })
                 .Where(o => !string.IsNullOrWhiteSpace(o.nombre))
                 .Where(o => o.nombre != "-")
-                .Where(o => o.nombre != "â€”")
                 .ToList();
 
             if (objetosNormalizados.Any(o => o.cantidad < 0))
@@ -100,7 +99,7 @@ namespace WebApplication1.Controllers
 
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId);
             if (usuario == null)
-                return Unauthorized("Usuario autenticado no vÃ¡lido");
+                return Unauthorized("Usuario autenticado no válido");
 
                         var dniGuardia = !string.IsNullOrWhiteSpace(usuario.Dni) &&
                                                          usuario.Dni.Trim().Length == 8 &&
@@ -113,7 +112,7 @@ namespace WebApplication1.Controllers
                                         : null;
 
                         if (string.IsNullOrWhiteSpace(dniGuardia))
-                                return BadRequest("El usuario autenticado no tiene un DNI vÃ¡lido configurado");
+                                return BadRequest("El usuario autenticado no tiene un DNI válido configurado");
 
             var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniGuardia);
             if (persona == null)
@@ -335,4 +334,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 

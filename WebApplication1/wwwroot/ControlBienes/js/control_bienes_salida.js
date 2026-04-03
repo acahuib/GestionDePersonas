@@ -126,7 +126,7 @@ async function registrarSalida() {
         const result = await response.json();
         const estado = result?.estado || "Salida registrada";
         mensaje.className = "success";
-        mensaje.innerText = `âœ… ${estado} para ${nombreCompleto || dni}`;
+        mensaje.innerText = `✅ ${estado} para ${nombreCompleto || dni}`;
 
         setTimeout(() => {
             window.location.href = "control_bienes.html";
@@ -145,4 +145,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

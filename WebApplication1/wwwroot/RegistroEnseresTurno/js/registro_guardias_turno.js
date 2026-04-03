@@ -22,12 +22,12 @@ const CONFIG_TURNOS_GUARDIAS = {
 let guardiasYaRegistrados = false;
 
 function obtenerMensajePlanoRGT(error) {
-    if (!error) return "No se pudo completar la operaciÃ³n.";
+    if (!error) return "No se pudo completar la operación.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operaciÃ³n.";
+    if (!base) return "No se pudo completar la operación.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operaciÃ³n.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
@@ -326,7 +326,7 @@ async function cargarRegistrosDia() {
                 ? new Date(r.fechaCreacion).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
                 : "-";
 
-            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">â€” registrado a las ${horaReg}</span></h4>`;
+            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">— registrado a las ${horaReg}</span></h4>`;
             html += '<div class="table-wrapper"><table class="table"><thead><tr><th>Puesto / Zona</th><th>Guardia</th></tr></thead><tbody>';
 
             if (guardiasGarita.length) {
@@ -355,4 +355,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 

@@ -6,10 +6,6 @@ function tieneValor(v) {
     return v !== null && v !== undefined && String(v).trim() !== "" && String(v).toLowerCase() !== "null";
 }
 
-function fechaLocalIso() {
-    return obtenerFechaLocalISO();
-}
-
 function horaLocalHHmm() {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
@@ -20,6 +16,30 @@ function horaLocalHHmm() {
 function construirDateTimeLocal(fecha, hora) {
     if (!fecha || !hora) return null;
     return `${fecha}T${hora}:00`;
+}
+
+function normalizarHoraHHmm(valor) {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const soloDigitos = texto.replace(/\D/g, "");
+    if (soloDigitos.length === 4) {
+        const hh = Number(soloDigitos.slice(0, 2));
+        const mm = Number(soloDigitos.slice(2, 4));
+        if (Number.isInteger(hh) && Number.isInteger(mm) && hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+            return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+        }
+    }
+
+    const match = texto.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (!match) return "";
+
+    const hh = Number(match[1]);
+    const mm = Number(match[2]);
+    if (!Number.isInteger(hh) || !Number.isInteger(mm)) return "";
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return "";
+
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 function asegurarEstilosTablaHabitacionesCompacta() {
@@ -55,15 +75,7 @@ function actualizarUIByTipoIngreso() {
     if (ayuda) ayuda.innerText = "Modo informativo: registro de habitación sin cierre espejo en Proveedores.";
 }
 
-async function cargarPrefillDesdeProveedor() {
-    const params = new URLSearchParams(window.location.search);
-    const proveedorSalidaId = params.get("proveedorSalidaId");
-    const dni = params.get("dni");
-    const nombreCompleto = params.get("nombreCompleto");
-    const origen = params.get("origen");
-
-    if (!proveedorSalidaId && !dni && !nombreCompleto && !origen) return;
-
+function aplicarPrefillProveedorEnFormulario(proveedorSalidaId, dni, nombreCompleto, origen) {
     const dniInput = document.getElementById("dni");
     const nombreInput = document.getElementById("nombreApellidos");
     const origenInput = document.getElementById("origen");
@@ -86,13 +98,89 @@ async function cargarPrefillDesdeProveedor() {
         origenInput.value = origen;
     }
 
-    if (tipoSelect) {
-        tipoSelect.value = "Proveedor";
-        tipoSelect.disabled = true;
+    if (proveedorSalidaId) {
+        if (tipoSelect) {
+            tipoSelect.value = "Proveedor";
+            tipoSelect.disabled = true;
+        }
+        if (infoProveedor) {
+            infoProveedor.style.display = "block";
+        }
+    }
+}
+
+async function cargarPrefillDesdeProveedor() {
+    const params = new URLSearchParams(window.location.search);
+    const proveedorSalidaId = params.get("proveedorSalidaId");
+    let dni = params.get("dni");
+    let nombreCompleto = params.get("nombreCompleto");
+    let origen = params.get("origen");
+
+    if (!dni || !nombreCompleto || !origen) {
+        try {
+            const rawPrefill = sessionStorage.getItem("prefillHabitacionProveedor");
+            if (rawPrefill) {
+                const prefill = JSON.parse(rawPrefill);
+                const coincide = !proveedorSalidaId || String(prefill?.proveedorSalidaId || "") === String(proveedorSalidaId);
+                if (coincide) {
+                    dni = dni || prefill?.dni || "";
+                    nombreCompleto = nombreCompleto || prefill?.nombreCompleto || "";
+                    origen = origen || prefill?.origen || "";
+                }
+            }
+        } catch {
+            // Ignorar errores de lectura de storage.
+        }
     }
 
-    if (infoProveedor) {
-        infoProveedor.style.display = "block";
+    if (!proveedorSalidaId && !dni && !nombreCompleto && !origen) return;
+
+    if (proveedorSalidaId && (!dni || !nombreCompleto || !origen)) {
+        try {
+            const response = await fetchAuth(`${API_BASE}/proveedor/${encodeURIComponent(proveedorSalidaId)}`);
+            if (response.ok) {
+                const proveedor = await response.json();
+                dni = dni || proveedor?.dni || "";
+                nombreCompleto = nombreCompleto || proveedor?.nombreCompleto || "";
+                origen = origen || proveedor?.procedencia || proveedor?.destino || "";
+            }
+        } catch {
+            // Si falla la recuperación, se mantiene lo recibido por query string.
+        }
+    }
+
+    aplicarPrefillProveedorEnFormulario(proveedorSalidaId, dni, nombreCompleto, origen);
+
+    if (!nombreCompleto && dni) {
+        try {
+            const responsePersona = await fetchAuth(`${API_BASE}/personas/dni/${encodeURIComponent(dni)}`);
+            if (responsePersona.ok) {
+                const persona = await responsePersona.json();
+                const nombrePersona = persona?.nombresApellidos || persona?.nombre || "";
+                const nombreInput = document.getElementById("nombreApellidos");
+                if (nombreInput && nombrePersona) {
+                    nombreInput.value = nombrePersona;
+                    nombreInput.disabled = true;
+                }
+                if (nombrePersona) {
+                    personaEncontrada = { nombresApellidos: nombrePersona };
+                }
+            }
+        } catch {
+            // Si falla la consulta de persona, se deja continuar con validación de backend.
+        }
+    }
+
+    if (proveedorSalidaId) {
+        const dniActual = document.getElementById("dni")?.value?.trim() || "";
+        const origenActual = document.getElementById("origen")?.value?.trim() || "";
+        if (!dniActual || !origenActual) {
+            const mensaje = document.getElementById("mensaje");
+            if (mensaje) {
+                mensaje.className = "error";
+                mensaje.innerText = "No se pudo precargar completamente el proveedor. Actualice y vuelva a intentar desde Proveedores.";
+            }
+        }
     }
 }
 
@@ -164,6 +252,7 @@ async function registrarIngreso() {
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || "";
     let horaIngresoInput = document.getElementById("horaIngreso")?.value || "";
     const proveedorSalidaId = document.getElementById("dni")?.dataset?.proveedorSalidaId || "";
+    const vieneDesdeProveedor = !!proveedorSalidaId;
 
     if (!dni || !origen) {
         if (mensaje) {
@@ -173,7 +262,7 @@ async function registrarIngreso() {
         return;
     }
 
-    if (!personaEncontrada && !nombreApellidos) {
+    if (!vieneDesdeProveedor && !personaEncontrada && !nombreApellidos) {
         if (mensaje) {
             mensaje.className = "error";
             mensaje.innerText = "Ingrese nombres y apellidos si el DNI no existe en Personas.";
@@ -182,6 +271,20 @@ async function registrarIngreso() {
     }
 
     try {
+        if (horaIngresoInput) {
+            const horaNormalizada = normalizarHoraHHmm(horaIngresoInput);
+            if (!horaNormalizada) {
+                if (mensaje) {
+                    mensaje.className = "error";
+                    mensaje.innerText = "Hora invalida. Use formato 24 horas HH:mm.";
+                }
+                return;
+            }
+            horaIngresoInput = horaNormalizada;
+            const horaIngresoEl = document.getElementById("horaIngreso");
+            if (horaIngresoEl) horaIngresoEl.value = horaIngresoInput;
+        }
+
         if (!horaIngresoInput) {
             horaIngresoInput = horaLocalHHmm();
             const horaIngresoEl = document.getElementById("horaIngreso");
@@ -497,7 +600,7 @@ async function cargarActivos() {
                     fechaIngresoParam: fechaIngresoValue || "",
                     horaIngresoParam: horaIngresoValue || "",
                     fechaIngreso: fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString("es-PE") : "N/A",
-                    horaIngreso: horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "N/A"
+                    horaIngreso: horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false }) : "N/A"
                 });
             });
 
@@ -595,5 +698,27 @@ document.addEventListener("DOMContentLoaded", () => {
         tipoIngreso.addEventListener("change", actualizarUIByTipoIngreso);
     }
     actualizarUIByTipoIngreso();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("proveedorSalidaId")) {
+        cargarPrefillDesdeProveedor();
+        setTimeout(() => {
+            const dniActual = document.getElementById("dni")?.value?.trim() || "";
+            const origenActual = document.getElementById("origen")?.value?.trim() || "";
+            if (!dniActual || !origenActual) {
+                cargarPrefillDesdeProveedor();
+            }
+        }, 250);
+    }
+
+    const horaIngreso = document.getElementById("horaIngreso");
+    if (horaIngreso) {
+        horaIngreso.addEventListener("blur", () => {
+            const normalizada = normalizarHoraHHmm(horaIngreso.value);
+            if (normalizada) {
+                horaIngreso.value = normalizada;
+            }
+        });
+    }
 });
 

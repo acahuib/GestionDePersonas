@@ -74,14 +74,14 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`ðŸ“¡ Response status: ${response.status}`);
+        console.log(`📡 Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`âœ… Persona encontrada:`, personaEncontrada);
+            console.log(`✅ Persona encontrada:`, personaEncontrada);
             
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
@@ -92,7 +92,7 @@ async function buscarPersonaPorDni() {
             
             document.getElementById("placa").focus();
         } else if (response.status === 404) {
-            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             conductorInput.disabled = false;
@@ -100,11 +100,11 @@ async function buscarPersonaPorDni() {
             conductorInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`âŒ Error del servidor: ${error}`);
+            console.error(`❌ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("âŒ Error al buscar persona:", error);
+        console.error("❌ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         conductorInput.disabled = false;
@@ -138,7 +138,7 @@ async function registrarMovimientoInicial() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
@@ -150,7 +150,7 @@ async function registrarMovimientoInicial() {
 
     if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un nÃºmero vÃ¡lido";
+        mensaje.innerText = "El kilometraje debe ser un número válido";
         return;
     }
 
@@ -259,13 +259,13 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehÃ­culos activos");
+            throw new Error(error || "Error al cargar vehículos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
             return;
         }
 
@@ -286,7 +286,7 @@ async function cargarActivos() {
         });
 
         if (pendientes.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehÃ­culos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
             return;
         }
 
@@ -308,7 +308,7 @@ async function cargarActivos() {
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
         html += '<th>Fecha / Hora</th>';
-        html += '<th>AcciÃ³n</th>';
+        html += '<th>Acción</th>';
         html += '</tr></thead><tbody>';
 
         pendientes.forEach(s => {
@@ -376,6 +376,7 @@ async function cargarActivos() {
         container.innerHTML = `<p class="text-center error">${getPlainErrorMessage(error)}</p>`;
     }
 }
+
 
 
 

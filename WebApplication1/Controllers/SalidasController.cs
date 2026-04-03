@@ -110,10 +110,10 @@ namespace WebApplication1.Controllers
             };
 
             if (!tiposPermitidos.Contains(dto.TipoOperacion))
-                return BadRequest("TipoOperacion no permitido en modo tÃ©cnico.");
+                return BadRequest("TipoOperacion no permitido en modo técnico.");
 
             if (string.IsNullOrWhiteSpace(dto.Dni) || dto.Dni.Trim().Length != 8 || !dto.Dni.Trim().All(char.IsDigit))
-                return BadRequest("DNI debe tener 8 dÃ­gitos numÃ©ricos.");
+                return BadRequest("DNI debe tener 8 dígitos numéricos.");
 
             var esRegistroEnseres = string.Equals(dto.TipoOperacion, "RegistroInformativoEnseresTurno", StringComparison.OrdinalIgnoreCase);
             if (esRegistroEnseres)
@@ -187,7 +187,7 @@ namespace WebApplication1.Controllers
                     .FirstOrDefaultAsync();
 
                 if (string.IsNullOrWhiteSpace(guardiaSeleccionado))
-                    return BadRequest("Guardia seleccionado no vÃ¡lido.");
+                    return BadRequest("Guardia seleccionado no válido.");
 
                 guardiaNombre = guardiaSeleccionado;
             }
@@ -219,7 +219,7 @@ namespace WebApplication1.Controllers
             if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
             {
                 if (!string.Equals(tipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("DiasLibre en modo tÃ©cnico solo permite TipoMovimiento='Salida'.");
+                    return BadRequest("DiasLibre en modo técnico solo permite TipoMovimiento='Salida'.");
             }
 
             Models.Movimiento? movimiento = null;
@@ -309,7 +309,7 @@ namespace WebApplication1.Controllers
 
                         return Ok(new
                         {
-                            mensaje = "Registro manual tÃ©cnico actualizado en operaciÃ³n abierta de ControlBienes",
+                            mensaje = "Registro manual técnico actualizado en operación abierta de ControlBienes",
                             operacionId = operacionAbierta.Id,
                             tipoOperacion = "ControlBienes",
                             tipoMovimiento = "Entrada",
@@ -403,7 +403,7 @@ namespace WebApplication1.Controllers
 
                         return Ok(new
                         {
-                            mensaje = "Salida tÃ©cnica creada sin ingreso previo en ControlBienes",
+                            mensaje = "Salida técnica creada sin ingreso previo en ControlBienes",
                             operacionId = operacionSalida.Id,
                             tipoOperacion = "ControlBienes",
                             tipoMovimiento = "Salida",
@@ -421,7 +421,7 @@ namespace WebApplication1.Controllers
 
                     var idsActivos = activos.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     if (idsRetiro.Any(idBien => !idsActivos.Contains(idBien)))
-                        return BadRequest("Uno o mÃ¡s bienes seleccionados no estÃ¡n activos para salida tÃ©cnica.");
+                        return BadRequest("Uno o más bienes seleccionados no están activos para salida técnica.");
 
                     foreach (var bien in bienesActuales.Where(b => idsRetiro.Contains(b.Id) && string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -450,7 +450,7 @@ namespace WebApplication1.Controllers
 
                     return Ok(new
                     {
-                        mensaje = "Salida tÃ©cnica parcial/completa aplicada en ControlBienes",
+                        mensaje = "Salida técnica parcial/completa aplicada en ControlBienes",
                         operacionId = operacionAbierta.Id,
                         tipoOperacion = "ControlBienes",
                         tipoMovimiento = "Salida",
@@ -508,7 +508,7 @@ namespace WebApplication1.Controllers
 
             return Ok(new
             {
-                mensaje = "Registro manual tÃ©cnico creado",
+                mensaje = "Registro manual técnico creado",
                 operacionId = operacion.Id,
                 tipoOperacion = operacion.TipoOperacion,
                 tipoMovimiento = movimiento.TipoMovimiento,
@@ -795,7 +795,7 @@ namespace WebApplication1.Controllers
             }
             catch
             {
-                return BadRequest("DatosJSON invÃ¡lido en el registro");
+                return BadRequest("DatosJSON inválido en el registro");
             }
 
             var resultado = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
@@ -1245,5 +1245,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

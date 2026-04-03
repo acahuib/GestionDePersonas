@@ -141,7 +141,7 @@ namespace WebApplication1.Controllers
                 if (referencias.Count > 0)
                 {
                     var detalle = string.Join(", ", referencias);
-                    return Conflict($"No es seguro cambiar el DNI porque ya estÃ¡ en uso en: {detalle}. Realice el cambio solo cuando ese DNI no tenga uso en el sistema.");
+                    return Conflict($"No es seguro cambiar el DNI porque ya está en uso en: {detalle}. Realice el cambio solo cuando ese DNI no tenga uso en el sistema.");
                 }
 
                 var duplicado = await _context.Personas.AnyAsync(p => p.Dni == dniNuevo);
@@ -196,7 +196,7 @@ namespace WebApplication1.Controllers
             if (referencias.Count > 0)
             {
                 var detalle = string.Join(", ", referencias);
-                return Conflict($"No es seguro eliminar la persona porque el DNI estÃ¡ en uso en: {detalle}. Elimine solo cuando no tenga uso en el sistema.");
+                return Conflict($"No es seguro eliminar la persona porque el DNI está en uso en: {detalle}. Elimine solo cuando no tenga uso en el sistema.");
             }
 
             var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
@@ -269,4 +269,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 

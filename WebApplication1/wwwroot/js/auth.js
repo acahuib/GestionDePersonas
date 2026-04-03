@@ -34,7 +34,7 @@ function verificarAutenticacion() {
 }
 
 function cerrarSesion() {
-    if (confirm("Â¿EstÃ¡ seguro de cerrar sesiÃ³n?")) {
+    if (confirm("¿Está seguro de cerrar sesión?")) {
         localStorage.clear();
         window.location.href = "/login.html";
     }
@@ -49,5 +49,6 @@ document.addEventListener("DOMContentLoaded", () => {
         verificarAutenticacion();
     }
 });
+
 
 

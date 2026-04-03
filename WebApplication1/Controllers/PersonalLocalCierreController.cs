@@ -38,7 +38,7 @@ namespace WebApplication1.Controllers
 
             var datosNode = JsonNode.Parse(registro.DatosJSON) as JsonObject ?? new JsonObject();
             if (EsCierreAdministrativo(datosNode))
-                return BadRequest("El registro ya estÃ¡ cerrado administrativamente.");
+                return BadRequest("El registro ya está cerrado administrativamente.");
 
             var usuarioId = ExtraerUsuarioId();
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -94,4 +94,5 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 

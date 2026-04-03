@@ -41,14 +41,14 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`ðŸ“¡ Response status: ${response.status}`);
+        console.log(`Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`âœ… Persona encontrada:`, personaEncontrada);
+            console.log(`Persona encontrada:`, personaEncontrada);
             
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
@@ -59,7 +59,7 @@ async function buscarPersonaPorDni() {
             
             document.getElementById("procedencia").focus();
         } else if (response.status === 404) {
-            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -67,11 +67,11 @@ async function buscarPersonaPorDni() {
             nombreCompletoInput.focus();
         } else {
             const error = await readApiError(response);
-            console.error(`âŒ Error del servidor: ${error}`);
+            console.error(`Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("âŒ Error al buscar persona:", error);
+        console.error("Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -98,7 +98,7 @@ async function registrarEntrada() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -208,6 +208,18 @@ function irASalidaDesdePayload(payloadCodificado) {
 }
 
 function irAHabitacion(proveedorSalidaId, dni, nombreCompleto, origen) {
+    try {
+        sessionStorage.setItem("prefillHabitacionProveedor", JSON.stringify({
+            proveedorSalidaId,
+            dni,
+            nombreCompleto,
+            origen,
+            ts: Date.now()
+        }));
+    } catch {
+        // Si falla storage, continuar solo con querystring.
+    }
+
     const params = new URLSearchParams({
         proveedorSalidaId,
         dni,
@@ -223,7 +235,7 @@ async function liberarHabitacionDesdeProveedor(habitacionSalidaId, nombreComplet
 
     if (!habitacionSalidaId) return;
 
-    const confirmar = window.confirm(`Se registrara la salida de habitaciÃ³n para ${nombreCompleto || "el proveedor"}. Â¿Desea continuar?`);
+    const confirmar = window.confirm(`Se registrara la salida de habitacion para ${nombreCompleto || "el proveedor"}. Desea continuar?`);
     if (!confirmar) return;
 
     try {
@@ -234,13 +246,13 @@ async function liberarHabitacionDesdeProveedor(habitacionSalidaId, nombreComplet
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "No se pudo registrar la salida de habitaciÃ³n");
+            throw new Error(error || "No se pudo registrar la salida de habitacion");
         }
 
         const data = await response.json();
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = data?.mensaje || "Salida de habitaciÃ³n registrada";
+            mensaje.innerText = data?.mensaje || "Salida de habitacion registrada";
         }
 
         await cargarActivos();
@@ -424,7 +436,7 @@ async function cancelarRetornoDesdeFila(salidaId) {
     const mensaje = document.getElementById("mensaje");
     if (!salidaId) return;
 
-    const confirmar = window.confirm("Se cerrara este registro sin retorno. Â¿Desea continuar?");
+    const confirmar = window.confirm("Se cerrara este registro sin retorno. Desea continuar?");
     if (!confirmar) return;
 
     const observacion = document.getElementById(`retorno-observacion-${salidaId}`)?.value?.trim() || "";
@@ -558,7 +570,7 @@ async function cargarActivos() {
 
                 const datos = h.datos || {};
                 const cuartoRaw = (datos.cuarto || "").toString().trim();
-                const cuarto = cuartoRaw ? `HabitaciÃ³n ${cuartoRaw}` : "En habitaciÃ³n";
+                const cuarto = cuartoRaw ? `Habitacion ${cuartoRaw}` : "En habitacion";
                 const fecha = h.fechaCreacion ? new Date(h.fechaCreacion).getTime() : 0;
                 const actual = habitacionesActivasPorDni.get(dniHabitacion);
 
@@ -578,7 +590,7 @@ async function cargarActivos() {
             html += '<th>Procedencia</th>';
             html += '<th>Destino</th>';
             html += '<th>Fecha / Hora Ingreso</th>';
-            html += '<th>HabitaciÃ³n</th>';
+            html += '<th>Habitacion</th>';
             html += '<th>Estado</th>';
             html += '<th>Acciones</th>';
             html += '</tr></thead><tbody>';
@@ -608,7 +620,7 @@ async function cargarActivos() {
                     : (estaEnHabitacion ? 'estado-habitacion' : 'estado-en-mina');
                 const textoEstado = esFueraTemporal
                     ? 'Fuera temporal'
-                    : (estaEnHabitacion ? 'En habitaciÃ³n' : 'En mina');
+                    : (estaEnHabitacion ? 'En habitacion' : 'En mina');
                 const ultimaSalida = datos.ultimaSalidaTemporal
                     ? new Date(datos.ultimaSalidaTemporal).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
                     : '';
@@ -662,7 +674,7 @@ async function cargarActivos() {
                 html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroProveedorDesdePayload('${payloadImagenes}')">Ver imagenes</button>`;
                 if (esFueraTemporal) {
                     html += `<select id="retorno-destino-${p.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoRetorno(destinoRetorno)}</select>`;
-                    html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="ObservaciÃ³n" class="retorno-input retorno-input-observacion">`;
+                    html += `<input type="text" id="retorno-observacion-${p.id}" value="${observacionRetorno}" placeholder="Observacion" class="retorno-input retorno-input-observacion">`;
                     html += `<input type="date" id="retorno-fecha-${p.id}" value="${hoy}" class="retorno-input retorno-input-fecha">`;
                     html += `<input type="time" id="retorno-hora-${p.id}" value="${horaActual}" class="retorno-input retorno-input-hora">`;
                     html += `<button onclick="registrarIngresoRetornoDesdeFila(${p.id})" class="btn-success btn-small">Ingreso (retorno)</button>`;
@@ -671,8 +683,8 @@ async function cargarActivos() {
                     html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
                     html += `<button onclick="irAHotelDesdePayload('${payloadHotel}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
                     html += estaEnHabitacion
-                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar HabitaciÃ³n</button><span class="estado-etiqueta estado-habitacion">Con habitaciÃ³n</span>`
-                        : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a HabitaciÃ³n</button>`;
+                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar Habitacion</button><span class="estado-etiqueta estado-habitacion">Con habitacion</span>`
+                        : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a Habitacion</button>`;
                 }
                 html += '</div>';
                 html += '</td></tr>';
@@ -694,7 +706,7 @@ function construirFechaHoraCelda(fechaTexto, horaTexto) {
 
 function obtenerMensajeUsuario(error) {
     const mensajeBase = (error?.message || error || "").toString().trim();
-    if (!mensajeBase) return "No se pudo completar la operaciÃ³n.";
+    if (!mensajeBase) return "No se pudo completar la operacion.";
 
     try {
         const json = JSON.parse(mensajeBase);

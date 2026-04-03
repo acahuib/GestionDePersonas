@@ -89,7 +89,7 @@ namespace WebApplication1.Services
 
             if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
             {
-                throw new InvalidOperationException($"Esta persona ya estÃ¡ adentro con el DNI {dni}");
+                throw new InvalidOperationException($"Esta persona ya está adentro con el DNI {dni}");
             }
         }
 
@@ -118,5 +118,6 @@ namespace WebApplication1.Services
         public int[] ZonasInternas => ZONAS_INTERNAS;
     }
 }
+
 
 

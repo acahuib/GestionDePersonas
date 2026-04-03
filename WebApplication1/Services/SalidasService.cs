@@ -107,7 +107,7 @@ namespace WebApplication1.Services
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            salida.UsuarioId = usuarioId;  // Registra quiÃ©n hace la actualizaciÃ³n
+            salida.UsuarioId = usuarioId;  // Registra quién hace la actualización
 
             if (horaIngreso.HasValue) salida.HoraIngreso = horaIngreso;
             if (fechaIngreso.HasValue) salida.FechaIngreso = fechaIngreso;
@@ -245,5 +245,6 @@ namespace WebApplication1.Services
         }
     }
 }
+
 
 

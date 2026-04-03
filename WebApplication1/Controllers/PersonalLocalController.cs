@@ -99,6 +99,7 @@ namespace WebApplication1.Controllers
                 var datosPersonalLocal = new
                 {
                     tipoPersonaLocal,
+                    celularesDejados = 0,
                     horaSalidaAlmuerzo = (DateTime?)null,
                     fechaSalidaAlmuerzo = (DateTime?)null,
                     horaEntradaAlmuerzo = (DateTime?)null,
@@ -107,7 +108,7 @@ namespace WebApplication1.Controllers
                     guardiaSalida = (string?)null,
                     guardiaSalidaAlmuerzo = (string?)null,
                     guardiaEntradaAlmuerzo = (string?)null,
-                    observaciones = dto.Observaciones
+                    observaciones = CombinarObservacionesConCelulares(dto.Observaciones, 0)
                 };
 
                 var salidaDetalle = await _salidaService.CrearSalidaDetalle(
@@ -117,8 +118,8 @@ namespace WebApplication1.Controllers
                     usuarioId,
                     horaIngresoColumna,
                     fechaIngresoColumna,
-                    null,                    // horaSalida (se registra despuÃ©s vÃ­a PUT)
-                    null,                    // fechaSalida (se registra despuÃ©s vÃ­a PUT)
+                    null,                    // horaSalida (se registra después vía PUT)
+                    null,                    // fechaSalida (se registra después vía PUT)
                     dniNormalizado);         // DNI va a columna
 
                 if (salidaDetalle == null)
@@ -168,6 +169,7 @@ namespace WebApplication1.Controllers
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
+                        celularesDejados = LeerCelularesDejados(root),
                         horaSalidaAlmuerzo = fechaHoraActual,
                         fechaSalidaAlmuerzo = fechaHoraActual.Date,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -176,7 +178,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = guardiaNombre,
                         guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
-                        observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
+                        observaciones = CombinarObservacionesConCelulares(
+                            dto.Observaciones ?? LeerObservaciones(root),
+                            LeerCelularesDejados(root) ?? 0)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
@@ -221,6 +225,7 @@ namespace WebApplication1.Controllers
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
+                        celularesDejados = LeerCelularesDejados(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = fechaHoraActual,
@@ -229,7 +234,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
                         guardiaEntradaAlmuerzo = guardiaNombre,
-                        observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
+                        observaciones = CombinarObservacionesConCelulares(
+                            dto.Observaciones ?? LeerObservaciones(root),
+                            LeerCelularesDejados(root) ?? 0)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
@@ -282,6 +289,7 @@ namespace WebApplication1.Controllers
                     var datosActualizados = new
                     {
                         tipoPersonaLocal = LeerTipoPersonaLocal(root),
+                        celularesDejados = LeerCelularesDejados(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -290,7 +298,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = guardiaNombre,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
                         guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
-                        observaciones = dto.Observaciones ?? (root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null ? obs.GetString() : null)
+                        observaciones = CombinarObservacionesConCelulares(
+                            dto.Observaciones ?? LeerObservaciones(root),
+                            LeerCelularesDejados(root) ?? 0)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(
@@ -331,6 +341,53 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> ObtenerSalidaPorId(int id)
         {
             return await ObtenerSalidaPorIdCore(id);
+        }
+
+        [HttpPut("{id}/celulares")]
+        public async Task<IActionResult> ActualizarCelularesDejados(int id, [FromBody] ActualizarCelularesPersonalLocalDto dto)
+        {
+            try
+            {
+                if (dto.CelularesDejados < 0 || dto.CelularesDejados > 2)
+                    return BadRequest("CelularesDejados debe ser 0, 1 o 2");
+
+                var salidaExistente = await _salidaService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Registro de salida no encontrado");
+
+                var horaSalida = salidaExistente.HoraSalida ?? _salidaService.ObtenerHoraSalidaFromJson(salidaExistente.DatosJSON);
+                if (horaSalida.HasValue)
+                    return BadRequest("No se puede actualizar celulares en un registro ya cerrado");
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+
+                using var doc = JsonDocument.Parse(salidaExistente.DatosJSON);
+                var root = doc.RootElement;
+
+                var datosActualizados = new
+                {
+                    tipoPersonaLocal = LeerTipoPersonaLocal(root),
+                    celularesDejados = dto.CelularesDejados,
+                    horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
+                    fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
+                    horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
+                    fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
+                    guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
+                    guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                    guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
+                    guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
+                    observaciones = CombinarObservacionesConCelulares(
+                        LeerObservaciones(root),
+                        dto.CelularesDejados)
+                };
+
+                var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+                return Ok(salidaActualizada);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
 
         [HttpGet("/api/tecnico/personal-local/{id}")]
@@ -411,7 +468,69 @@ namespace WebApplication1.Controllers
                 return false;
             }
         }
+
+        private static int? LeerCelularesDejados(JsonElement root)
+        {
+            if (!root.TryGetProperty("celularesDejados", out var celulares))
+            {
+                return null;
+            }
+
+            if (celulares.ValueKind == JsonValueKind.Number && celulares.TryGetInt32(out var numero))
+            {
+                return numero;
+            }
+
+            if (celulares.ValueKind == JsonValueKind.String && int.TryParse(celulares.GetString(), out var textoNumero))
+            {
+                return textoNumero;
+            }
+
+            return null;
+        }
+
+        private static string? LeerObservaciones(JsonElement root)
+        {
+            return root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null
+                ? obs.GetString()
+                : null;
+        }
+
+        private static string CombinarObservacionesConCelulares(string? observacionesBase, int celularesDejados)
+        {
+            var textoBase = LimpiarLineaCelulares(observacionesBase);
+            var textoCelulares = celularesDejados switch
+            {
+                1 => "Celulares: 1 celular",
+                2 => "Celulares: 2 celulares",
+                _ => "Celulares: No deja celular"
+            };
+
+            if (string.IsNullOrWhiteSpace(textoBase))
+            {
+                return textoCelulares;
+            }
+
+            return $"{textoBase} | {textoCelulares}";
+        }
+
+        private static string? LimpiarLineaCelulares(string? observaciones)
+        {
+            if (string.IsNullOrWhiteSpace(observaciones))
+            {
+                return null;
+            }
+
+            var partes = observaciones
+                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !p.StartsWith("Celulares:", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            return partes.Count > 0 ? string.Join(" | ", partes) : null;
+        }
     }
 }
+
 
 

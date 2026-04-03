@@ -11,16 +11,17 @@ namespace WebApplication1.DTOs
         public string? Nombres { get; set; }
         public string? Apellidos { get; set; }
         
-        public required string DeDonde { get; set; }  // Ãrea de trabajo
+        public required string DeDonde { get; set; }  // Área de trabajo
         public required string Tipo { get; set; }      // Tipo de permiso (Normal, Pernoctar, etc.)
         public required string QuienAutoriza { get; set; }
         
-        public DateTime? HoraSalida { get; set; }  // Hora de salida fÃ­sica
+        public DateTime? HoraSalida { get; set; }  // Hora de salida física
         
         public DateTime? HoraIngreso { get; set; }
         
         public string? Observacion { get; set; }
     }
 }
+
 
 

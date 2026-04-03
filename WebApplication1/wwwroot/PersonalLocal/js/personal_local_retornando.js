@@ -2,6 +2,37 @@
 
 let personaEncontrada = null;
 
+function actualizarFechaHoraActualVisual() {
+    const etiqueta = document.getElementById("fecha-hora-actual");
+    if (!etiqueta) return;
+
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString("es-PE");
+    const hora = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    etiqueta.textContent = `${fecha} ${hora}`;
+}
+
+function obtenerCelularesDejados(datos) {
+    const valor = datos?.celularesDejados;
+    const numero = Number.parseInt(valor, 10);
+    return Number.isNaN(numero) ? "0" : String(Math.max(0, Math.min(2, numero)));
+}
+
+function obtenerOpcionesCelularesHtml(valorActual) {
+    const actual = valorActual ?? "0";
+    return `
+        <option value="0" ${actual === "0" ? "selected" : ""}>No deja celular</option>
+        <option value="1" ${actual === "1" ? "selected" : ""}>1 celular</option>
+        <option value="2" ${actual === "2" ? "selected" : ""}>2 celulares</option>
+    `;
+}
+
+function mostrarCampoNombreManual(mostrar) {
+    const grupo = document.getElementById("grupo-nombre-manual");
+    if (!grupo) return;
+    grupo.style.display = mostrar ? "block" : "none";
+}
+
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
@@ -11,8 +42,11 @@ async function buscarPersonaPorDni() {
     if (dni.length !== 8 || isNaN(dni)) {
         personaInfo.style.display = "none";
         personaEncontrada = null;
-        nombreApellidosInput.disabled = false;
-        nombreApellidosInput.value = "";
+        mostrarCampoNombreManual(false);
+        if (nombreApellidosInput) {
+            nombreApellidosInput.disabled = false;
+            nombreApellidosInput.value = "";
+        }
         return;
     }
 
@@ -24,16 +58,22 @@ async function buscarPersonaPorDni() {
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
 
-            nombreApellidosInput.value = "";
-            nombreApellidosInput.disabled = true;
-            nombreApellidosInput.placeholder = "(Ya registrado)";
-            document.getElementById("observaciones").focus();
+            if (nombreApellidosInput) {
+                nombreApellidosInput.value = "";
+                nombreApellidosInput.disabled = true;
+                nombreApellidosInput.placeholder = "(Ya registrado)";
+            }
+            mostrarCampoNombreManual(false);
+            document.getElementById("dni").focus();
         } else if (response.status === 404) {
             personaEncontrada = null;
             personaInfo.style.display = "none";
-            nombreApellidosInput.disabled = false;
-            nombreApellidosInput.placeholder = "Nombre completo del personal";
-            nombreApellidosInput.focus();
+            mostrarCampoNombreManual(true);
+            if (nombreApellidosInput) {
+                nombreApellidosInput.disabled = false;
+                nombreApellidosInput.placeholder = "Nombre completo del personal";
+                nombreApellidosInput.focus();
+            }
         } else {
             const error = await readApiError(response);
             throw new Error(error);
@@ -41,17 +81,17 @@ async function buscarPersonaPorDni() {
     } catch {
         personaEncontrada = null;
         personaInfo.style.display = "none";
-        nombreApellidosInput.disabled = false;
-        nombreApellidosInput.placeholder = "Nombre completo del personal";
+        mostrarCampoNombreManual(false);
+        if (nombreApellidosInput) {
+            nombreApellidosInput.disabled = false;
+            nombreApellidosInput.placeholder = "Nombre completo del personal";
+        }
     }
 }
 
 async function registrarIngresoRetornando() {
     const dni = document.getElementById("dni").value.trim();
-    const nombreApellidos = document.getElementById("nombreApellidos").value.trim();
-    const observaciones = document.getElementById("observaciones").value.trim();
-    const horaIngresoInput = document.getElementById("horaIngreso").value;
-    const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
+    const nombreApellidos = document.getElementById("nombreApellidos")?.value.trim() || "";
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -65,26 +105,28 @@ async function registrarIngresoRetornando() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
-    if (!personaEncontrada && !nombreApellidos) {
+    if (!personaEncontrada) {
+        if (!nombreApellidos) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI no registrado. Complete Nombre y Apellidos para registrarlo.";
+            mostrarCampoNombreManual(true);
+            document.getElementById("nombreApellidos")?.focus();
+            return;
+        }
+
         mensaje.className = "error";
-        mensaje.innerText = "DNI no registrado. Complete el nombre y apellidos.";
-        return;
+        mensaje.innerText = "Registrando persona nueva...";
     }
 
     try {
         const body = {
             dni,
-            tipoPersonaLocal: "Retornando",
-            observaciones: observaciones || null
+            tipoPersonaLocal: "Retornando"
         };
-
-        if (horaIngresoInput) {
-            body.horaIngreso = construirDateTimeLocal(fechaIngresoInput, horaIngresoInput);
-        }
 
         if (!personaEncontrada) {
             body.nombreApellidos = nombreApellidos;
@@ -100,18 +142,20 @@ async function registrarIngresoRetornando() {
             throw new Error(error);
         }
 
-        const nombreCompleto = personaEncontrada ? personaEncontrada.nombre : nombreApellidos;
+        const nombreCompleto = personaEncontrada?.nombre || nombreApellidos || dni;
         mensaje.className = "success";
         mensaje.innerText = `INGRESO RETORNANDO registrado para ${nombreCompleto}`;
 
         document.getElementById("dni").value = "";
-        document.getElementById("nombreApellidos").value = "";
-        document.getElementById("observaciones").value = "";
-        document.getElementById("horaIngreso").value = "";
+        const nombreInput = document.getElementById("nombreApellidos");
+        if (nombreInput) nombreInput.value = "";
+        const horaIngreso = document.getElementById("horaIngreso");
+        if (horaIngreso) horaIngreso.value = "";
         const fechaIngreso = document.getElementById("fechaIngreso");
         if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
         document.getElementById("persona-info").style.display = "none";
-        document.getElementById("nombreApellidos").disabled = false;
+        if (nombreInput) nombreInput.disabled = false;
+        mostrarCampoNombreManual(false);
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
@@ -119,6 +163,37 @@ async function registrarIngresoRetornando() {
     } catch (error) {
         mensaje.className = "error";
         mensaje.innerText = getPlainErrorMessage(error);
+    }
+}
+
+async function actualizarCelularesDejadosRetornando(id, celularesDejados) {
+    const cantidad = Number.parseInt(celularesDejados, 10);
+    if (Number.isNaN(cantidad) || cantidad < 0 || cantidad > 2) {
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/personal-local/${id}/celulares`, {
+            method: "PUT",
+            body: JSON.stringify({ celularesDejados: cantidad })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo actualizar celulares");
+        }
+    } catch (error) {
+        alert(getPlainErrorMessage(error));
+        cargarActivosRetornando();
+    }
+}
+
+async function actualizarCelularesRetornandoDesdePayload(payloadCodificado, valor) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await actualizarCelularesDejadosRetornando(datos.id, valor);
+    } catch (error) {
+        console.error("Error al actualizar celulares retornando:", error);
     }
 }
 
@@ -203,6 +278,7 @@ async function cargarActivosRetornando() {
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
         html += '<th>Fecha / Hora Ingreso</th>';
+        html += '<th>Celulares</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -218,11 +294,16 @@ async function cargarActivosRetornando() {
                 ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE") : "N/A";
+            const celularesDejados = obtenerCelularesDejados(s.datos || {});
+            const payloadCelulares = encodeURIComponent(JSON.stringify({
+                id: s.id
+            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
+            html += `<td><select class="input-inline" onchange="actualizarCelularesRetornandoDesdePayload('${payloadCelulares}', this.value)">${obtenerOpcionesCelularesHtml(celularesDejados)}</select></td>`;
             html += '<td>';
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
             html += '<span class="muted">Sin salida en este cuaderno</span>';
@@ -240,5 +321,28 @@ async function cargarActivosRetornando() {
 document.addEventListener("DOMContentLoaded", () => {
     const fechaIngreso = document.getElementById("fechaIngreso");
     if (fechaIngreso) fechaIngreso.value = obtenerFechaLocalISO();
+
+    actualizarFechaHoraActualVisual();
+    setInterval(actualizarFechaHoraActualVisual, 1000);
+
+    const dniInput = document.getElementById("dni");
+    if (dniInput) {
+        dniInput.addEventListener("input", () => {
+            const valor = dniInput.value.trim();
+            if (valor.length === 8 && !isNaN(valor)) {
+                buscarPersonaPorDni();
+            }
+        });
+
+        dniInput.addEventListener("keydown", async (event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            await buscarPersonaPorDni();
+            if (personaEncontrada) {
+                registrarIngresoRetornando();
+            }
+        });
+    }
 });
+
 

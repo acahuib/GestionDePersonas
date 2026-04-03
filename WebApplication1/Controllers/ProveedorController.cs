@@ -254,7 +254,7 @@ namespace WebApplication1.Controllers
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             var estadoActual = LeerEstadoActual(datosActuales);
             if (estadoActual == "FueraTemporal")
-                return BadRequest("Este proveedor ya estÃ¡ fuera. Registre el ingreso de retorno.");
+                return BadRequest("Este proveedor ya está fuera. Registre el ingreso de retorno.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -337,7 +337,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             if (!EstaFueraTemporal(datosActuales))
-                return BadRequest("Solo se puede registrar ingreso si el proveedor estÃ¡ fuera temporalmente.");
+                return BadRequest("Solo se puede registrar ingreso si el proveedor está fuera temporalmente.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -446,7 +446,7 @@ namespace WebApplication1.Controllers
 
             var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
             if (!EstaFueraTemporal(datosActuales))
-                return BadRequest("Solo se puede cancelar retorno si el proveedor estÃ¡ fuera temporalmente.");
+                return BadRequest("Solo se puede cancelar retorno si el proveedor está fuera temporalmente.");
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
             var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
@@ -532,7 +532,7 @@ namespace WebApplication1.Controllers
             
             var estadoActual = LeerEstadoActual(datosActuales);
             if (estadoActual == "FueraTemporal")
-                return BadRequest("El proveedor estÃ¡ fuera temporalmente. Registre primero el ingreso de retorno o use salida temporal segÃºn corresponda.");
+                return BadRequest("El proveedor está fuera temporalmente. Registre primero el ingreso de retorno o use salida temporal según corresponda.");
 
             var movimientosInternos = LeerMovimientosInternos(datosActuales);
             movimientosInternos.Add(new
@@ -650,7 +650,7 @@ namespace WebApplication1.Controllers
                     return BadRequest("DNI es requerido.");
 
                 if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                    return BadRequest("DNI debe tener 8 dÃ­gitos numÃ©ricos.");
+                    return BadRequest("DNI debe tener 8 dígitos numéricos.");
 
                 if (dto.FechaHoraIngresoManual > DateTime.Now)
                     return BadRequest("La fecha/hora manual no puede ser futura.");
@@ -727,5 +727,6 @@ namespace WebApplication1.Controllers
 
     }
 }
+
 
 

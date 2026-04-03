@@ -30,7 +30,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 
@@ -67,11 +67,11 @@ async function registrarSalida(endpoint, mensajeOk) {
 }
 
 async function registrarSalidaTemporal() {
-    await registrarSalida("salida-temporal", "âœ… SALIDA CON RETORNO registrada correctamente");
+    await registrarSalida("salida-temporal", "✅ SALIDA CON RETORNO registrada correctamente");
 }
 
 async function registrarSalidaDefinitiva() {
-    await registrarSalida("salida", "âœ… SALIDA DEFINITIVA registrada correctamente");
+    await registrarSalida("salida", "✅ SALIDA DEFINITIVA registrada correctamente");
 }
 
 function volver() {
@@ -88,7 +88,7 @@ function obtenerFechaLocalISO() {
 
 function obtenerMensajeUsuario(error) {
     const mensajeBase = (error?.message || error || "").toString().trim();
-    if (!mensajeBase) return "No se pudo completar la operaciÃ³n.";
+    if (!mensajeBase) return "No se pudo completar la operación.";
 
     try {
         const json = JSON.parse(mensajeBase);
@@ -99,4 +99,5 @@ function obtenerMensajeUsuario(error) {
 
     return mensajeBase.replace(/^error\s*:\s*/i, "");
 }
+
 

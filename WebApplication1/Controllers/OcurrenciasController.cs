@@ -54,10 +54,10 @@ namespace WebApplication1.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
-                    return BadRequest("DescripciÃ³n de ocurrencia es requerida");
+                    return BadRequest("Descripción de ocurrencia es requerida");
 
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("Ocurrencias: solo envÃ­e horaIngreso O horaSalida, no ambos");
+                    return BadRequest("Ocurrencias: solo envíe horaIngreso O horaSalida, no ambos");
 
                 if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
                     return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
@@ -346,18 +346,18 @@ namespace WebApplication1.Controllers
         private async Task<string> GenerarDniFicticio()
         {
             var hoy = DateTime.Now;
-            var prefijo = $"99{hoy.Month:00}{hoy.Day:00}"; // 99MMDD = 6 dÃ­gitos
+            var prefijo = $"99{hoy.Month:00}{hoy.Day:00}"; // 99MMDD = 6 dígitos
             var contador = 0;
             string dniGenerado;
 
             do
             {
-                dniGenerado = $"{prefijo}{contador:00}"; // 99MMDDNN = 8 dÃ­gitos
+                dniGenerado = $"{prefijo}{contador:00}"; // 99MMDDNN = 8 dígitos
                 var existe = await _context.Personas.AnyAsync(p => p.Dni == dniGenerado);
                 if (!existe)
                     break;
                 contador++;
-            } while (contador < 100); // MÃ¡ximo 99 ocurrencias por dÃ­a
+            } while (contador < 100); // Máximo 99 ocurrencias por día
 
             if (contador >= 100)
             {
@@ -378,5 +378,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

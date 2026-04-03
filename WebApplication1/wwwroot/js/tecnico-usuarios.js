@@ -200,7 +200,7 @@
 
         const nuevoEstado = !usuario.activo;
         const accion = nuevoEstado ? "activar" : "desactivar";
-        const confirmar = await appDialog.confirm(`Â¿Deseas ${accion} la cuenta ${usuario.usuarioLogin}?`, "Cambiar estado de cuenta");
+        const confirmar = await appDialog.confirm(`¿Deseas ${accion} la cuenta ${usuario.usuarioLogin}?`, "Cambiar estado de cuenta");
         if (!confirmar) return;
 
         const response = await fetchAuth(`${ENDPOINT}/${id}/estado`, {
@@ -270,4 +270,5 @@
         await cargarUsuarios();
     });
 })();
+
 

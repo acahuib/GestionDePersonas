@@ -29,7 +29,7 @@ async function registrarAutomatico() {
 
     if (response.ok) {
         mensaje.className = "success";
-        mensaje.innerText = "Movimiento automÃ¡tico registrado";
+        mensaje.innerText = "Movimiento automático registrado";
         document.getElementById("dni").value = "";
         document.getElementById("dni").focus();
     } else {
@@ -37,4 +37,5 @@ async function registrarAutomatico() {
         mensaje.innerText = await readApiError(response);
     }
 }
+
 

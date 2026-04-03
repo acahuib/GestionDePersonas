@@ -75,7 +75,7 @@ namespace WebApplication1.Controllers
             try
             {
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
-                    return BadRequest("VehiculoEmpresa: solo envÃ­e horaSalida O horaIngreso, no ambos");
+                    return BadRequest("VehiculoEmpresa: solo envíe horaSalida O horaIngreso, no ambos");
 
                 if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
                     return BadRequest("VehiculoEmpresa: debe enviar horaSalida O horaIngreso");
@@ -128,7 +128,7 @@ namespace WebApplication1.Controllers
                 {
                     if (string.IsNullOrWhiteSpace(dto.Conductor))
                     {
-                        return BadRequest("El conductor es requerido cuando el DNI no estÃ¡ registrado. Por favor proporcione el nombre del conductor.");
+                        return BadRequest("El conductor es requerido cuando el DNI no está registrado. Por favor proporcione el nombre del conductor.");
                     }
                     
                     persona = new Models.Persona
@@ -459,5 +459,6 @@ namespace WebApplication1.Controllers
         }
     }
 }
+
 
 

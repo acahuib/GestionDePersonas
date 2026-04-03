@@ -69,7 +69,7 @@ namespace WebApplication1.Controllers
                 var bienesNuevos = dto.Bienes ?? new List<BienDeclarado>();
 
                 if (bienesNuevos.Any(b => string.IsNullOrWhiteSpace(b.Descripcion)))
-                    return BadRequest("Todos los bienes nuevos deben tener descripciÃ³n");
+                    return BadRequest("Todos los bienes nuevos deben tener descripción");
 
                 var dniNormalizado = dto.Dni.Trim();
                 var persona = await _context.Personas
@@ -266,7 +266,7 @@ namespace WebApplication1.Controllers
             var bienesActivosIds = bienesActivos.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var idsInvalidos = idsSeleccionados.Where(idBien => !bienesActivosIds.Contains(idBien)).ToList();
             if (idsInvalidos.Count > 0)
-                return BadRequest("Uno o mÃ¡s bienes seleccionados no estÃ¡n activos o no existen en este registro.");
+                return BadRequest("Uno o más bienes seleccionados no están activos o no existen en este registro.");
 
             foreach (var bien in bienesActuales.Where(b => idsSeleccionados.Contains(b.Id) && string.Equals(b.Estado, EstadoActivo, StringComparison.OrdinalIgnoreCase)))
             {
@@ -388,7 +388,7 @@ namespace WebApplication1.Controllers
         {
             var dniNormalizado = (dni ?? string.Empty).Trim();
             if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
-                return BadRequest(new { mensaje = "DNI invÃ¡lido" });
+                return BadRequest(new { mensaje = "DNI inválido" });
 
             var operacionAbierta = await _context.OperacionDetalle
                 .Where(o => o.TipoOperacion == "ControlBienes" &&
@@ -517,5 +517,6 @@ namespace WebApplication1.Controllers
 
     }
 }
+
 
 

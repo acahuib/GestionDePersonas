@@ -118,7 +118,7 @@ const API_BASE = "/api";
             document.body.appendChild(overlay);
         },
 
-        confirm(message, title = "ConfirmaciÃ³n") {
+        confirm(message, title = "Confirmación") {
             return new Promise((resolve) => {
                 const { overlay, actions } = crearDialogoBase(title, String(message || ""));
 
@@ -226,7 +226,7 @@ const API_BASE = "/api";
     let historyTrapInstalled = false;
     let allowingHistoryBack = false;
 
-    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. Â¿Deseas continuar?";
+    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. ¿Deseas continuar?";
     const BEFORE_UNLOAD_MESSAGE = "Los cambios que realizaste podrian no guardarse.";
 
     const now = () => Date.now();
@@ -443,7 +443,7 @@ async function fetchAuth(url, options = {}) {
     });
 
     if (response.status === 401 || response.status === 403) {
-        alert("SesiÃ³n expirada o no autorizada");
+        alert("Sesión expirada o no autorizada");
         localStorage.clear();
         window.location.href = "/login.html";
         return;
@@ -587,7 +587,7 @@ async function readApiError(response) {
 
 function getPlainErrorMessage(error) {
     const base = (error?.message || error || "").toString().trim();
-    if (!base) return "No se pudo completar la operaciÃ³n.";
+    if (!base) return "No se pudo completar la operación.";
 
     try {
         const parsed = JSON.parse(base);
@@ -597,11 +597,11 @@ function getPlainErrorMessage(error) {
             parsed?.error ||
             parsed?.detail ||
             parsed?.title ||
-            "No se pudo completar la operaciÃ³n."
+            "No se pudo completar la operación."
         );
     } catch {
         return base
-            .replace(/^âŒ\s*/u, "")
+            .replace(/^❌\s*/u, "")
             .replace(/^error\s*:\s*/i, "")
             .replace(/^"|"$/g, "");
     }
@@ -935,5 +935,6 @@ function obtenerFechaLocalISO() {
 function obtenerHoraLocalHHMM() {
     return horaLocalHHmm();
 }
+
 
 

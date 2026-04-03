@@ -24,14 +24,14 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`ðŸ” Buscando DNI en tabla Personas: '${dni}'`);
+        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
         const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
         
-        console.log(`ðŸ“¡ Response status: ${response.status}`);
+        console.log(`📡 Response status: ${response.status}`);
         
         if (response.ok) {
             personaEncontrada = await response.json();
-            console.log(`âœ… Persona encontrada:`, personaEncontrada);
+            console.log(`✅ Persona encontrada:`, personaEncontrada);
             
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
@@ -45,7 +45,7 @@ async function buscarPersonaPorDni() {
             const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
             if (primerBien) primerBien.focus();
         } else if (response.status === 404) {
-            console.log(`â„¹ï¸ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -60,11 +60,11 @@ async function buscarPersonaPorDni() {
             }
         } else {
             const error = await readApiError(response);
-            console.error(`âŒ Error del servidor: ${error}`);
+            console.error(`❌ Error del servidor: ${error}`);
             throw new Error(error);
         }
     } catch (error) {
-        console.error("âŒ Error al buscar persona:", error);
+        console.error("❌ Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -113,7 +113,7 @@ async function cargarBienesPendientesPorDni(dni) {
         if (pendingInfo) {
             pendingInfo.style.display = bienesPendientes.length > 0 ? "block" : "none";
             pendingInfo.innerHTML = bienesPendientes.length > 0
-                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarÃ¡n automÃ¡ticamente y no son editables.`
+                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarán automáticamente y no son editables.`
                 : "";
         }
     } catch {
@@ -160,7 +160,7 @@ function agregarBien() {
         <h4 style="margin-top: 0;">Bien #${bienId}</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
-                <label>DescripciÃ³n *</label>
+                <label>Descripción *</label>
                 <input type="text" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
             </div>
             <div>
@@ -233,7 +233,7 @@ async function registrarIngreso() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dÃ­gitos";
+        mensaje.innerText = "DNI debe tener 8 dígitos";
         return;
     }
 
@@ -305,7 +305,7 @@ async function registrarIngreso() {
         document.getElementById("pendientes-info").style.display = "none";
         contadorBienes = 0;
         bienesPendientes = [];
-        agregarBien(); // Agregar un bien vacÃ­o
+        agregarBien(); // Agregar un bien vacío
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
@@ -441,6 +441,7 @@ async function cargarActivos() {
 
     }
 }
+
 
 
 

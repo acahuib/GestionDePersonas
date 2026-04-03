@@ -8,34 +8,34 @@ function crearSidebar() {
     const sidebar = `
         <div class="sidebar">
             <div class="sidebar-header">
-                <h3>ðŸ¢ Control Accesos</h3>
+                <h3>🏢 Control Accesos</h3>
             </div>
             
             <ul class="sidebar-menu">
                 <li>
                     <a href="${basePath}index.html">
-                        ðŸ  Home
+                        🏠 Home
                     </a>
                 </li>
                 <li>
                     <a href="${basePath}historial.html?tipo=Proveedor">
-                        ðŸ—‚ï¸ Historiales
+                        🗂️ Historiales
                     </a>
                 </li>
                 
                 <li class="sidebar-submenu">
                     <a href="#">
-                        ðŸ“š Cuadernos
-                        <span>â–¼</span>
+                        📚 Cuadernos
+                        <span>▼</span>
                     </a>
                     <ul class="sidebar-submenu-items">
                         <li><a href="${basePath}Proveedores/html/proveedor.html">Proveedores</a></li>
                         <li><a href="${basePath}Cancha/html/cancha.html">Cancha</a></li>
-                        <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">VehÃ­culos Empresa</a></li>
-                        <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">VehÃ­culos Proveedores</a></li>
+                        <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">Vehículos Empresa</a></li>
+                        <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehículos Proveedores</a></li>
                         <li><a href="${basePath}PersonalLocal/html/personal_local.html">Cuaderno de Asistencia Personal de Mina</a></li>
-                        <li><a href="${basePath}DiasLibre/html/dias_libre.html">DÃ­as Libre</a></li>
-                        <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">HabitaciÃ³n Proveedor</a></li>
+                        <li><a href="${basePath}DiasLibre/html/dias_libre.html">Días Libre</a></li>
+                        <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">Habitación Proveedor</a></li>
                         <li><a href="${basePath}HotelProveedor/html/hotel_proveedor.html">Hotel Proveedor</a></li>
                         <li><a href="${basePath}OficialPermisos/html/oficial_permisos.html">Permisos Personal</a></li>
                         <li><a href="${basePath}Ocurrencias/html/ocurrencias.html">Ocurrencias</a></li>
@@ -49,7 +49,7 @@ function crearSidebar() {
                 <div style="text-align: center; margin-bottom: 10px; color: #ecf0f1; font-size: 0.9rem;">
                     <span id="sidebar-usuario-info">Cargando...</span>
                 </div>
-                <button onclick="cerrarSesion()"><img src="/images/door-open-fill.svg" class="icon-brown"> Cerrar SesiÃ³n</button>
+                <button onclick="cerrarSesion()"><img src="/images/door-open-fill.svg" class="icon-brown"> Cerrar Sesión</button>
             </div>
         </div>
     `;
@@ -87,5 +87,6 @@ function actualizarInfoUsuarioSidebar() {
 document.addEventListener("DOMContentLoaded", () => {
     crearSidebar();
 });
+
 
 

@@ -37,7 +37,7 @@ async function registrarSalida() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontrÃ³ el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 
@@ -61,7 +61,7 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "âœ… SALIDA registrada correctamente";
+        mensaje.innerText = "✅ SALIDA registrada correctamente";
 
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";
@@ -84,4 +84,5 @@ function obtenerFechaLocalISO() {
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
 
