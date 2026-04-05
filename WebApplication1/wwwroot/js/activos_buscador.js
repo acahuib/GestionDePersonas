@@ -62,7 +62,6 @@
         if (path.includes("/proveedores/")) return "Proveedor";
         if (path.includes("/vehiculosproveedores/")) return "VehiculosProveedores";
         if (path.includes("/vehiculoempresa/")) return "VehiculoEmpresa";
-        if (path.includes("/controlbienes/")) return "ControlBienes";
         if (path.includes("/oficialpermisos/")) return "OficialPermisos";
         if (path.includes("/personallocal/")) return "PersonalLocal";
         if (path.includes("/permisospersonal/")) return "SalidasPermisosPersonal";

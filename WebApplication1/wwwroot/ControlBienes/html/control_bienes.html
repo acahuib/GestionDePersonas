@@ -5,6 +5,71 @@
     <title>Control de Bienes - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
+    <style>
+        .cb-compact-card {
+            padding: 14px;
+        }
+
+        .cb-compact-card h3,
+        .cb-compact-card h4 {
+            margin-bottom: 8px;
+        }
+
+        .cb-form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .cb-form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .cb-label-tight {
+            margin-top: 0;
+            margin-bottom: 2px;
+            font-size: 0.9rem;
+        }
+
+        .cb-pendiente-item {
+            border: 1px solid #d8e3ef;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            background: #f7fafc;
+        }
+
+        .cb-bien-item {
+            border: 1px solid #d6dce3;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            position: relative;
+            background: #fafafa;
+        }
+
+        .cb-bien-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .cb-small-input input {
+            margin-top: 4px;
+            padding: 8px 10px;
+        }
+
+        @media (max-width: 900px) {
+            .cb-form-row,
+            .cb-form-row-3,
+            .cb-bien-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 
 </head>
 <body>
@@ -29,14 +94,19 @@
         <hr>
 
     <!-- FORMULARIO DE REGISTRO DE INGRESO -->
-    <div class="form-card">
+    <div class="form-card cb-compact-card">
         <h3>Registrar Ingreso con Bienes</h3>
 
-        <label>DNI *</label>
-        <input type="text" id="dni" placeholder="Ingrese DNI" maxlength="8">
-
-        <label>Nombre Completo <span class="muted">(Opcional si DNI ya está registrado)</span></label>
-        <input type="text" id="nombreCompleto" placeholder="Nombres y apellidos">
+        <div class="cb-form-row">
+            <div>
+                <label class="cb-label-tight">DNI *</label>
+                <input type="text" id="dni" placeholder="Ingrese DNI" maxlength="8">
+            </div>
+            <div>
+                <label class="cb-label-tight">Nombre Completo <span class="muted">(Opcional si DNI ya está registrado)</span></label>
+                <input type="text" id="nombreCompleto" placeholder="Nombres y apellidos">
+            </div>
+        </div>
 
         <div id="persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
             <strong>
@@ -58,13 +128,20 @@
             <!-- Los bienes se agregarán dinámicamente aquí -->
         </div>
 
-        <button onclick="agregarBien()" class="btn-inline btn-small" style="margin-bottom: 15px;">
+        <button onclick="agregarBien()" class="btn-inline btn-small" style="margin-bottom: 10px;">
             <img src="/images/plus-lg.svg" class="icon-white">
             Agregar Bien</button>
 
-        <label>Hora de Ingreso</label>
-        <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
-        <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
+        <div class="cb-form-row-3">
+            <div>
+                <label class="cb-label-tight">Fecha de Ingreso</label>
+                <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
+            </div>
+            <div>
+                <label class="cb-label-tight">Hora de Ingreso</label>
+                <input type="time" id="horaIngreso" placeholder="Dejar vacío para usar hora actual">
+            </div>
+        </div>
 
         <div class="form-card" style="margin-top:10px;">
             <label>Imagenes del registro <span class="muted">(opcional, max 20)</span></label>

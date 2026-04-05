@@ -95,11 +95,13 @@ namespace WebApplication1.Controllers
 
                 DateTime horaIngresoColumna = fechaHoraActual;
                 DateTime fechaIngresoColumna = fechaHoraActual.Date;
+                var esTipoNormal = string.Equals(tipoPersonaLocal, "Normal", StringComparison.OrdinalIgnoreCase);
+                var celularesIniciales = esTipoNormal ? 0 : (int?)null;
 
                 var datosPersonalLocal = new
                 {
                     tipoPersonaLocal,
-                    celularesDejados = 0,
+                    celularesDejados = celularesIniciales,
                     horaSalidaAlmuerzo = (DateTime?)null,
                     fechaSalidaAlmuerzo = (DateTime?)null,
                     horaEntradaAlmuerzo = (DateTime?)null,
@@ -108,7 +110,9 @@ namespace WebApplication1.Controllers
                     guardiaSalida = (string?)null,
                     guardiaSalidaAlmuerzo = (string?)null,
                     guardiaEntradaAlmuerzo = (string?)null,
-                    observaciones = CombinarObservacionesConCelulares(dto.Observaciones, 0)
+                    observaciones = esTipoNormal
+                        ? CombinarObservacionesConCelulares(dto.Observaciones, celularesIniciales ?? 0)
+                        : LimpiarLineaCelulares(dto.Observaciones)
                 };
 
                 var salidaDetalle = await _salidaService.CrearSalidaDetalle(
@@ -165,11 +169,14 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
+                    var tipoPersonaLocal = LeerTipoPersonaLocal(root);
+                    var celularesDejados = LeerCelularesDejados(root);
+                    var observacionesBase = dto.Observaciones ?? LeerObservaciones(root);
 
                     var datosActualizados = new
                     {
-                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
-                        celularesDejados = LeerCelularesDejados(root),
+                        tipoPersonaLocal,
+                        celularesDejados,
                         horaSalidaAlmuerzo = fechaHoraActual,
                         fechaSalidaAlmuerzo = fechaHoraActual.Date,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -178,9 +185,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = guardiaNombre,
                         guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
-                        observaciones = CombinarObservacionesConCelulares(
-                            dto.Observaciones ?? LeerObservaciones(root),
-                            LeerCelularesDejados(root) ?? 0)
+                        observaciones = string.Equals(tipoPersonaLocal, "Normal", StringComparison.OrdinalIgnoreCase)
+                            ? CombinarObservacionesConCelulares(observacionesBase, celularesDejados ?? 0)
+                            : LimpiarLineaCelulares(observacionesBase)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
@@ -221,11 +228,14 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
+                    var tipoPersonaLocal = LeerTipoPersonaLocal(root);
+                    var celularesDejados = LeerCelularesDejados(root);
+                    var observacionesBase = dto.Observaciones ?? LeerObservaciones(root);
 
                     var datosActualizados = new
                     {
-                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
-                        celularesDejados = LeerCelularesDejados(root),
+                        tipoPersonaLocal,
+                        celularesDejados,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = fechaHoraActual,
@@ -234,9 +244,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
                         guardiaEntradaAlmuerzo = guardiaNombre,
-                        observaciones = CombinarObservacionesConCelulares(
-                            dto.Observaciones ?? LeerObservaciones(root),
-                            LeerCelularesDejados(root) ?? 0)
+                        observaciones = string.Equals(tipoPersonaLocal, "Normal", StringComparison.OrdinalIgnoreCase)
+                            ? CombinarObservacionesConCelulares(observacionesBase, celularesDejados ?? 0)
+                            : LimpiarLineaCelulares(observacionesBase)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
@@ -283,13 +293,16 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
+                    var tipoPersonaLocal = LeerTipoPersonaLocal(root);
+                    var celularesDejados = LeerCelularesDejados(root);
+                    var observacionesBase = dto.Observaciones ?? LeerObservaciones(root);
 
                     var dni = salidaExistente.Dni;
                 
                     var datosActualizados = new
                     {
-                        tipoPersonaLocal = LeerTipoPersonaLocal(root),
-                        celularesDejados = LeerCelularesDejados(root),
+                        tipoPersonaLocal,
+                        celularesDejados,
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -298,9 +311,9 @@ namespace WebApplication1.Controllers
                         guardiaSalida = guardiaNombre,
                         guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
                         guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
-                        observaciones = CombinarObservacionesConCelulares(
-                            dto.Observaciones ?? LeerObservaciones(root),
-                            LeerCelularesDejados(root) ?? 0)
+                        observaciones = string.Equals(tipoPersonaLocal, "Normal", StringComparison.OrdinalIgnoreCase)
+                            ? CombinarObservacionesConCelulares(observacionesBase, celularesDejados ?? 0)
+                            : LimpiarLineaCelulares(observacionesBase)
                     };
 
                     var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(
@@ -363,10 +376,14 @@ namespace WebApplication1.Controllers
 
                 using var doc = JsonDocument.Parse(salidaExistente.DatosJSON);
                 var root = doc.RootElement;
+                var tipoPersonaLocal = LeerTipoPersonaLocal(root);
+
+                if (string.Equals(tipoPersonaLocal, "Retornando", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("Celulares solo aplica para Personal Local normal");
 
                 var datosActualizados = new
                 {
-                    tipoPersonaLocal = LeerTipoPersonaLocal(root),
+                    tipoPersonaLocal,
                     celularesDejados = dto.CelularesDejados,
                     horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                     fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,

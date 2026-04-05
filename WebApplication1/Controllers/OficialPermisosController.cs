@@ -75,7 +75,10 @@ namespace WebApplication1.Controllers
                         string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
 
                     if (!estaDentro)
-                        return BadRequest("No se puede registrar salida: la persona ya se encuentra fuera (último movimiento no es Entrada).");
+                    {
+                        var cuadernoOrigen = await _movimientosService.ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimientoGlobal);
+                        return BadRequest($"No se puede registrar salida: la persona ya se encuentra fuera con el DNI {dto.Dni.Trim()}. Último registro de salida: {cuadernoOrigen}. Revise ese cuaderno para completar el ingreso pendiente.");
+                    }
                 }
 
                 var dniNormalizado = dto.Dni.Trim();

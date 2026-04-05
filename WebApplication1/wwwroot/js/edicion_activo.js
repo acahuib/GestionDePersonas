@@ -146,6 +146,126 @@ function escaparHtml(texto) {
         .replace(/'/g, "&#39;");
 }
 
+function parsearDetalleOcurrencia(texto) {
+    const raw = String(texto || "").trim();
+    const base = {
+        tipo: "Persona",
+        dni: "",
+        placa: "",
+        tractoPlaca: "",
+        plataformaPlaca: "",
+        chofer: "",
+        empresa: "",
+        procedencia: "",
+        destino: "",
+        observacion: raw
+    };
+
+    if (!raw.startsWith("[TIPO:")) return base;
+
+    const partes = raw.split("|").map((p) => p.trim()).filter(Boolean);
+    const tipoMatch = partes[0]?.match(/^\[TIPO:\s*([^\]]+)\]$/i);
+    const tipoRaw = (tipoMatch?.[1] || "Persona").trim().toUpperCase();
+    if (tipoRaw === "VEHICULAR") base.tipo = "Vehicular";
+    if (tipoRaw === "ENCAPSULADO") base.tipo = "Encapsulado";
+
+    const extraer = (clave) => {
+        const prefijo = `${clave.toLowerCase()}:`;
+        const parte = partes.find((p) => p.toLowerCase().startsWith(prefijo));
+        return parte ? parte.substring(parte.indexOf(":") + 1).trim() : "";
+    };
+
+    base.dni = extraer("DNI");
+    base.placa = extraer("Placa");
+    base.tractoPlaca = extraer("Tracto Placa 1");
+    base.plataformaPlaca = extraer("Plataforma Placa 2");
+    base.chofer = extraer("Chofer");
+    base.empresa = extraer("Empresa/Proveedor");
+    base.procedencia = extraer("Procedencia");
+    base.destino = extraer("Destino");
+    base.observacion = extraer("Observacion") || raw;
+
+    return base;
+}
+
+function construirOcurrenciaCompuestaDesdeEditor() {
+    const tipo = document.querySelector("[data-ocurrencia-tipo]")?.value || "Persona";
+    const dni = document.querySelector("[data-ocurrencia-dni]")?.value || "S/N";
+
+    const leer = (campo) => {
+        const el = document.querySelector(`[data-ocurrencia-campo="${campo}"]`);
+        return (el?.value || "").trim();
+    };
+
+    if (tipo === "Vehicular") {
+        return [
+            "[TIPO: VEHICULAR]",
+            `DNI: ${dni || "S/N"}`,
+            `Placa: ${leer("placa")}`,
+            `Chofer: ${leer("chofer")}`,
+            `Empresa/Proveedor: ${leer("empresa")}`,
+            `Procedencia: ${leer("procedencia")}`,
+            `Destino: ${leer("destino")}`,
+            `Observacion: ${leer("observacion")}`
+        ].join(" | ");
+    }
+
+    if (tipo === "Encapsulado") {
+        return [
+            "[TIPO: ENCAPSULADO]",
+            `DNI: ${dni || "S/N"}`,
+            `Tracto Placa 1: ${leer("tractoPlaca")}`,
+            `Plataforma Placa 2: ${leer("plataformaPlaca")}`,
+            `Chofer: ${leer("chofer")}`,
+            `Empresa/Proveedor: ${leer("empresa")}`,
+            `Procedencia: ${leer("procedencia")}`,
+            `Destino: ${leer("destino")}`,
+            `Observacion: ${leer("observacion")}`
+        ].join(" | ");
+    }
+
+    return leer("observacion");
+}
+
+function actualizarBloquesEditorOcurrencia() {
+    const tipo = document.querySelector("[data-ocurrencia-tipo]")?.value || "Persona";
+    const bloquePersona = document.querySelector("[data-ocurrencia-bloque=" + '"persona"' + "]");
+    const bloqueVehicular = document.querySelector("[data-ocurrencia-bloque=" + '"vehicular"' + "]");
+    const bloqueEncapsulado = document.querySelector("[data-ocurrencia-bloque=" + '"encapsulado"' + "]");
+
+    if (bloquePersona) bloquePersona.style.display = tipo === "Persona" ? "block" : "none";
+    if (bloqueVehicular) bloqueVehicular.style.display = tipo === "Vehicular" ? "block" : "none";
+    if (bloqueEncapsulado) bloqueEncapsulado.style.display = tipo === "Encapsulado" ? "block" : "none";
+
+    const hidden = document.querySelector("[data-dato-key='ocurrencia']");
+    if (hidden) {
+        hidden.value = construirOcurrenciaCompuestaDesdeEditor();
+    }
+}
+
+function inicializarEditorOcurrenciaEspecial() {
+    const tipoSelector = document.querySelector("[data-ocurrencia-tipo]");
+    if (!tipoSelector) return;
+
+    tipoSelector.addEventListener("change", () => {
+        actualizarBloquesEditorOcurrencia();
+        resaltarCamposEditados();
+    });
+
+    document.querySelectorAll("[data-ocurrencia-campo]").forEach((el) => {
+        el.addEventListener("input", () => {
+            actualizarBloquesEditorOcurrencia();
+            resaltarCamposEditados();
+        });
+        el.addEventListener("change", () => {
+            actualizarBloquesEditorOcurrencia();
+            resaltarCamposEditados();
+        });
+    });
+
+    actualizarBloquesEditorOcurrencia();
+}
+
 function toDateTimeLocal(valor) {
     if (!valor) return "";
     const d = new Date(valor);
@@ -210,6 +330,63 @@ function construirCampo(key, value) {
     const label = escaparHtml(obtenerEtiquetaCampo(key));
     const safeKey = escaparHtml(key);
     const ayuda = escaparHtml(formatoEsperadoPorCampo(key));
+
+    if (tipoOperacion === "Ocurrencias" && key === "ocurrencia") {
+        const detalle = parsearDetalleOcurrencia(value);
+        const tipo = detalle.tipo || "Persona";
+
+        return `
+            <label>${label}</label>
+            <input type="hidden" data-dato-key="ocurrencia" data-dato-tipo="text" value="${escaparHtml(String(value ?? ""))}">
+            <input type="hidden" data-ocurrencia-dni value="${escaparHtml(detalle.dni || "S/N")}">
+
+            <label>Tipo de ocurrencia</label>
+            <select data-ocurrencia-tipo>
+                <option value="Persona" ${tipo === "Persona" ? "selected" : ""}>Persona</option>
+                <option value="Vehicular" ${tipo === "Vehicular" ? "selected" : ""}>Vehicular</option>
+                <option value="Encapsulado" ${tipo === "Encapsulado" ? "selected" : ""}>Encapsulado</option>
+            </select>
+
+            <div data-ocurrencia-bloque="persona" style="display:none;">
+                <label>Descripcion</label>
+                <textarea data-ocurrencia-campo="observacion" rows="3">${escaparHtml(detalle.observacion || "")}</textarea>
+            </div>
+
+            <div data-ocurrencia-bloque="vehicular" style="display:none;">
+                <label>Placa</label>
+                <input type="text" data-ocurrencia-campo="placa" value="${escaparHtml(detalle.placa || "")}">
+                <label>Chofer</label>
+                <input type="text" data-ocurrencia-campo="chofer" value="${escaparHtml(detalle.chofer || "")}">
+                <label>Empresa / Proveedor</label>
+                <input type="text" data-ocurrencia-campo="empresa" value="${escaparHtml(detalle.empresa || "")}">
+                <label>Procedencia</label>
+                <input type="text" data-ocurrencia-campo="procedencia" value="${escaparHtml(detalle.procedencia || "")}">
+                <label>Destino</label>
+                <input type="text" data-ocurrencia-campo="destino" value="${escaparHtml(detalle.destino || "")}">
+                <label>Observacion</label>
+                <textarea data-ocurrencia-campo="observacion" rows="3">${escaparHtml(detalle.observacion || "")}</textarea>
+            </div>
+
+            <div data-ocurrencia-bloque="encapsulado" style="display:none;">
+                <label>Tracto Placa 1</label>
+                <input type="text" data-ocurrencia-campo="tractoPlaca" value="${escaparHtml(detalle.tractoPlaca || "")}">
+                <label>Plataforma Placa 2</label>
+                <input type="text" data-ocurrencia-campo="plataformaPlaca" value="${escaparHtml(detalle.plataformaPlaca || "")}">
+                <label>Chofer</label>
+                <input type="text" data-ocurrencia-campo="chofer" value="${escaparHtml(detalle.chofer || "")}">
+                <label>Empresa / Proveedor</label>
+                <input type="text" data-ocurrencia-campo="empresa" value="${escaparHtml(detalle.empresa || "")}">
+                <label>Procedencia</label>
+                <input type="text" data-ocurrencia-campo="procedencia" value="${escaparHtml(detalle.procedencia || "")}">
+                <label>Destino</label>
+                <input type="text" data-ocurrencia-campo="destino" value="${escaparHtml(detalle.destino || "")}">
+                <label>Observacion</label>
+                <textarea data-ocurrencia-campo="observacion" rows="3">${escaparHtml(detalle.observacion || "")}</textarea>
+            </div>
+
+            <small class="muted formato-ayuda">Edicion estructurada para Ocurrencias vehiculares/encapsulado.</small>
+        `;
+    }
 
     if (tipoOperacion === "Proveedor" && key === "destino") {
         const valorActual = String(value ?? "").trim();
@@ -401,6 +578,7 @@ async function cargarRegistro() {
             el.addEventListener("input", resaltarCamposEditados);
             el.addEventListener("change", resaltarCamposEditados);
         });
+        inicializarEditorOcurrenciaEspecial();
         resaltarCamposEditados();
     } catch (error) {
         form.innerHTML = `<p class="text-center error">${escaparHtml(getPlainErrorMessage(error))}</p>`;

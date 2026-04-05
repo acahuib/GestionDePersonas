@@ -12,7 +12,6 @@ function cargarDatosDesdeUrl() {
     document.getElementById("fechaIngreso").value = params.get("fechaIngreso") || "";
     const fechaSalida = document.getElementById("fechaSalida");
     if (fechaSalida) fechaSalida.value = obtenerFechaLocalISO();
-    document.getElementById("observaciones").value = params.get("observacion") || "";
     
     const horaSalidaAlmuerzo = params.get("horaSalidaAlmuerzo");
     const horaEntradaAlmuerzo = params.get("horaEntradaAlmuerzo");
@@ -27,7 +26,6 @@ function cargarDatosDesdeUrl() {
 async function registrarSalida() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
-    const observaciones = document.getElementById("observaciones").value.trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
     const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
@@ -42,9 +40,7 @@ async function registrarSalida() {
     }
 
     try {
-        const body = {
-            observaciones: observaciones || null
-        };
+        const body = {};
 
         if (horaSalidaInput) {
             body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);

@@ -4,6 +4,159 @@ let salidaId = null;
 let ocurrencia = '';
 let modoComplemento = 'salida';
 
+function parsearDetalleOcurrencia(ocurrenciaTexto) {
+    const raw = String(ocurrenciaTexto || '').trim();
+    const detalleBase = {
+        tipo: 'Persona',
+        dni: '',
+        placa: '',
+        tractoPlaca: '',
+        plataformaPlaca: '',
+        chofer: '',
+        empresa: '',
+        procedencia: '',
+        destino: '',
+        observacion: raw
+    };
+
+    if (!raw.startsWith('[TIPO:')) return detalleBase;
+
+    const partes = raw.split('|').map((p) => p.trim()).filter(Boolean);
+    const tipoMatch = partes[0]?.match(/^\[TIPO:\s*([^\]]+)\]$/i);
+    const tipoRaw = (tipoMatch?.[1] || 'Persona').trim().toUpperCase();
+    if (tipoRaw === 'VEHICULAR') detalleBase.tipo = 'Vehicular';
+    if (tipoRaw === 'ENCAPSULADO') detalleBase.tipo = 'Encapsulado';
+
+    const extraer = (clave) => {
+        const prefijo = `${clave.toLowerCase()}:`;
+        const parte = partes.find((p) => p.toLowerCase().startsWith(prefijo));
+        return parte ? parte.substring(parte.indexOf(':') + 1).trim() : '';
+    };
+
+    detalleBase.dni = extraer('DNI');
+    detalleBase.placa = extraer('Placa');
+    detalleBase.tractoPlaca = extraer('Tracto Placa 1');
+    detalleBase.plataformaPlaca = extraer('Plataforma Placa 2');
+    detalleBase.chofer = extraer('Chofer');
+    detalleBase.empresa = extraer('Empresa/Proveedor');
+    detalleBase.procedencia = extraer('Procedencia');
+    detalleBase.destino = extraer('Destino');
+    detalleBase.observacion = extraer('Observacion') || raw;
+
+    return detalleBase;
+}
+
+function leerTexto(id) {
+    return document.getElementById(id)?.value?.trim() || '';
+}
+
+function renderizarDetalleEditable(detalle) {
+    const bloquePersona = document.getElementById('bloquePersonaDetalle');
+    const bloqueVehicular = document.getElementById('bloqueVehicularDetalle');
+    const bloqueEncapsulado = document.getElementById('bloqueEncapsuladoDetalle');
+    const tipoInput = document.getElementById('readonly-tipo-ocurrencia');
+
+    if (tipoInput) tipoInput.value = detalle.tipo || 'Persona';
+    if (bloquePersona) bloquePersona.style.display = detalle.tipo === 'Persona' ? 'block' : 'none';
+    if (bloqueVehicular) bloqueVehicular.style.display = detalle.tipo === 'Vehicular' ? 'block' : 'none';
+    if (bloqueEncapsulado) bloqueEncapsulado.style.display = detalle.tipo === 'Encapsulado' ? 'block' : 'none';
+
+    const textoPersona = document.getElementById('readonly-ocurrencia');
+    if (textoPersona) {
+        textoPersona.value = detalle.tipo === 'Persona' ? (detalle.observacion || '') : '';
+    }
+
+    const mapVehicular = {
+        'edit-vehiculo-placa': detalle.placa,
+        'edit-vehiculo-chofer': detalle.chofer,
+        'edit-vehiculo-empresa': detalle.empresa,
+        'edit-vehiculo-procedencia': detalle.procedencia,
+        'edit-vehiculo-destino': detalle.destino,
+        'edit-vehiculo-observacion': detalle.observacion
+    };
+
+    Object.entries(mapVehicular).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    });
+
+    const mapEncapsulado = {
+        'edit-encapsulado-tracto-placa': detalle.tractoPlaca,
+        'edit-encapsulado-plataforma-placa': detalle.plataformaPlaca,
+        'edit-encapsulado-chofer': detalle.chofer,
+        'edit-encapsulado-empresa': detalle.empresa,
+        'edit-encapsulado-procedencia': detalle.procedencia,
+        'edit-encapsulado-destino': detalle.destino,
+        'edit-encapsulado-observacion': detalle.observacion
+    };
+
+    Object.entries(mapEncapsulado).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    });
+}
+
+function construirOcurrenciaDesdeDetalle(detalle) {
+    const tipo = detalle?.tipo || 'Persona';
+
+    if (tipo === 'Vehicular') {
+        const placa = leerTexto('edit-vehiculo-placa');
+        const chofer = leerTexto('edit-vehiculo-chofer');
+        const empresa = leerTexto('edit-vehiculo-empresa');
+        const procedencia = leerTexto('edit-vehiculo-procedencia');
+        const destino = leerTexto('edit-vehiculo-destino');
+        const observacion = leerTexto('edit-vehiculo-observacion');
+
+        if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
+            throw new Error('Complete todos los campos de detalle vehicular para guardar');
+        }
+
+        return [
+            '[TIPO: VEHICULAR]',
+            `DNI: ${detalle?.dni || 'S/N'}`,
+            `Placa: ${placa}`,
+            `Chofer: ${chofer}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(' | ');
+    }
+
+    if (tipo === 'Encapsulado') {
+        const tractoPlaca = leerTexto('edit-encapsulado-tracto-placa');
+        const plataformaPlaca = leerTexto('edit-encapsulado-plataforma-placa');
+        const chofer = leerTexto('edit-encapsulado-chofer');
+        const empresa = leerTexto('edit-encapsulado-empresa');
+        const procedencia = leerTexto('edit-encapsulado-procedencia');
+        const destino = leerTexto('edit-encapsulado-destino');
+        const observacion = leerTexto('edit-encapsulado-observacion');
+
+        if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
+            throw new Error('Complete todos los campos de detalle encapsulado para guardar');
+        }
+
+        return [
+            '[TIPO: ENCAPSULADO]',
+            `DNI: ${detalle?.dni || 'S/N'}`,
+            `Tracto Placa 1: ${tractoPlaca}`,
+            `Plataforma Placa 2: ${plataformaPlaca}`,
+            `Chofer: ${chofer}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(' | ');
+    }
+
+    const textoPersona = leerTexto('readonly-ocurrencia');
+    if (!textoPersona) {
+        throw new Error('La descripción de ocurrencia es obligatoria');
+    }
+
+    return textoPersona;
+}
+
 function actualizarTextosModo() {
     const esIngreso = modoComplemento === 'ingreso';
     const tituloPagina = document.getElementById('tituloPagina');
@@ -72,7 +225,8 @@ function cargarDatos() {
     }
     
     document.getElementById('readonly-guardia-ingreso').value = guardiaInicial || '-';
-    document.getElementById('readonly-ocurrencia').value = ocurrencia || '-';
+    const detalle = parsearDetalleOcurrencia(ocurrencia || '');
+    renderizarDetalleEditable(detalle);
 }
 
 async function registrarSalida() {
@@ -99,14 +253,19 @@ async function registrarSalida() {
             horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
         }
 
+        const detalle = parsearDetalleOcurrencia(ocurrencia || '');
+        const ocurrenciaActualizada = construirOcurrenciaDesdeDetalle(detalle);
+
         const body = {
-            ocurrencia: ocurrencia
+            ocurrencia: ocurrenciaActualizada
         };
         if (modoComplemento === 'ingreso') {
             body.horaIngreso = horaSalida;
         } else {
             body.horaSalida = horaSalida;
         }
+
+        ocurrencia = ocurrenciaActualizada;
 
         const responseSalida = await fetchAuth(`${API_BASE}/ocurrencias/${salidaId}/horario`, {
             method: 'PUT',

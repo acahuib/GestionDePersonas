@@ -1,6 +1,7 @@
 ﻿// Script frontend para personal_local.
 
 let personaEncontrada = null;
+const guardadosCelularesPendientes = new Map();
 
 function actualizarFechaHoraActualVisual() {
     const etiqueta = document.getElementById("fecha-hora-actual");
@@ -18,12 +19,18 @@ function obtenerCelularesDejados(datos) {
     return Number.isNaN(numero) ? "0" : String(Math.max(0, Math.min(2, numero)));
 }
 
-function obtenerOpcionesCelularesHtml(valorActual) {
+function construirBotonesCelularesHtml(payloadCodificado, valorActual) {
     const actual = valorActual ?? "0";
+    const clase0 = actual === "0" ? "btn-success" : "btn-secondary";
+    const clase1 = actual === "1" ? "btn-success" : "btn-secondary";
+    const clase2 = actual === "2" ? "btn-success" : "btn-secondary";
+
     return `
-        <option value="0" ${actual === "0" ? "selected" : ""}>No deja celular</option>
-        <option value="1" ${actual === "1" ? "selected" : ""}>1 celular</option>
-        <option value="2" ${actual === "2" ? "selected" : ""}>2 celulares</option>
+        <div class="celulares-grupo" data-celulares-group="1" style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button type="button" class="${clase0} btn-small" onclick="actualizarCelularesDesdePayload('${payloadCodificado}', '0', this)">0</button>
+            <button type="button" class="${clase1} btn-small" onclick="actualizarCelularesDesdePayload('${payloadCodificado}', '1', this)">1</button>
+            <button type="button" class="${clase2} btn-small" onclick="actualizarCelularesDesdePayload('${payloadCodificado}', '2', this)">2</button>
+        </div>
     `;
 }
 
@@ -31,6 +38,20 @@ function mostrarCampoNombreManual(mostrar) {
     const grupo = document.getElementById("grupo-nombre-manual");
     if (!grupo) return;
     grupo.style.display = mostrar ? "block" : "none";
+}
+
+async function esperarGuardadoCelulares(registroId) {
+    const clave = String(registroId || "").trim();
+    if (!clave) return;
+
+    const tarea = guardadosCelularesPendientes.get(clave);
+    if (!tarea) return;
+
+    try {
+        await tarea;
+    } catch {
+        // El error ya se maneja en el flujo de guardado
+    }
 }
 
 async function buscarPersonaPorDni() {
@@ -198,12 +219,56 @@ async function actualizarCelularesDejados(id, celularesDejados) {
     }
 }
 
-async function actualizarCelularesDesdePayload(payloadCodificado, valor) {
+async function actualizarCelularesDesdePayload(payloadCodificado, valor, triggerElement) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
-        await actualizarCelularesDejados(datos.id, valor);
+        const grupo = triggerElement?.closest?.("[data-celulares-group]");
+        const registroId = String(datos?.id || "").trim();
+        if (grupo && grupo.dataset.saving === "1") {
+            return;
+        }
+
+        const tareaGuardado = (async () => {
+            if (grupo) {
+                grupo.dataset.saving = "1";
+                grupo.querySelectorAll("button").forEach((btn) => {
+                    btn.disabled = true;
+                });
+            }
+
+            await actualizarCelularesDejados(datos.id, valor);
+
+            if (grupo) {
+                grupo.querySelectorAll("button").forEach((btn) => {
+                    btn.classList.remove("btn-success");
+                    btn.classList.add("btn-secondary");
+                    if (btn.textContent?.trim() === String(valor)) {
+                        btn.classList.remove("btn-secondary");
+                        btn.classList.add("btn-success");
+                    }
+                });
+            }
+        })();
+
+        if (registroId) {
+            const tareaConLimpieza = tareaGuardado.finally(() => {
+                guardadosCelularesPendientes.delete(registroId);
+            });
+            guardadosCelularesPendientes.set(registroId, tareaConLimpieza);
+            await tareaConLimpieza;
+        } else {
+            await tareaGuardado;
+        }
     } catch (error) {
         console.error("Error al actualizar celulares:", error);
+    } finally {
+        const grupo = triggerElement?.closest?.("[data-celulares-group]");
+        if (grupo) {
+            grupo.querySelectorAll("button").forEach((btn) => {
+                btn.disabled = false;
+            });
+            grupo.dataset.saving = "0";
+        }
     }
 }
 
@@ -259,18 +324,20 @@ function irAControlBienes(dni, nombre) {
     window.location.href = `/ControlBienes/html/control_bienes.html?${params.toString()}`;
 }
 
-function irAControlBienesDesdePayload(payloadCodificado) {
+async function irAControlBienesDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId);
         irAControlBienes(datos.dni, datos.nombre);
     } catch (error) {
         console.error("Error al abrir Control de Bienes:", error);
     }
 }
 
-function irASalidaAlmuerzoDesdePayload(payloadCodificado) {
+async function irASalidaAlmuerzoDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId || datos.salidaId);
         irASalidaAlmuerzo(
             datos.salidaId,
             datos.dni,
@@ -285,9 +352,10 @@ function irASalidaAlmuerzoDesdePayload(payloadCodificado) {
     }
 }
 
-function irAIngresoAlmuerzoDesdePayload(payloadCodificado) {
+async function irAIngresoAlmuerzoDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId || datos.salidaId);
         irAIngresoAlmuerzo(
             datos.salidaId,
             datos.dni,
@@ -305,9 +373,10 @@ function irAIngresoAlmuerzoDesdePayload(payloadCodificado) {
     }
 }
 
-function irASalidaFinalDesdePayload(payloadCodificado) {
+async function irASalidaFinalDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId || datos.salidaId);
         irASalidaFinal(
             datos.salidaId,
             datos.dni,
@@ -324,9 +393,10 @@ function irASalidaFinalDesdePayload(payloadCodificado) {
     }
 }
 
-function cerrarRegistroDesdePayload(payloadCodificado) {
+async function cerrarRegistroDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId || datos.id);
         personalLocalCierre?.cerrarRegistroPersonalLocal(datos.id, datos.dni, datos.nombre);
     } catch (error) {
         console.error("Error al cerrar registro:", error);
@@ -436,11 +506,13 @@ async function cargarActivos() {
             const tieneSalidaAlmuerzo = datos.horaSalidaAlmuerzo !== null && datos.horaSalidaAlmuerzo !== undefined;
             const tieneEntradaAlmuerzo = datos.horaEntradaAlmuerzo !== null && datos.horaEntradaAlmuerzo !== undefined;
             const payloadControlBienes = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
                 dni,
                 nombre
             }));
             const payloadCierre = encodeURIComponent(JSON.stringify({
                 id: s.id,
+                registroId: s.id,
                 dni,
                 nombre
             }));
@@ -448,6 +520,7 @@ async function cargarActivos() {
                 id: s.id
             }));
             const payloadSalidaAlmuerzo = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
                 salidaId: s.id,
                 dni,
                 nombre,
@@ -457,6 +530,7 @@ async function cargarActivos() {
                 observacion
             }));
             const payloadIngresoAlmuerzo = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
                 salidaId: s.id,
                 dni,
                 nombre,
@@ -469,6 +543,7 @@ async function cargarActivos() {
                 observacion
             }));
             const payloadSalidaDirecta = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
                 salidaId: s.id,
                 dni,
                 nombre,
@@ -480,6 +555,7 @@ async function cargarActivos() {
                 observacion
             }));
             const payloadSalidaFinal = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
                 salidaId: s.id,
                 dni,
                 nombre,
@@ -495,7 +571,7 @@ async function cargarActivos() {
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
-            html += `<td><select class="input-inline" onchange="actualizarCelularesDesdePayload('${payloadCelulares}', this.value)">${obtenerOpcionesCelularesHtml(celularesDejados)}</select></td>`;
+            html += `<td>${construirBotonesCelularesHtml(payloadCelulares, celularesDejados)}</td>`;
             html += `<td>${horaSalidaAlmuerzo}</td>`;
             html += `<td>${horaEntradaAlmuerzo}</td>`;
             html += '<td>';

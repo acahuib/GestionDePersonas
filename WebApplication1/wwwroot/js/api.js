@@ -883,9 +883,83 @@ function habilitarEnterComoTab() {
     });
 }
 
+function esMensajeEstadoOperativo(texto) {
+    const valor = String(texto || "").toLowerCase();
+    if (!valor) return false;
+
+    return (
+        valor.includes("ya está adentro") ||
+        valor.includes("ya esta adentro") ||
+        valor.includes("ya se encuentra fuera") ||
+        valor.includes("último registro de entrada") ||
+        valor.includes("ultimo registro de entrada") ||
+        valor.includes("último registro de salida") ||
+        valor.includes("ultimo registro de salida") ||
+        valor.includes("completar el ingreso pendiente") ||
+        valor.includes("regularizar la salida")
+    );
+}
+
+function aplicarEstiloMensajeOperativo(el) {
+    if (!(el instanceof HTMLElement)) return;
+
+    const esError = el.classList.contains("error");
+    const texto = (el.textContent || "").trim();
+    const resaltar = esError && esMensajeEstadoOperativo(texto);
+
+    el.classList.toggle("error-operativo", resaltar);
+}
+
+function habilitarMensajesOperativos() {
+    const refrescar = () => {
+        const elementos = document.querySelectorAll("#mensaje");
+        elementos.forEach((el) => aplicarEstiloMensajeOperativo(el));
+    };
+
+    refrescar();
+
+    const observer = new MutationObserver((mutations) => {
+        let requiereRefrescoGlobal = false;
+
+        for (const mut of mutations) {
+            if (mut.type === "characterData") {
+                const parent = mut.target?.parentElement;
+                if (parent && parent.id === "mensaje") {
+                    aplicarEstiloMensajeOperativo(parent);
+                }
+                continue;
+            }
+
+            if (mut.type === "attributes") {
+                if (mut.target instanceof HTMLElement && mut.target.id === "mensaje") {
+                    aplicarEstiloMensajeOperativo(mut.target);
+                }
+                continue;
+            }
+
+            if (mut.type === "childList") {
+                requiereRefrescoGlobal = true;
+            }
+        }
+
+        if (requiereRefrescoGlobal) {
+            refrescar();
+        }
+    });
+
+    observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        characterData: true,
+        attributeFilter: ["class"]
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     forzarMayusculasGlobal();
     habilitarEnterComoTab();
+    habilitarMensajesOperativos();
     completarFechasActualesVacias();
     completarHorasActualesVacias();
     habilitarHoraActualPorDefectoGlobal();

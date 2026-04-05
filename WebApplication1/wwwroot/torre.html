@@ -3,76 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torre - Monitoreo en Tiempo Real</title>
-    <link rel="stylesheet" href="css/torre.css">
+    <title>Redireccionando Torre...</title>
+    <meta http-equiv="refresh" content="0; url=/Torre/html/torre.html">
 </head>
 <body>
-    <div class="torre-shell">
-        <header class="torre-header">
-            <div>
-                <h1>Torre de Monitoreo</h1>
-                <p class="subtitle">Vista en tiempo real de todos los apuntes de garita. Solo lectura.</p>
-            </div>
-            <div class="header-actions">
-                <div class="user-pill">
-                    <span id="nombreUsuario">Torre</span>
-                    <small id="ultimaActualizacion">Ult. act: --:--:--</small>
-                </div>
-                <button type="button" class="btn btn-danger" onclick="cerrarSesion()">Cerrar sesion</button>
-            </div>
-        </header>
-
-        <section class="tabs-card">
-            <div id="tabsCuadernos" class="tabs-cuadernos"></div>
-        </section>
-
-        <section class="filters-card">
-            <div class="filters-grid">
-                <label>
-                    Movimiento
-                    <select id="filtroMovimiento">
-                        <option value="">Todos</option>
-                        <option value="Entrada">Entrada</option>
-                        <option value="Salida">Salida</option>
-                        <option value="Info">Info</option>
-                    </select>
-                </label>
-                <label>
-                    Buscar
-                    <input id="busquedaTexto" type="text" placeholder="DNI, nombre, placa, observacion...">
-                </label>
-                <label>
-                    Desde
-                    <input id="fechaInicio" type="date">
-                </label>
-                <label>
-                    Hasta
-                    <input id="fechaFin" type="date">
-                </label>
-                <div class="filter-buttons">
-                    <button id="btnBuscar" type="button" class="btn">Buscar</button>
-                    <button id="btnLimpiar" type="button" class="btn btn-muted">Limpiar</button>
-                    <button id="btnRecargar" type="button" class="btn btn-soft">Recargar</button>
-                </div>
-            </div>
-            <p id="resumenResultados" class="resumen">0 registros</p>
-        </section>
-
-        <section>
-            <div id="listaRegistros" class="lista-registros">
-                <article class="registro-card loading-card">Cargando registros...</article>
-            </div>
-            <div class="pagination">
-                <button id="btnPrev" type="button" class="btn btn-soft">Anterior</button>
-                <span id="infoPagina">Pagina 0 de 0</span>
-                <button id="btnNext" type="button" class="btn btn-soft">Siguiente</button>
-            </div>
-        </section>
-    </div>
-
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/imagenes_registro.js"></script>
-    <script src="js/torre.js"></script>
+    <script>
+        window.location.replace('/Torre/html/torre.html');
+    </script>
 </body>
 </html>

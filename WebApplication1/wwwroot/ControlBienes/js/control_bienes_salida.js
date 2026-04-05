@@ -34,17 +34,6 @@ async function cargarDetalleSalida() {
 
         document.getElementById("ver-dni").value = dni || "N/A";
         document.getElementById("ver-nombre").value = nombreCompleto || "N/A";
-
-        const fechaIngresoObj = data.fechaIngreso ? new Date(data.fechaIngreso) : null;
-        const horaIngresoObj = data.horaIngreso ? new Date(data.horaIngreso) : null;
-
-        document.getElementById("ver-fecha-ingreso").value = fechaIngresoObj
-            ? fechaIngresoObj.toLocaleDateString("es-PE")
-            : "N/A";
-        document.getElementById("ver-hora-ingreso").value = horaIngresoObj
-            ? horaIngresoObj.toLocaleTimeString("es-PE")
-            : "N/A";
-        document.getElementById("ver-guardia-ingreso").value = data.guardiaIngreso || "N/A";
         document.getElementById("ver-observacion").value = data.observacion || "(Ninguna)";
 
         renderBienesActivos();
@@ -71,19 +60,39 @@ function renderBienesActivos() {
         const serie = bien.serie ? ` | Serie: ${bien.serie}` : "";
         const fechaIngreso = bien.fechaIngreso ? new Date(bien.fechaIngreso).toLocaleString("es-PE") : "N/A";
 
-        return `<label style="display: block; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 8px; background: #f9f9f9; cursor: pointer;">
-            <input type="checkbox" class="bien-check" value="${bien.id}" style="margin-right: 8px;">
-            <strong>Bien #${index + 1}</strong><br>
+        return `<label class="bien-salida-item" data-bien-item>
+            <div class="bien-salida-top">
+                <input type="checkbox" class="bien-check" value="${bien.id}" style="margin-right: 8px;">
+                <strong>Bien #${index + 1}</strong>
+            </div>
             ${cant}x ${desc}${marca}${serie}<br>
             <span class="muted">Ingreso: ${fechaIngreso}</span>
         </label>`;
     }).join("");
+
+    sincronizarVisualSeleccionBienes();
 }
 
 function marcarTodosBienes(marcar) {
     const checks = document.querySelectorAll(".bien-check");
     checks.forEach(ch => {
         ch.checked = marcar;
+    });
+    sincronizarVisualSeleccionBienes();
+}
+
+function sincronizarVisualSeleccionBienes() {
+    const checks = Array.from(document.querySelectorAll(".bien-check"));
+    checks.forEach((check) => {
+        const item = check.closest("[data-bien-item]");
+        if (!item) return;
+        item.classList.toggle("selected", check.checked);
+    });
+
+    checks.forEach((check) => {
+        if (check.dataset.bindSeleccion === "1") return;
+        check.addEventListener("change", sincronizarVisualSeleccionBienes);
+        check.dataset.bindSeleccion = "1";
     });
 }
 

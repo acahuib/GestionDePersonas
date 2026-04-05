@@ -5,6 +5,41 @@
     <title>Salida Control de Bienes - Control de Accesos</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../../css/styles.css">
+    <style>
+        .cb-salida-hint {
+            margin: 8px 0 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #eef6ff;
+            border: 1px solid #cde0f7;
+            color: #1f3b57;
+            font-weight: 600;
+        }
+
+        .bien-salida-item {
+            display: block;
+            border: 1px solid #d6dce3;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .bien-salida-item.selected {
+            background: #e8f8ec;
+            border-color: #3aa55f;
+            box-shadow: inset 0 0 0 1px #3aa55f;
+        }
+
+        .bien-salida-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+    </style>
 </head>
 <body>
 
@@ -22,7 +57,7 @@
         <hr>
 
     <div class="form-card">
-        <h3>Datos del Ingreso</h3>
+        <h3>Datos del Registro</h3>
 
         <label>DNI</label>
         <input type="text" id="ver-dni" readonly>
@@ -31,6 +66,7 @@
         <input type="text" id="ver-nombre" readonly>
 
         <label>Bienes Declarados</label>
+        <div class="cb-salida-hint">Escoja los bienes que va a retirar.</div>
         <div style="margin-bottom: 8px;">
             <button type="button" class="btn-inline btn-small" onclick="marcarTodosBienes(true)">
                 <img src="/images/check-lg.svg" class="icon-white"> Seleccionar todos
@@ -40,15 +76,6 @@
             </button>
         </div>
         <div id="ver-bienes" style="padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; min-height: 50px;"></div>
-
-        <label>Fecha y Hora de Ingreso</label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <input type="text" id="ver-fecha-ingreso" readonly>
-            <input type="text" id="ver-hora-ingreso" readonly>
-        </div>
-
-        <label>Guardia de Ingreso</label>
-        <input type="text" id="ver-guardia-ingreso" readonly>
 
         <label>Observación de Ingreso</label>
         <textarea id="ver-observacion" readonly rows="2"></textarea>
@@ -66,7 +93,7 @@
 
         <div>
             <button id="btn-registrar-salida" onclick="registrarSalida()" class="btn-danger btn-block">
-                <img src="/images/box-arrow-right.svg" class="icon-white"> Registrar SALIDA</button>
+                Registrar SALIDA</button>
         </div>
         <div>
             <button onclick="window.location.href='control_bienes.html'" class="btn-secondary btn-block"><img src="/images/x-circle.svg" class="icon-white"> Cancelar</button>

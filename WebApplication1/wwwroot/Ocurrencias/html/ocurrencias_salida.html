@@ -39,8 +39,56 @@
         <label id="labelGuardiaInicial">Guardia de Ingreso</label>
         <input type="text" id="readonly-guardia-ingreso" readonly>
 
-        <label>Ocurrencia</label>
-        <textarea id="readonly-ocurrencia" rows="4" readonly></textarea>
+        <label>Tipo de Ocurrencia</label>
+        <input type="text" id="readonly-tipo-ocurrencia" readonly>
+
+        <div id="bloquePersonaDetalle">
+            <label>Ocurrencia</label>
+            <textarea id="readonly-ocurrencia" rows="4"></textarea>
+        </div>
+
+        <div id="bloqueVehicularDetalle" style="display:none;">
+            <label>Placa</label>
+            <input type="text" id="edit-vehiculo-placa">
+
+            <label>Chofer</label>
+            <input type="text" id="edit-vehiculo-chofer">
+
+            <label>Empresa / Proveedor</label>
+            <input type="text" id="edit-vehiculo-empresa">
+
+            <label>Procedencia</label>
+            <input type="text" id="edit-vehiculo-procedencia">
+
+            <label>Destino</label>
+            <input type="text" id="edit-vehiculo-destino">
+
+            <label>Observacion</label>
+            <textarea id="edit-vehiculo-observacion" rows="3"></textarea>
+        </div>
+
+        <div id="bloqueEncapsuladoDetalle" style="display:none;">
+            <label>Tracto Placa 1</label>
+            <input type="text" id="edit-encapsulado-tracto-placa">
+
+            <label>Plataforma Placa 2</label>
+            <input type="text" id="edit-encapsulado-plataforma-placa">
+
+            <label>Chofer</label>
+            <input type="text" id="edit-encapsulado-chofer">
+
+            <label>Empresa / Proveedor</label>
+            <input type="text" id="edit-encapsulado-empresa">
+
+            <label>Procedencia</label>
+            <input type="text" id="edit-encapsulado-procedencia">
+
+            <label>Destino</label>
+            <input type="text" id="edit-encapsulado-destino">
+
+            <label>Observacion</label>
+            <textarea id="edit-encapsulado-observacion" rows="3"></textarea>
+        </div>
 
         <label id="labelHoraComplemento">Hora de Salida <span class="muted">(Opcional)</span></label>
         <input type="date" id="fechaSalida" placeholder="Fecha de salida">

@@ -10,6 +10,8 @@ async function initCuadernoHistorial() {
 
     const inputTexto = container.querySelector("[data-historial-texto]");
     const inputFecha = container.querySelector("[data-historial-fecha]");
+    const selectTipoRegistro = container.querySelector("[data-historial-tipo-registro]");
+    const selectTipoPersonaLocal = container.querySelector("[data-historial-tipo-persona-local]");
     const btnBuscar = container.querySelector("[data-historial-buscar]");
     const btnLimpiar = container.querySelector("[data-historial-limpiar]");
     const btnRecargar = container.querySelector("[data-historial-recargar]");
@@ -100,7 +102,17 @@ async function initCuadernoHistorial() {
         pushIf("Destino", datos.destino);
         pushIf("Tipo habitacion", datos.tipoHabitacion);
         pushIf("Numero personas", datos.numeroPersonas);
-        pushIf("Tipo registro", datos.tipoRegistro === "Almacen" ? "Almacen" : "Normal");
+        if (tipoOperacion === "VehiculoEmpresa") {
+            pushIf("Tipo registro", datos.tipoRegistro === "Almacen" ? "Almacen" : "Normal");
+        }
+
+        if (tipoOperacion === "PersonalLocal") {
+            const tipoRaw = String(datos.tipoPersonaLocal || "").trim().toLowerCase();
+            const tipoPersonal = tipoRaw === "retornando"
+                ? "Retornando"
+                : (tipoRaw === "normal" ? "Personal local" : "No especificado");
+            pushIf("Tipo personal", tipoPersonal);
+        }
         pushIf("Origen", datos.origen);
         pushIf("Cuarto", datos.cuarto);
         pushIf("Ocurrencia", datos.ocurrencia);
@@ -347,6 +359,8 @@ async function initCuadernoHistorial() {
             ocurrenciaDetalle,
             kmSalida: (datos.kmSalida ?? "-").toString(),
             kmIngreso: (datos.kmIngreso ?? "-").toString(),
+            tipoRegistro: normalizarTipoRegistro(datos.tipoRegistro),
+            tipoPersonaLocal: normalizarTipoPersonaLocal(datos.tipoPersonaLocal),
             datos,
             fechaFiltro: fechaBase ? new Date(fechaBase) : null,
             timestamp,
@@ -386,6 +400,17 @@ async function initCuadernoHistorial() {
                 return `<div class="detalle-item">${piezas.join(" | ")}</div>`;
             })
             .join("")}</div>`;
+    };
+
+    const normalizarTipoRegistro = (valor) => {
+        return String(valor || "").trim().toLowerCase() === "almacen" ? "Almacen" : "Normal";
+    };
+
+    const normalizarTipoPersonaLocal = (valor) => {
+        const tipo = String(valor || "").trim().toLowerCase();
+        if (tipo === "retornando") return "Retornando";
+        if (tipo === "normal") return "Normal";
+        return "";
     };
 
     const renderPaginacion = (totalRegistros, totalPaginas) => {
@@ -519,9 +544,17 @@ async function initCuadernoHistorial() {
     const aplicarFiltros = () => {
         const texto = (inputTexto?.value || "").trim().toLowerCase();
         const fecha = inputFecha?.value || "";
+        const tipoRegistroFiltro = (selectTipoRegistro?.value || "").trim();
+        const tipoPersonaLocalFiltro = (selectTipoPersonaLocal?.value || "").trim();
 
         const filtrados = registros.filter((item) => {
             if (texto && !item.textoBusqueda.includes(texto)) return false;
+            if (tipoOperacion === "VehiculoEmpresa" && tipoRegistroFiltro) {
+                if (item.tipoRegistro !== tipoRegistroFiltro) return false;
+            }
+            if (tipoOperacion === "PersonalLocal" && tipoPersonaLocalFiltro) {
+                if (item.tipoPersonaLocal !== tipoPersonaLocalFiltro) return false;
+            }
             if (fecha) {
                 if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
                 const fechaItem = item.fechaFiltro.toISOString().split("T")[0];
@@ -560,6 +593,8 @@ async function initCuadernoHistorial() {
     if (btnLimpiar) btnLimpiar.addEventListener("click", () => {
         if (inputTexto) inputTexto.value = "";
         if (inputFecha) inputFecha.value = "";
+        if (selectTipoRegistro) selectTipoRegistro.value = "";
+        if (selectTipoPersonaLocal) selectTipoPersonaLocal.value = "";
         aplicarFiltros();
     });
     if (btnRecargar) btnRecargar.addEventListener("click", cargar);
@@ -567,6 +602,8 @@ async function initCuadernoHistorial() {
         aplicarFiltros();
     });
     if (inputFecha) inputFecha.addEventListener("change", aplicarFiltros);
+    if (selectTipoRegistro) selectTipoRegistro.addEventListener("change", aplicarFiltros);
+    if (selectTipoPersonaLocal) selectTipoPersonaLocal.addEventListener("change", aplicarFiltros);
 
     renderHeaders();
 

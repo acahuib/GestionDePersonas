@@ -12,20 +12,6 @@ function actualizarFechaHoraActualVisual() {
     etiqueta.textContent = `${fecha} ${hora}`;
 }
 
-function obtenerCelularesDejados(datos) {
-    const valor = datos?.celularesDejados;
-    const numero = Number.parseInt(valor, 10);
-    return Number.isNaN(numero) ? "0" : String(Math.max(0, Math.min(2, numero)));
-}
-
-function obtenerOpcionesCelularesHtml(valorActual) {
-    const actual = valorActual ?? "0";
-    return `
-        <option value="0" ${actual === "0" ? "selected" : ""}>No deja celular</option>
-        <option value="1" ${actual === "1" ? "selected" : ""}>1 celular</option>
-        <option value="2" ${actual === "2" ? "selected" : ""}>2 celulares</option>
-    `;
-}
 
 function mostrarCampoNombreManual(mostrar) {
     const grupo = document.getElementById("grupo-nombre-manual");
@@ -166,37 +152,6 @@ async function registrarIngresoRetornando() {
     }
 }
 
-async function actualizarCelularesDejadosRetornando(id, celularesDejados) {
-    const cantidad = Number.parseInt(celularesDejados, 10);
-    if (Number.isNaN(cantidad) || cantidad < 0 || cantidad > 2) {
-        return;
-    }
-
-    try {
-        const response = await fetchAuth(`${API_BASE}/personal-local/${id}/celulares`, {
-            method: "PUT",
-            body: JSON.stringify({ celularesDejados: cantidad })
-        });
-
-        if (!response.ok) {
-            const error = await readApiError(response);
-            throw new Error(error || "No se pudo actualizar celulares");
-        }
-    } catch (error) {
-        alert(getPlainErrorMessage(error));
-        cargarActivosRetornando();
-    }
-}
-
-async function actualizarCelularesRetornandoDesdePayload(payloadCodificado, valor) {
-    try {
-        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
-        await actualizarCelularesDejadosRetornando(datos.id, valor);
-    } catch (error) {
-        console.error("Error al actualizar celulares retornando:", error);
-    }
-}
-
 function irAControlBienes(dni, nombre) {
     const params = new URLSearchParams({
         dni,
@@ -278,7 +233,6 @@ async function cargarActivosRetornando() {
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
         html += '<th>Fecha / Hora Ingreso</th>';
-        html += '<th>Celulares</th>';
         html += '<th>Acciones</th>';
         html += '</tr></thead><tbody>';
 
@@ -294,16 +248,11 @@ async function cargarActivosRetornando() {
                 ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })
                 : "N/A";
             const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE") : "N/A";
-            const celularesDejados = obtenerCelularesDejados(s.datos || {});
-            const payloadCelulares = encodeURIComponent(JSON.stringify({
-                id: s.id
-            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
             html += `<td>${nombre}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
-            html += `<td><select class="input-inline" onchange="actualizarCelularesRetornandoDesdePayload('${payloadCelulares}', this.value)">${obtenerOpcionesCelularesHtml(celularesDejados)}</select></td>`;
             html += '<td>';
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
             html += '<span class="muted">Sin salida en este cuaderno</span>';

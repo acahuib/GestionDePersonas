@@ -71,7 +71,10 @@ namespace WebApplication1.Controllers
                 return BadRequest("No se puede registrar Días Libres: la persona no tiene movimiento previo de entrada.");
 
             if (!string.Equals(ultimoMovimiento.TipoMovimiento, "Entrada", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("No se puede registrar Días Libres: la persona no está dentro de la mina (último movimiento no es Entrada).");
+            {
+                var cuadernoOrigen = await _movimientosService.ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimiento);
+                return BadRequest($"No se puede registrar Días Libres: la persona ya se encuentra fuera con el DNI {dniNormalizado}. Último registro de salida: {cuadernoOrigen}. Revise ese cuaderno para completar el ingreso pendiente.");
+            }
 
             var persona = await _context.Personas
                 .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);

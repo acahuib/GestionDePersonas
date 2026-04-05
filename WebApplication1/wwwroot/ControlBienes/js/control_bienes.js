@@ -42,7 +42,7 @@ async function buscarPersonaPorDni() {
 
             await cargarBienesPendientesPorDni(dni);
             
-            const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
+            const primerBien = document.querySelector(".bien-item .bien-descripcion");
             if (primerBien) primerBien.focus();
         } else if (response.status === 404) {
             console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
@@ -132,18 +132,26 @@ function renderBienesPendientes() {
         return;
     }
 
-    container.innerHTML = bienesPendientes.map((bien, index) => {
+    const items = bienesPendientes.map((bien, index) => {
         const cantidad = bien.cantidad || 1;
         const marca = bien.marca ? ` | Marca: ${bien.marca}` : "";
         const serie = bien.serie ? ` | Serie: ${bien.serie}` : "";
         const fechaIngreso = bien.fechaIngreso ? new Date(bien.fechaIngreso).toLocaleString("es-PE") : "N/A";
 
-        return `<div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 5px; background: #f5f5f5;">
+        return `<div class="cb-pendiente-item">
             <strong>Pendiente #${index + 1}</strong><br>
             ${cantidad}x ${bien.descripcion || "N/A"}${marca}${serie}<br>
             <span class="muted">Ingreso: ${fechaIngreso}</span>
         </div>`;
     }).join("");
+
+    container.innerHTML = `
+        <p class="muted" style="margin:0 0 8px 0;">Ya tiene <strong>${bienesPendientes.length}</strong> bien(es) activo(s) registrado(s).</p>
+        <details>
+            <summary style="cursor:pointer; color:#1d4e89; font-weight:600;">Ver bienes previos</summary>
+            <div style="margin-top:8px;">${items}</div>
+        </details>
+    `;
 }
 
 function agregarBien() {
@@ -153,26 +161,26 @@ function agregarBien() {
     const bienDiv = document.createElement("div");
     bienDiv.className = "bien-item";
     bienDiv.id = `bien-${bienId}`;
-    bienDiv.style.cssText = "border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; position: relative; background: #f9f9f9;";
+    bienDiv.classList.add("cb-bien-item");
     
     bienDiv.innerHTML = `
         <button type="button" onclick="eliminarBien(${bienId})" class="btn-danger btn-small" style="position: absolute; top: 10px; right: 10px;"><img src="/images/x-circle.svg" class="icon-white"></button>
-        <h4 style="margin-top: 0;">Bien #${bienId}</h4>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <h4 style="margin-top: 0; margin-bottom: 6px;">Bien #${bienId}</h4>
+        <div class="cb-bien-grid cb-small-input">
             <div>
-                <label>Descripción *</label>
-                <input type="text" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
+                <label class="cb-label-tight">Descripción *</label>
+                <input type="text" class="bien-descripcion" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
             </div>
             <div>
-                <label>Marca</label>
+                <label class="cb-label-tight">Marca</label>
                 <input type="text" id="marca-${bienId}" placeholder="Marca (opcional)" data-bien-id="${bienId}">
             </div>
             <div>
-                <label>Serie</label>
+                <label class="cb-label-tight">Serie</label>
                 <input type="text" id="serie-${bienId}" placeholder="Serie (opcional)" data-bien-id="${bienId}">
             </div>
             <div>
-                <label>Cantidad</label>
+                <label class="cb-label-tight">Cantidad</label>
                 <input type="number" id="cant-${bienId}" value="1" min="1" data-bien-id="${bienId}">
             </div>
         </div>
@@ -322,6 +330,13 @@ function irASalida(salidaId) {
     window.location.href = `control_bienes_salida.html?${params.toString()}`;
 }
 
+function irARegistrarMasBienes(dni, nombre) {
+    const params = new URLSearchParams();
+    params.set("dni", String(dni || "").trim());
+    if (nombre) params.set("nombre", String(nombre).trim());
+    window.location.href = `control_bienes.html?${params.toString()}`;
+}
+
 function abrirImagenesRegistroControlBienes(registroId, info = {}) {
     if (typeof window.abrirImagenesRegistroModal !== "function") {
         window.alert("No se pudo abrir el visor de imagenes.");
@@ -428,6 +443,7 @@ async function cargarActivos() {
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
             html += `<button onclick='irASalida(${s.id})' class="btn-danger btn-small btn-inline">Registrar Salida</button> `;
+            html += `<button onclick="irARegistrarMasBienes('${(s.dni || '').replace(/'/g, "\\'")}', '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-secondary btn-small btn-inline">Registrar mas bienes</button> `;
             html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroControlBienes(${s.id}, { dni: '${(s.dni || '').replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
             html += '</td></tr>';
         });

@@ -74,6 +74,53 @@ namespace WebApplication1.Services
 
         }
 
+        private static string FormatearTipoOperacion(string? tipoOperacion)
+        {
+            if (string.IsNullOrWhiteSpace(tipoOperacion))
+                return "Registro no identificado";
+
+            return tipoOperacion.Trim() switch
+            {
+                "PersonalLocal" => "Personal Local",
+                "OficialPermisos" => "Oficial Permisos",
+                "VehiculoEmpresa" => "Vehiculo Empresa",
+                "VehiculosProveedores" => "Vehiculos Proveedores",
+                "ControlBienes" => "Control de Bienes",
+                "DiasLibre" => "Dias Libres",
+                "HabitacionProveedor" => "Habitacion Proveedor",
+                "Proveedor" => "Proveedores",
+                "Ocurrencias" => "Ocurrencias",
+                "Cancha" => "Cancha",
+                _ => tipoOperacion.Trim()
+            };
+        }
+
+        private static string FormatearPuntoControl(int puntoControlId)
+        {
+            return puntoControlId switch
+            {
+                GARITA_ID => "Garita",
+                COMEDOR_ID => "Comedor",
+                QUIMICO_ID => "Quimico",
+                _ => $"Punto de control {puntoControlId}"
+            };
+        }
+
+        public async Task<string> ObtenerOrigenRegistroPorMovimientoAsync(Movimiento movimiento)
+        {
+            var tipoOperacion = await _context.OperacionDetalle
+                .AsNoTracking()
+                .Where(o => o.MovimientoId == movimiento.Id)
+                .OrderByDescending(o => o.FechaCreacion)
+                .Select(o => o.TipoOperacion)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrWhiteSpace(tipoOperacion))
+                return FormatearTipoOperacion(tipoOperacion);
+
+            return FormatearPuntoControl(movimiento.PuntoControlId);
+        }
+
         private async Task ValidarEntradaDuplicada(string dni, int puntoControlId, string tipoMovimiento)
         {
             if (puntoControlId != GARITA_ID)
@@ -89,7 +136,9 @@ namespace WebApplication1.Services
 
             if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
             {
-                throw new InvalidOperationException($"Esta persona ya está adentro con el DNI {dni}");
+                var cuadernoOrigen = await ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimiento);
+                throw new InvalidOperationException(
+                    $"Esta persona ya está adentro con el DNI {dni}. Último registro de entrada: {cuadernoOrigen}. Revise ese cuaderno para regularizar la salida.");
             }
         }
 

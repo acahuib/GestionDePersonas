@@ -942,6 +942,8 @@ namespace WebApplication1.Controllers
             [FromQuery] string? tipoOperacion,
             [FromQuery] string? tipoMovimiento,
             [FromQuery] string? texto,
+            [FromQuery] string? tipoRegistro,
+            [FromQuery] string? tipoPersonaLocal,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -1024,6 +1026,7 @@ namespace WebApplication1.Controllers
                 var ocurrencia = LeerString(datosJson, "ocurrencia");
                 var observacion = LeerString(datosJson, "observacion");
                 var observaciones = LeerString(datosJson, "observaciones");
+                var tipoRegistro = LeerString(datosJson, "tipoRegistro");
 
                 AgregarSiTiene("Proveedor", proveedor);
                 AgregarSiTiene("Placa", placa);
@@ -1031,6 +1034,7 @@ namespace WebApplication1.Controllers
                 AgregarSiTiene("Destino", destino);
                 AgregarSiTiene("Origen", origen);
                 AgregarSiTiene("Destino salida", destinoSalida);
+                AgregarSiTiene("Tipo ruta", tipoRegistro);
                 AgregarSiTiene("Cuarto", cuarto);
                 AgregarSiTiene("Ocurrencia", ocurrencia);
 
@@ -1174,6 +1178,38 @@ namespace WebApplication1.Controllers
                 {
                     var blob = $"{r.Dni} {r.Nombre} {r.DatosJson.GetRawText()}".ToLowerInvariant();
                     return blob.Contains(textoLower);
+                }).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(tipoRegistro))
+            {
+                var tipoRegistroFiltro = tipoRegistro.Trim();
+                registros = registros.Where(r =>
+                {
+                    if (!string.Equals(r.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    if (!r.DatosJson.TryGetProperty("tipoRegistro", out var tipoRegistroJson) || tipoRegistroJson.ValueKind != JsonValueKind.String)
+                        return false;
+
+                    var valor = tipoRegistroJson.GetString();
+                    return string.Equals(valor, tipoRegistroFiltro, StringComparison.OrdinalIgnoreCase);
+                }).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(tipoPersonaLocal))
+            {
+                var tipoPersonaLocalFiltro = tipoPersonaLocal.Trim();
+                registros = registros.Where(r =>
+                {
+                    if (!string.Equals(r.TipoOperacion, "PersonalLocal", StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    if (!r.DatosJson.TryGetProperty("tipoPersonaLocal", out var tipoPersonaLocalJson) || tipoPersonaLocalJson.ValueKind != JsonValueKind.String)
+                        return false;
+
+                    var valor = tipoPersonaLocalJson.GetString();
+                    return string.Equals(valor, tipoPersonaLocalFiltro, StringComparison.OrdinalIgnoreCase);
                 }).ToList();
             }
 

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torre de Control - Centro de Monitoreo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/torre.css">
+</head>
+<body>
+    <div class="tc-shell">
+        <header class="tc-header">
+            <div>
+                <p class="tc-eyebrow">Monitoreo integral</p>
+                <h1>Torre de Control</h1>
+                <p class="tc-subtitle">Supervision en tiempo real de todos los cuadernos de garita.</p>
+            </div>
+            <div class="tc-actions">
+                <div class="tc-userbox">
+                    <strong id="nombreUsuario">Torre</strong>
+                    <span id="ultimaActualizacion">Ultima actualizacion: --:--:--</span>
+                </div>
+                <button type="button" class="tc-btn tc-btn-danger" onclick="cerrarSesion()">Cerrar sesion</button>
+            </div>
+        </header>
+
+        <section class="tc-kpis" id="kpiPanel">
+            <article class="tc-kpi">
+                <span>Total visibles</span>
+                <strong id="kpiTotal">0</strong>
+            </article>
+            <article class="tc-kpi">
+                <span>Entradas</span>
+                <strong id="kpiEntradas">0</strong>
+            </article>
+            <article class="tc-kpi">
+                <span>Salidas</span>
+                <strong id="kpiSalidas">0</strong>
+            </article>
+        </section>
+
+        <section class="tc-filters">
+            <label>
+                Cuaderno
+                <select id="filtroTipo"></select>
+            </label>
+            <label>
+                Movimiento
+                <select id="filtroMovimiento">
+                    <option value="">Todos</option>
+                    <option value="Entrada">Entrada</option>
+                    <option value="Salida">Salida</option>
+                    <option value="Info">Info</option>
+                </select>
+            </label>
+            <label id="wrapFiltroTipoRegistro" class="tc-hidden">
+                Tipo ruta almacen
+                <select id="filtroTipoRegistro">
+                    <option value="">Todos</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Almacen">Almacen</option>
+                </select>
+            </label>
+            <label id="wrapFiltroTipoPersonaLocal" class="tc-hidden">
+                Tipo personal
+                <select id="filtroTipoPersonaLocal">
+                    <option value="">Todos</option>
+                    <option value="Normal">Personal local</option>
+                    <option value="Retornando">Retornando</option>
+                </select>
+            </label>
+            <label>
+                Buscar
+                <input id="busquedaTexto" type="text" placeholder="DNI, nombre, placa, observacion, cuaderno...">
+            </label>
+            <label>
+                Desde
+                <input id="fechaInicio" type="date">
+            </label>
+            <label>
+                Hasta
+                <input id="fechaFin" type="date">
+            </label>
+            <div class="tc-filter-actions">
+                <button id="btnBuscar" type="button" class="tc-btn">Buscar</button>
+                <button id="btnLimpiar" type="button" class="tc-btn tc-btn-muted">Limpiar</button>
+                <button id="btnDescargar" type="button" class="tc-btn tc-btn-accent">Descargar Excel</button>
+                <button id="btnRecargar" type="button" class="tc-btn tc-btn-soft">Recargar</button>
+            </div>
+        </section>
+
+        <section class="tc-table-wrap">
+            <div class="tc-table-head">
+                <p id="resumenResultados">0 registros</p>
+                <div class="tc-pagination-inline">
+                    <button id="btnPrev" type="button" class="tc-btn tc-btn-soft">Anterior</button>
+                    <span id="infoPagina">Pagina 0 de 0</span>
+                    <button id="btnNext" type="button" class="tc-btn tc-btn-soft">Siguiente</button>
+                </div>
+            </div>
+            <div class="tc-table-scroller">
+                <table class="tc-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Cuaderno</th>
+                            <th>Movimiento</th>
+                            <th>DNI</th>
+                            <th>Nombre</th>
+                            <th>Guardia</th>
+                            <th>Resumen</th>
+                            <th>Imagenes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="torreBody">
+                        <tr><td colspan="8">Cargando registros...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/imagenes_registro.js"></script>
+    <script src="../js/torre.js"></script>
+</body>
+</html>
