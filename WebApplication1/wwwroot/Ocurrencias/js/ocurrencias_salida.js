@@ -4,11 +4,17 @@ let salidaId = null;
 let ocurrencia = '';
 let modoComplemento = 'salida';
 
+function formatearTipoOcurrencia(tipo) {
+    if (tipo === 'CosasEncargadas') return 'Cosas encargadas';
+    return tipo || 'Persona';
+}
+
 function parsearDetalleOcurrencia(ocurrenciaTexto) {
     const raw = String(ocurrenciaTexto || '').trim();
     const detalleBase = {
         tipo: 'Persona',
         dni: '',
+        nombre: '',
         placa: '',
         tractoPlaca: '',
         plataformaPlaca: '',
@@ -16,6 +22,8 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
         empresa: '',
         procedencia: '',
         destino: '',
+        queEncarga: '',
+        aQuienDeja: '',
         observacion: raw
     };
 
@@ -26,6 +34,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     const tipoRaw = (tipoMatch?.[1] || 'Persona').trim().toUpperCase();
     if (tipoRaw === 'VEHICULAR') detalleBase.tipo = 'Vehicular';
     if (tipoRaw === 'ENCAPSULADO') detalleBase.tipo = 'Encapsulado';
+    if (tipoRaw === 'COSAS ENCARGADAS') detalleBase.tipo = 'CosasEncargadas';
 
     const extraer = (clave) => {
         const prefijo = `${clave.toLowerCase()}:`;
@@ -34,6 +43,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     };
 
     detalleBase.dni = extraer('DNI');
+    detalleBase.nombre = extraer('Nombre');
     detalleBase.placa = extraer('Placa');
     detalleBase.tractoPlaca = extraer('Tracto Placa 1');
     detalleBase.plataformaPlaca = extraer('Plataforma Placa 2');
@@ -41,7 +51,9 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     detalleBase.empresa = extraer('Empresa/Proveedor');
     detalleBase.procedencia = extraer('Procedencia');
     detalleBase.destino = extraer('Destino');
-    detalleBase.observacion = extraer('Observacion') || raw;
+    detalleBase.queEncarga = extraer('Que encarga');
+    detalleBase.aQuienDeja = extraer('A quien deja encargado');
+    detalleBase.observacion = extraer('Observacion') || (detalleBase.tipo === 'Persona' ? raw : '');
 
     return detalleBase;
 }
@@ -56,14 +68,26 @@ function renderizarDetalleEditable(detalle) {
     const bloqueEncapsulado = document.getElementById('bloqueEncapsuladoDetalle');
     const tipoInput = document.getElementById('readonly-tipo-ocurrencia');
 
-    if (tipoInput) tipoInput.value = detalle.tipo || 'Persona';
-    if (bloquePersona) bloquePersona.style.display = detalle.tipo === 'Persona' ? 'block' : 'none';
+    if (tipoInput) tipoInput.value = formatearTipoOcurrencia(detalle.tipo);
+    if (bloquePersona) bloquePersona.style.display = (detalle.tipo === 'Persona' || detalle.tipo === 'CosasEncargadas') ? 'block' : 'none';
     if (bloqueVehicular) bloqueVehicular.style.display = detalle.tipo === 'Vehicular' ? 'block' : 'none';
     if (bloqueEncapsulado) bloqueEncapsulado.style.display = detalle.tipo === 'Encapsulado' ? 'block' : 'none';
 
     const textoPersona = document.getElementById('readonly-ocurrencia');
     if (textoPersona) {
-        textoPersona.value = detalle.tipo === 'Persona' ? (detalle.observacion || '') : '';
+        if (detalle.tipo === 'CosasEncargadas') {
+            textoPersona.value = [
+                `DNI: ${detalle.dni || '-'}`,
+                `Nombre: ${detalle.nombre || '-'}`,
+                `Empresa/Proveedor: ${detalle.empresa || '-'}`,
+                `Que encarga: ${detalle.queEncarga || '-'}`,
+                `A quien deja encargado: ${detalle.aQuienDeja || '-'}`
+            ].join('\n');
+            textoPersona.setAttribute('readonly', 'readonly');
+        } else {
+            textoPersona.value = detalle.tipo === 'Persona' ? (detalle.observacion || '') : '';
+            textoPersona.removeAttribute('readonly');
+        }
     }
 
     const mapVehicular = {
@@ -98,6 +122,10 @@ function renderizarDetalleEditable(detalle) {
 
 function construirOcurrenciaDesdeDetalle(detalle) {
     const tipo = detalle?.tipo || 'Persona';
+
+    if (tipo === 'CosasEncargadas') {
+        throw new Error('Este tipo de registro es solo informativo y no requiere completar ingreso/salida');
+    }
 
     if (tipo === 'Vehicular') {
         const placa = leerTexto('edit-vehiculo-placa');

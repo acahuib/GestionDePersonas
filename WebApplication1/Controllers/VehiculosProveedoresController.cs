@@ -8,6 +8,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Helpers;
 using WebApplication1.Services;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Security.Claims;
 
 namespace WebApplication1.Controllers
@@ -178,7 +179,125 @@ namespace WebApplication1.Controllers
             int salidaEmpresaId,
             [FromBody] RegistrarVehiculoEmpresaDesdeProveedorDto? dto)
         {
-            return BadRequest("Registro espejo entre VehiculoEmpresa y VehiculosProveedores deshabilitado temporalmente.");
+            var salidaEmpresa = await _salidasService.ObtenerSalidaPorId(salidaEmpresaId);
+            if (salidaEmpresa == null)
+                return NotFound("Registro de VehiculoEmpresa no encontrado.");
+
+            if (!string.Equals(salidaEmpresa.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("El registro origen no corresponde a VehiculoEmpresa.");
+
+            if (!salidaEmpresa.HoraSalida.HasValue || salidaEmpresa.HoraIngreso.HasValue)
+                return BadRequest("El registro de VehiculoEmpresa debe estar pendiente de ingreso para usar este flujo especial.");
+
+            var dniNormalizado = (salidaEmpresa.Dni ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(dniNormalizado))
+                return BadRequest("El registro de VehiculoEmpresa no tiene DNI asociado.");
+
+            using var docEmpresa = JsonDocument.Parse(salidaEmpresa.DatosJSON);
+            var datosEmpresa = docEmpresa.RootElement;
+
+            var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+            if (persona == null)
+            {
+                var nombreConductor = JsonElementHelper.GetString(datosEmpresa, "conductor");
+                if (string.IsNullOrWhiteSpace(nombreConductor))
+                    nombreConductor = dniNormalizado;
+
+                persona = new Models.Persona
+                {
+                    Dni = dniNormalizado,
+                    Nombre = nombreConductor,
+                    Tipo = "VehiculoProveedor"
+                };
+                _context.Personas.Add(persona);
+                await _context.SaveChangesAsync();
+            }
+
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            var guardiaNombre = usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            guardiaNombre ??= "S/N";
+
+            var ahoraLocal = ResolverHoraPeru(null);
+            var fechaActual = ahoraLocal.Date;
+
+            var placa = JsonElementHelper.GetString(datosEmpresa, "placa") ?? "N/A";
+            var procedenciaBase =
+                dto?.Procedencia?.Trim() ??
+                JsonElementHelper.GetString(datosEmpresa, "destinoSalida") ??
+                JsonElementHelper.GetString(datosEmpresa, "destino") ??
+                JsonElementHelper.GetString(datosEmpresa, "procedencia") ??
+                "Vehiculo Empresa";
+
+            var proveedor = dto?.Proveedor?.Trim();
+            if (string.IsNullOrWhiteSpace(proveedor))
+                proveedor = "Cruce especial desde Vehiculo Empresa";
+
+            var observacionCruce = dto?.Observacion?.Trim();
+            if (string.IsNullOrWhiteSpace(observacionCruce))
+                observacionCruce = "Cruce especial VE->VP (sin pendiente de salida en Vehiculos Proveedores).";
+
+            var movimientoEntrada = await _movimientosService.RegistrarMovimientoEnBD(
+                dniNormalizado,
+                1,
+                "Entrada",
+                usuarioId);
+
+            var salidaProveedor = await _salidasService.CrearSalidaDetalle(
+                movimientoEntrada.Id,
+                "VehiculosProveedores",
+                new
+                {
+                    nombreApellidos = persona.Nombre,
+                    proveedor,
+                    placa,
+                    tipo = dto?.Tipo,
+                    lote = dto?.Lote,
+                    cantidad = dto?.Cantidad,
+                    procedencia = procedenciaBase,
+                    guardiaIngreso = guardiaNombre,
+                    guardiaSalida = guardiaNombre,
+                    observacion = observacionCruce,
+                    cierreAdministrativo = true,
+                    motivoCierreAdministrativo = "Flujo especial desde VehiculoEmpresa",
+                    guardiaCierreAdministrativo = guardiaNombre,
+                    fechaCierreAdministrativo = ahoraLocal,
+                    salidaEmpresaIdOrigen = salidaEmpresaId
+                },
+                usuarioId,
+                ahoraLocal,
+                fechaActual,
+                ahoraLocal,
+                fechaActual,
+                dniNormalizado
+            );
+
+            var nodeEmpresa = JsonNode.Parse(salidaEmpresa.DatosJSON) as JsonObject ?? new JsonObject();
+            var observacionEmpresa = nodeEmpresa["observacion"]?.GetValue<string>();
+            var marcaCruce = "Cerrado manual para terminar registro en vehiculos de mineral.";
+            nodeEmpresa["observacion"] = string.IsNullOrWhiteSpace(observacionEmpresa)
+                ? marcaCruce
+                : $"{observacionEmpresa} | {marcaCruce}";
+            nodeEmpresa["cruceEspecialVehiculoProveedor"] = true;
+            nodeEmpresa["guardiaCruceVehiculoProveedor"] = guardiaNombre;
+            nodeEmpresa["fechaCruceVehiculoProveedor"] = ahoraLocal;
+            nodeEmpresa["vehiculoProveedorSalidaId"] = salidaProveedor.Id;
+
+            salidaEmpresa.DatosJSON = nodeEmpresa.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+            salidaEmpresa.HoraIngreso = ahoraLocal;
+            salidaEmpresa.FechaIngreso = fechaActual;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Cruce especial registrado. VehiculoEmpresa y VehiculosProveedores quedaron cerrados sin pendientes.",
+                salidaEmpresaId,
+                salidaProveedorId = salidaProveedor.Id
+            });
         }
 
         [HttpPut("{id}/salida")]

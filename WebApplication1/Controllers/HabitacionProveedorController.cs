@@ -48,17 +48,6 @@ namespace WebApplication1.Controllers
             };
         }
 
-        private static string NormalizarTipoIngreso(string? tipoIngreso)
-        {
-            if (string.IsNullOrWhiteSpace(tipoIngreso)) return "Proveedor";
-
-            var valor = tipoIngreso.Trim().ToLowerInvariant();
-            if (valor is "informativopersonalmina" or "informativopersonal" or "informativomina")
-                return "InformativoPersonalMina";
-
-            return "Proveedor";
-        }
-
         private int? ExtractUsuarioIdFromToken()
         {
             return UserClaimsHelper.GetUserId(User);
@@ -143,8 +132,6 @@ namespace WebApplication1.Controllers
             try
             {
                 var dniNormalizado = dto.Dni.Trim();
-                var tipoIngreso = NormalizarTipoIngreso(dto.TipoIngreso);
-                var esInformativoPersonalMina = string.Equals(tipoIngreso, "InformativoPersonalMina", StringComparison.OrdinalIgnoreCase);
 
                 if (string.IsNullOrWhiteSpace(dniNormalizado))
                     return BadRequest("DNI es requerido");
@@ -152,13 +139,12 @@ namespace WebApplication1.Controllers
                 if (string.IsNullOrWhiteSpace(dto.Origen))
                     return BadRequest("Origen es requerido");
 
-                Models.OperacionDetalle? proveedorActivo = null;
-                if (!esInformativoPersonalMina)
-                {
-                    proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, dto.ProveedorSalidaId);
-                    if (proveedorActivo == null)
-                        return BadRequest("El proveedor debe estar activo en el cuaderno de Proveedores antes de ingresar a Habitación.");
-                }
+                if (string.IsNullOrWhiteSpace(dto.Cuarto))
+                    return BadRequest("Cuarto es requerido");
+
+                Models.OperacionDetalle? proveedorActivo = await ObtenerProveedorActivo(dniNormalizado, dto.ProveedorSalidaId);
+                if (dto.ProveedorSalidaId.HasValue && proveedorActivo == null)
+                    return BadRequest("No se encontró proveedor activo para el DNI indicado.");
 
                 if (await TieneHabitacionActiva(dniNormalizado))
                     return BadRequest("Este proveedor ya tiene una habitación activa.");
@@ -173,12 +159,11 @@ namespace WebApplication1.Controllers
 
                 if (persona == null)
                 {
-                    var tipoPersona = esInformativoPersonalMina ? "PersonalLocal" : "HabitacionProveedor";
                     persona = new Models.Persona
                     {
                         Dni = dniNormalizado,
                         Nombre = dto.NombresApellidos!,
-                        Tipo = tipoPersona
+                        Tipo = "HabitacionProveedor"
                     };
                     _context.Personas.Add(persona);
                     await _context.SaveChangesAsync();
@@ -215,7 +200,6 @@ namespace WebApplication1.Controllers
                     "HabitacionProveedor",
                     new
                     {
-                        tipoIngreso,
                         proveedorSalidaId = proveedorActivo?.Id,
                         origen = dto.Origen,
                         cuarto = dto.Cuarto,
@@ -239,12 +223,9 @@ namespace WebApplication1.Controllers
                     new { id = salidaDetalle.Id },
                     new
                     {
-                        mensaje = esInformativoPersonalMina
-                            ? "Ingreso informativo a Habitación registrado"
-                            : "Ingreso a Habitación Proveedor registrado",
+                        mensaje = "Ingreso a Habitación registrado",
                         salidaId = salidaDetalle.Id,
                         tipoOperacion = "HabitacionProveedor",
-                        tipoIngreso,
                         nombreCompleto = persona.Nombre,
                         dni = dniNormalizado,
                         estado = "Aguardando salida"
@@ -288,14 +269,9 @@ namespace WebApplication1.Controllers
                     var proveedorSalidaId = root.TryGetProperty("proveedorSalidaId", out var proveedorIdElement) && proveedorIdElement.ValueKind == JsonValueKind.Number && proveedorIdElement.TryGetInt32(out var proveedorId)
                         ? proveedorId
                         : (int?)null;
-                    var tipoIngreso = root.TryGetProperty("tipoIngreso", out var tipoIngresoEl) && tipoIngresoEl.ValueKind == JsonValueKind.String
-                        ? tipoIngresoEl.GetString()
-                        : "Proveedor";
-                    var esInformativoPersonalMina = string.Equals(tipoIngreso, "InformativoPersonalMina", StringComparison.OrdinalIgnoreCase);
 
                     var datosActualizados = new
                     {
-                        tipoIngreso,
                         proveedorSalidaId,
                         origen = root.TryGetProperty("origen", out var org) && org.ValueKind == JsonValueKind.String ? org.GetString() : null,
                         cuarto = root.TryGetProperty("cuarto", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null,

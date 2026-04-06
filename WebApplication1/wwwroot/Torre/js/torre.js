@@ -112,6 +112,7 @@ function torreExtraerGuardia(datos) {
 }
 
 function torreArmarResumen(datos) {
+    const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
     const camposClave = [
         datos.procedencia,
         datos.destino,
@@ -119,11 +120,16 @@ function torreArmarResumen(datos) {
         datos.ocurrencia,
         datos.observacion,
         datos.observaciones,
+        datos.motivoCierreAdministrativo,
         datos.cuarto,
         datos.turno,
         datos.tipoPersonaLocal,
         datos.tipo
     ].filter((v) => v !== undefined && v !== null && String(v).trim() !== "");
+
+    if (cierreAdministrativo && !camposClave.length) {
+        camposClave.push("Cierre administrativo");
+    }
 
     if (!camposClave.length) return "Sin resumen";
 
@@ -132,6 +138,8 @@ function torreArmarResumen(datos) {
 }
 
 function torreExtraerDetalles(datos) {
+    const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
+
     const detalleMap = {
         tipoRegistro: "Tipo ruta",
         proveedor: "Proveedor",
@@ -152,15 +160,30 @@ function torreExtraerDetalles(datos) {
         turno: "Turno",
         quienAutoriza: "Autoriza",
         deDonde: "De donde",
-        tipoPersonaLocal: "Tipo personal"
+        tipoPersonaLocal: "Tipo personal",
+        motivoCierreAdministrativo: "Motivo cierre",
+        observacionesCierreAdministrativo: "Obs. cierre",
+        guardiaCierreAdministrativo: "Guardia cierre"
     };
 
     const detalles = [];
+    if (cierreAdministrativo) {
+        detalles.push("Estado: Cerrado administrativamente");
+    }
+
     Object.entries(detalleMap).forEach(([k, lbl]) => {
         const val = datos[k];
         if (val === undefined || val === null || String(val).trim() === "") return;
         detalles.push(`${lbl}: ${String(val)}`);
     });
+
+    if (datos.fechaCierreAdministrativo) {
+        const fecha = new Date(datos.fechaCierreAdministrativo);
+        const fechaTexto = Number.isNaN(fecha.getTime())
+            ? String(datos.fechaCierreAdministrativo)
+            : `${fecha.toLocaleDateString("es-PE")} ${fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`;
+        detalles.push(`Fecha cierre: ${fechaTexto}`);
+    }
 
     if (Array.isArray(datos.bienes) && datos.bienes.length) {
         detalles.push(`Bienes: ${datos.bienes.map((b) => `${b.cantidad || 1}x ${b.descripcion || "-"}`).join("; ")}`);

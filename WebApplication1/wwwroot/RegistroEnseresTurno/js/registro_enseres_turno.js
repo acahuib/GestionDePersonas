@@ -304,23 +304,45 @@ function _renderTablaEnseres() {
     const container = document.getElementById("items-container");
     if (!container) return;
 
-    container.innerHTML = enseresItems.map(item => `
-        <tr data-item-id="${item.id}">
+    const renderCeldasItem = (item) => {
+        if (!item) {
+            return `
+                <td></td>
+                <td></td>
+                <td></td>
+            `;
+        }
+
+        return `
             <td>
                 <input type="text" class="enser-nombre" value="${item.nombre.replace(/"/g, "&quot;")}" placeholder="Nombre del enser" style="width:100%;" oninput="actualizarNombreEnser('${item.id}', this.value)">
             </td>
             <td>
-                <input type="number" class="enser-cantidad" min="0" step="1" value="${item.cantidad}" style="width:100px;" oninput="actualizarCantidadEnser('${item.id}', this.value)">
+                <input type="number" class="enser-cantidad" min="0" step="1" value="${item.cantidad}" style="width:70px;" oninput="actualizarCantidadEnser('${item.id}', this.value)">
             </td>
             <td>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <div style="display:flex; gap:4px; flex-wrap:wrap;">
                     <button type="button" class="btn-inline btn-small" onclick="ajustarCantidadEnser('${item.id}', -1)">-1</button>
                     <button type="button" class="btn-inline btn-small" onclick="ajustarCantidadEnser('${item.id}', 1)">+1</button>
                     <button type="button" class="btn-danger btn-small" onclick="quitarFilaEnser('${item.id}')">Quitar</button>
                 </div>
             </td>
-        </tr>
-    `).join("");
+        `;
+    };
+
+    const filas = [];
+    for (let i = 0; i < enseresItems.length; i += 2) {
+        const itemA = enseresItems[i];
+        const itemB = enseresItems[i + 1];
+        filas.push(`
+            <tr data-item-id-a="${itemA?.id || ""}" data-item-id-b="${itemB?.id || ""}">
+                ${renderCeldasItem(itemA)}
+                ${renderCeldasItem(itemB)}
+            </tr>
+        `);
+    }
+
+    container.innerHTML = filas.join("");
 
     _actualizarResumenEnseres();
 }
@@ -347,8 +369,19 @@ function ajustarCantidadEnser(id, delta) {
 }
 
 function agregarFilaEnser() {
-    enseresItems.push(_crearEnser("", 0));
+    const nuevo = _crearEnser("", 0);
+    enseresItems.push(nuevo);
     _renderTablaEnseres();
+
+    // Llevar foco directo al nuevo campo de nombre para escritura inmediata.
+    requestAnimationFrame(() => {
+        const input = document.querySelector(`tr[data-item-id-a="${nuevo.id}"], tr[data-item-id-b="${nuevo.id}"]`)
+            ?.querySelector(`input[oninput*="'${nuevo.id}'"].enser-nombre`);
+        if (input instanceof HTMLInputElement) {
+            input.focus();
+            input.select();
+        }
+    });
 }
 
 function quitarFilaEnser(id) {

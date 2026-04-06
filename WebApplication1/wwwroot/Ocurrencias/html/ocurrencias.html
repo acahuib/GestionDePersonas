@@ -47,6 +47,7 @@
                 <option value="Persona">Persona</option>
                 <option value="Vehicular">Vehicular</option>
                 <option value="Encapsulado">Encapsulado</option>
+                <option value="CosasEncargadas">Cosas encargadas</option>
             </select>
 
             <div id="bloquePersona">
@@ -119,6 +120,23 @@
 
                 <label>Observación *</label>
                 <textarea id="encapsuladoObservacion" placeholder="Detalle de la ocurrencia encapsulada" rows="4"></textarea>
+            </div>
+
+            <div id="bloqueCosasEncargadas" style="display:none;">
+                <label>DNI *</label>
+                <input type="text" id="cosasDni" placeholder="DNI" maxlength="8">
+
+                <label>Nombre *</label>
+                <input type="text" id="cosasNombre" placeholder="Nombre completo">
+
+                <label>Empresa / Proveedor *</label>
+                <input type="text" id="cosasEmpresa" placeholder="Empresa o proveedor">
+
+                <label>Que encarga *</label>
+                <textarea id="cosasQueEncarga" placeholder="Describa que objeto/cosa deja encargada" rows="3"></textarea>
+
+                <label>A quien deja encargado *</label>
+                <input type="text" id="cosasAQuien" placeholder="Nombre de quien recibe el encargo">
             </div>
 
             <label id="labelFechaMovimientoInicial">Fecha de Ingreso</label>
@@ -201,6 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     inicializarAutocompletadoDniOcurrencias();
     inicializarPreviewImagenes();
+    inicializarDesdeVehiculoEmpresaEspecial();
 });
 </script>
 

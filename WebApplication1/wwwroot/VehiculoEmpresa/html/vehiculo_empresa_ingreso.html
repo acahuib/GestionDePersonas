@@ -22,7 +22,7 @@
         <hr>
 
         <div class="form-card">
-            <h3>Datos del Vehículo</h3>
+            <h3>Datos del Vehículo (solo lectura)</h3>
 
             <label>Flujo actual</label>
             <input type="text" id="flujoActual" readonly>
@@ -35,9 +35,6 @@
 
             <label>Nombre del Conductor</label>
             <input type="text" id="conductor" readonly>
-
-            <label>Placa</label>
-            <input type="text" id="placa" readonly>
 
             <label>Kilometraje de Salida (registrado)</label>
             <input type="number" id="kmSalidaRegistrado" readonly>
@@ -57,8 +54,9 @@
             <label>Destino de Ingreso (registrado)</label>
             <input type="text" id="destinoIngresoRegistrado" readonly>
 
-            <label>Observación</label>
-            <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
+            <hr>
+
+            <h3>Datos editables del movimiento</h3>
 
             <div id="bloque-ingreso">
                 <label>Kilometraje de Ingreso (opcional)</label>
@@ -69,6 +67,10 @@
 
                 <label>Destino de Ingreso *</label>
                 <input type="text" id="destinoIngreso" placeholder="Destino del ingreso">
+
+                <label>Placa</label>
+                <input type="text" id="placaIngreso" placeholder="Placa del vehiculo usado en este movimiento">
+                <p style="color:#b91c1c;font-size:0.85rem;margin-top:6px;">Placa editable si cambio de carro.</p>
 
                 <label>Hora de Ingreso (opcional)</label>
                 <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
@@ -85,10 +87,17 @@
                 <label>Destino de Salida *</label>
                 <input type="text" id="destinoSalida" placeholder="Destino de la salida">
 
+                <label>Placa</label>
+                <input type="text" id="placaSalida" placeholder="Placa del vehiculo usado en este movimiento">
+                <p style="color:#b91c1c;font-size:0.85rem;margin-top:6px;">Placa editable si cambio de carro.</p>
+
                 <label>Hora de Salida (opcional)</label>
                 <input type="date" id="fechaSalida" placeholder="Fecha de salida">
                 <input type="time" id="horaSalida" placeholder="Dejar vacío para usar hora actual">
             </div>
+
+            <label>Observación</label>
+            <textarea id="observacion" placeholder="Observación (opcional)" rows="3"></textarea>
 
             <label>Imagenes <span class="muted">(Opcional, max 20 | JPG/PNG/WEBP)</span></label>
             <input type="file" id="vehiculoEmpresaComplementoImagenes" accept="image/png,image/jpeg,image/webp" multiple>

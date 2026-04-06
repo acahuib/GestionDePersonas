@@ -73,7 +73,8 @@ async function cargarDetalleOperacion(salidaId) {
         setElementValueIfExists("tipoRegistroActual", formatearTipoRegistro(datos.tipoRegistro));
         setElementValueIfExists("dni", detalle.dni || "");
         setElementValueIfExists("conductor", detalle.nombreCompleto || datos.conductor || datos.nombreApellidos || "");
-        setElementValueIfExists("placa", datos.placa || "");
+        setElementValueIfExists("placaIngreso", datos.placa || "");
+        setElementValueIfExists("placaSalida", datos.placa || "");
 
         setElementValueIfExists("kmSalidaRegistrado", datos.kmSalida ?? "");
         setElementValueIfExists("origenSalidaRegistrado", datos.origenSalida || datos.origen || "");
@@ -95,7 +96,11 @@ async function registrarMovimientoComplementario() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
     const modo = (dniElement.dataset.modo || "ingreso").toLowerCase();
+    const esIngreso = modo === "ingreso";
     const observacion = document.getElementById("observacion").value.trim();
+    const placa = esIngreso
+        ? (document.getElementById("placaIngreso")?.value?.trim() || "")
+        : (document.getElementById("placaSalida")?.value?.trim() || "");
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -107,7 +112,6 @@ async function registrarMovimientoComplementario() {
         return;
     }
 
-    const esIngreso = modo === "ingreso";
     const km = esIngreso
         ? document.getElementById("kmIngreso").value.trim()
         : document.getElementById("kmSalida").value.trim();
@@ -136,6 +140,12 @@ async function registrarMovimientoComplementario() {
         return;
     }
 
+    if (!placa) {
+        mensaje.className = "error";
+        mensaje.innerText = "La placa es obligatoria";
+        return;
+    }
+
     try {
         const endpoint = esIngreso
             ? `${API_BASE}/vehiculo-empresa/${salidaId}/ingreso`
@@ -143,12 +153,14 @@ async function registrarMovimientoComplementario() {
 
         const body = esIngreso
             ? {
+                placa,
                 kmIngreso: km ? parseInt(km, 10) : null,
                 origenIngreso: origen,
                 destinoIngreso: destino,
                 observacion: observacion || null
             }
             : {
+                placa,
                 kmSalida: km ? parseInt(km, 10) : null,
                 origenSalida: origen,
                 destinoSalida: destino,

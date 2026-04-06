@@ -34,14 +34,12 @@
 
         <div id="registro-desde-proveedor" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e8f5e9; border-left: 4px solid #2e7d32;">
             <strong>Proveedor activo detectado:</strong> este registro es informativo para habitación y no afecta movimientos de mina.
+            <div style="margin-top:8px;">
+                <button type="button" class="btn-inline btn-small" onclick="activarRegistroManualHabitacion()">Cambiar a registro manual</button>
+            </div>
         </div>
 
-        <label>Tipo de Registro de Habitación *</label>
-        <select id="tipoIngresoHabitacion">
-            <option value="Proveedor">Proveedor (informativo)</option>
-            <option value="InformativoPersonalMina">Informativo personal mina</option>
-        </select>
-        <p class="muted m-0" id="ayudaTipoIngreso">Modo informativo: registro de habitación sin cierre espejo en Proveedores.</p>
+        <p class="muted m-0">Registro unico de habitación para cualquier persona.</p>
 
         <label>DNI *</label>
         <input type="text" id="dni" placeholder="Ingrese DNI del proveedor" maxlength="8">
@@ -56,9 +54,9 @@
         <label>Origen *</label>
         <input type="text" id="origen" placeholder="Origen">
 
-        <label>Cuarto</label>
+        <label>Cuarto *</label>
         <select id="cuarto">
-            <option value="">Seleccione cuarto (opcional)</option>
+            <option value="">Seleccione cuarto</option>
             <option value="Cuarto 1">Cuarto 1</option>
             <option value="Cuarto 2">Cuarto 2</option>
             <option value="Cuarto 3">Cuarto 3</option>
@@ -145,9 +143,6 @@ async function cargarActivosConReintento() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof cargarPrefillDesdeProveedor === "function") {
-        cargarPrefillDesdeProveedor();
-    }
     verificarAutenticacion();
     prellenarFechaHoraActualHabitacion();
     crearSidebar();

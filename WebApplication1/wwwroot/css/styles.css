@@ -423,6 +423,11 @@ button:hover {
     text-align: center;
 }
 
+.enseres-tabla-compacta {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
 .fecha-hora-celda {
     display: flex;
     flex-direction: column;

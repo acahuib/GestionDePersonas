@@ -5,6 +5,7 @@ namespace WebApplication1.DTOs
     public class RegistroInformativoEnseresTurnoDto
     {
         public required string Turno { get; set; }
+        public bool EsRelevoDiurno { get; set; }
         public string? Puesto { get; set; }
         public DateTime Fecha { get; set; }
         public DateTime? HoraRegistro { get; set; }

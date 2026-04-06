@@ -1,6 +1,7 @@
 ﻿// Script frontend para ocurrencias.
 
 let personaEncontrada = null;
+let salidaVehiculoEmpresaEspecialId = null;
 
 function obtenerInputImagenes() {
     const input = document.getElementById("ocurrenciaImagenes");
@@ -50,16 +51,27 @@ function actualizarUIRegistroInicial() {
 
     const movimiento = tipo === "Persona" ? obtenerMovimientoInicialPersona() : "Ingreso";
     const esSalida = movimiento === "Salida";
+    const esCosasEncargadas = tipo === "CosasEncargadas";
 
     if (labelFecha) {
-        labelFecha.textContent = esSalida ? "Fecha de Salida" : "Fecha de Ingreso";
+        labelFecha.textContent = esCosasEncargadas
+            ? "Fecha de Registro"
+            : (esSalida ? "Fecha de Salida" : "Fecha de Ingreso");
     }
 
     if (labelHora) {
-        labelHora.textContent = esSalida ? "Hora de Salida" : "Hora de Ingreso";
+        labelHora.textContent = esCosasEncargadas
+            ? "Hora de Registro"
+            : (esSalida ? "Hora de Salida" : "Hora de Ingreso");
     }
 
     if (btnRegistrar) {
+        if (esCosasEncargadas) {
+            btnRegistrar.className = "btn-success btn-block";
+            btnRegistrar.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar INFORMACION';
+            return;
+        }
+
         btnRegistrar.className = esSalida ? "btn-danger btn-block" : "btn-success btn-block";
         btnRegistrar.innerHTML = esSalida
             ? '<img src="/images/x-circle.svg" class="icon-white"> Registrar SALIDA'
@@ -73,6 +85,87 @@ function inicializarSelectorMovimientoPersona() {
         selector.addEventListener("change", actualizarUIRegistroInicial);
     }
     actualizarUIRegistroInicial();
+}
+
+async function inicializarDesdeVehiculoEmpresaEspecial() {
+    const params = new URLSearchParams(window.location.search);
+    const salidaEmpresaId = params.get("salidaEmpresaId");
+    const modoPie = (params.get("modoPie") || "salida").toLowerCase();
+    if (!salidaEmpresaId) return;
+
+    const mensaje = document.getElementById("mensaje");
+    const tipoSelect = document.getElementById("tipoOcurrencia");
+    const movSelect = document.getElementById("movimientoInicialPersona");
+    const dniInput = document.getElementById("dni");
+    const nombreInput = document.getElementById("nombre");
+    const ocurrenciaInput = document.getElementById("ocurrencia");
+    const personaInfo = document.getElementById("persona-info");
+    const personaNombre = document.getElementById("persona-nombre");
+
+    salidaVehiculoEmpresaEspecialId = salidaEmpresaId;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/${salidaEmpresaId}`);
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo cargar Vehiculo Empresa";
+            throw new Error(error);
+        }
+
+        const detalle = await response.json();
+        if (detalle?.tipoOperacion !== "VehiculoEmpresa") {
+            throw new Error("El registro origen no corresponde a Vehiculo Empresa.");
+        }
+
+        const datos = detalle.datos || {};
+        const dni = String(detalle.dni || "").trim();
+        const nombre = String(detalle.nombreCompleto || datos.conductor || "").trim();
+
+        if (tipoSelect) {
+            tipoSelect.value = "Persona";
+            tipoSelect.disabled = true;
+        }
+        if (movSelect) {
+            movSelect.value = modoPie === "ingreso" ? "Ingreso" : "Salida";
+            movSelect.disabled = true;
+        }
+
+        cambiarTipoOcurrencia();
+        actualizarUIRegistroInicial();
+
+        if (dniInput) {
+            dniInput.value = dni;
+            dniInput.readOnly = true;
+        }
+
+        if (nombreInput) {
+            nombreInput.value = nombre;
+            nombreInput.disabled = true;
+            nombreInput.placeholder = "(Autocompletado por Vehiculo MP)";
+        }
+
+        personaEncontrada = nombre ? { nombre } : null;
+
+        if (personaInfo && personaNombre && nombre) {
+            personaNombre.textContent = nombre;
+            personaInfo.style.display = "block";
+        }
+
+        if (ocurrenciaInput && !ocurrenciaInput.value.trim()) {
+            ocurrenciaInput.value = modoPie === "ingreso"
+                ? "Retorna a pie luego de traslado en Vehiculo MP"
+                : "Sale a pie luego de traslado en Vehiculo MP";
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Modo especial activo: este registro cerrará el pendiente de Vehiculo MP.";
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
 }
 
 async function consultarPersonaPorDni(dni) {
@@ -92,12 +185,14 @@ function cambiarTipoOcurrencia() {
     const bloquePersona = document.getElementById("bloquePersona");
     const bloqueVehicular = document.getElementById("bloqueVehicular");
     const bloqueEncapsulado = document.getElementById("bloqueEncapsulado");
+    const bloqueCosasEncargadas = document.getElementById("bloqueCosasEncargadas");
 
-    if (!bloquePersona || !bloqueVehicular || !bloqueEncapsulado) return;
+    if (!bloquePersona || !bloqueVehicular || !bloqueEncapsulado || !bloqueCosasEncargadas) return;
 
     bloquePersona.style.display = tipo === "Persona" ? "block" : "none";
     bloqueVehicular.style.display = tipo === "Vehicular" ? "block" : "none";
     bloqueEncapsulado.style.display = tipo === "Encapsulado" ? "block" : "none";
+    bloqueCosasEncargadas.style.display = tipo === "CosasEncargadas" ? "block" : "none";
 
     if (tipo !== "Persona") {
         personaEncontrada = null;
@@ -115,6 +210,27 @@ function cambiarTipoOcurrencia() {
 
 function leerValor(id) {
     return document.getElementById(id)?.value?.trim() || "";
+}
+
+function formatearTipoOcurrencia(tipo) {
+    if (tipo === "CosasEncargadas") return "Cosas encargadas";
+    return tipo || "Persona";
+}
+
+function habilitarEdicionNombreCosas(mantenerValor = true) {
+    const nombreInput = document.getElementById("cosasNombre");
+    if (!(nombreInput instanceof HTMLInputElement)) return;
+    nombreInput.disabled = false;
+    nombreInput.placeholder = "Nombre completo";
+    if (!mantenerValor) nombreInput.value = "";
+}
+
+function bloquearNombreCosasDesdeDni(nombre) {
+    const nombreInput = document.getElementById("cosasNombre");
+    if (!(nombreInput instanceof HTMLInputElement)) return;
+    nombreInput.value = nombre || "";
+    nombreInput.disabled = true;
+    nombreInput.placeholder = "(Autocompletado por DNI)";
 }
 
 function validarDniOpcional(dni) {
@@ -183,40 +299,73 @@ function construirDescripcionPorTipo() {
         };
     }
 
-    const dni = leerValor("encapsuladoDni");
-    const tractoPlaca = leerValor("encapsuladoTractoPlaca");
-    const plataformaPlaca = leerValor("encapsuladoPlataformaPlaca");
-    const chofer = leerValor("encapsuladoChofer");
-    const empresa = leerValor("encapsuladoEmpresa");
-    const procedencia = leerValor("encapsuladoProcedencia");
-    const destino = leerValor("encapsuladoDestino");
-    const observacion = leerValor("encapsuladoObservacion");
+    if (tipo === "Encapsulado") {
+        const dni = leerValor("encapsuladoDni");
+        const tractoPlaca = leerValor("encapsuladoTractoPlaca");
+        const plataformaPlaca = leerValor("encapsuladoPlataformaPlaca");
+        const chofer = leerValor("encapsuladoChofer");
+        const empresa = leerValor("encapsuladoEmpresa");
+        const procedencia = leerValor("encapsuladoProcedencia");
+        const destino = leerValor("encapsuladoDestino");
+        const observacion = leerValor("encapsuladoObservacion");
 
-    if (!validarDniOpcional(dni)) {
-        return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        if (!validarDniOpcional(dni)) {
+            return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        }
+
+        if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
+            return { ok: false, error: "Complete todos los campos obligatorios de Encapsulado" };
+        }
+
+        const ocurrencia = [
+            "[TIPO: ENCAPSULADO]",
+            `DNI: ${dni || "S/N"}`,
+            `Tracto Placa 1: ${tractoPlaca}`,
+            `Plataforma Placa 2: ${plataformaPlaca}`,
+            `Chofer: ${chofer}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(" | ");
+
+        return {
+            ok: true,
+            tipo,
+            dni,
+            nombre: chofer,
+            ocurrencia
+        };
     }
 
-    if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
-        return { ok: false, error: "Complete todos los campos obligatorios de Encapsulado" };
+    const dni = leerValor("cosasDni");
+    const nombre = leerValor("cosasNombre");
+    const empresa = leerValor("cosasEmpresa");
+    const queEncarga = leerValor("cosasQueEncarga");
+    const aQuienDeja = leerValor("cosasAQuien");
+
+    if (!dni || dni.length !== 8 || isNaN(dni)) {
+        return { ok: false, error: "DNI es obligatorio y debe tener 8 dígitos numéricos" };
+    }
+
+    if (!nombre || !empresa || !queEncarga || !aQuienDeja) {
+        return { ok: false, error: "Complete todos los campos obligatorios de Cosas encargadas" };
     }
 
     const ocurrencia = [
-        "[TIPO: ENCAPSULADO]",
-        `DNI: ${dni || "S/N"}`,
-        `Tracto Placa 1: ${tractoPlaca}`,
-        `Plataforma Placa 2: ${plataformaPlaca}`,
-        `Chofer: ${chofer}`,
+        "[TIPO: COSAS ENCARGADAS]",
+        `DNI: ${dni}`,
+        `Nombre: ${nombre}`,
         `Empresa/Proveedor: ${empresa}`,
-        `Procedencia: ${procedencia}`,
-        `Destino: ${destino}`,
-        `Observacion: ${observacion}`
+        `Que encarga: ${queEncarga}`,
+        `A quien deja encargado: ${aQuienDeja}`
     ].join(" | ");
 
     return {
         ok: true,
         tipo,
         dni,
-        nombre: chofer,
+        nombre,
         ocurrencia
     };
 }
@@ -225,7 +374,8 @@ function limpiarFormularioPorTipo() {
     const ids = [
         "dni", "nombre", "ocurrencia",
         "vehiculoDni", "vehiculoPlaca", "vehiculoChofer", "vehiculoEmpresa", "vehiculoProcedencia", "vehiculoDestino", "vehiculoObservacion",
-        "encapsuladoDni", "encapsuladoTractoPlaca", "encapsuladoPlataformaPlaca", "encapsuladoChofer", "encapsuladoEmpresa", "encapsuladoProcedencia", "encapsuladoDestino", "encapsuladoObservacion"
+        "encapsuladoDni", "encapsuladoTractoPlaca", "encapsuladoPlataformaPlaca", "encapsuladoChofer", "encapsuladoEmpresa", "encapsuladoProcedencia", "encapsuladoDestino", "encapsuladoObservacion",
+        "cosasDni", "cosasNombre", "cosasEmpresa", "cosasQueEncarga", "cosasAQuien"
     ];
 
     ids.forEach((id) => {
@@ -241,6 +391,7 @@ function limpiarFormularioPorTipo() {
         nombreInput.disabled = false;
         nombreInput.placeholder = "Nombre o descripción de la persona";
     }
+    habilitarEdicionNombreCosas();
 
     const inputImagenes = obtenerInputImagenes();
     if (inputImagenes) {
@@ -254,6 +405,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     const detalleBase = {
         tipo: "Persona",
         dni: "",
+        nombre: "",
         placa: "",
         tractoPlaca: "",
         plataformaPlaca: "",
@@ -261,6 +413,8 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
         empresa: "",
         procedencia: "",
         destino: "",
+        queEncarga: "",
+        aQuienDeja: "",
         observacion: raw
     };
 
@@ -271,6 +425,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     const tipoRaw = (tipoMatch?.[1] || "Persona").trim().toUpperCase();
     if (tipoRaw === "VEHICULAR") detalleBase.tipo = "Vehicular";
     if (tipoRaw === "ENCAPSULADO") detalleBase.tipo = "Encapsulado";
+    if (tipoRaw === "COSAS ENCARGADAS") detalleBase.tipo = "CosasEncargadas";
 
     const extraer = (clave) => {
         const prefijo = `${clave.toLowerCase()}:`;
@@ -279,6 +434,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     };
 
     detalleBase.dni = extraer("DNI");
+    detalleBase.nombre = extraer("Nombre");
     detalleBase.placa = extraer("Placa");
     detalleBase.tractoPlaca = extraer("Tracto Placa 1");
     detalleBase.plataformaPlaca = extraer("Plataforma Placa 2");
@@ -286,7 +442,9 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     detalleBase.empresa = extraer("Empresa/Proveedor");
     detalleBase.procedencia = extraer("Procedencia");
     detalleBase.destino = extraer("Destino");
-    detalleBase.observacion = extraer("Observacion") || raw;
+    detalleBase.queEncarga = extraer("Que encarga");
+    detalleBase.aQuienDeja = extraer("A quien deja encargado");
+    detalleBase.observacion = extraer("Observacion") || (detalleBase.tipo === "Persona" ? raw : "");
 
     return detalleBase;
 }
@@ -313,6 +471,12 @@ function construirDetalleTipoHtml(detalle) {
         pushIf("Empresa", detalle.empresa);
         pushIf("Procedencia", detalle.procedencia);
         pushIf("Destino", detalle.destino);
+    } else if (tipo === "CosasEncargadas") {
+        pushIf("DNI", detalle.dni);
+        pushIf("Nombre", detalle.nombre);
+        pushIf("Empresa", detalle.empresa);
+        pushIf("Que encarga", detalle.queEncarga);
+        pushIf("A quien deja encargado", detalle.aQuienDeja);
     }
 
     pushIf("Observacion", detalle?.observacion);
@@ -515,6 +679,29 @@ async function autocompletarChoferDesdeDni(dniId, choferId) {
     }
 }
 
+async function autocompletarNombreDesdeDni(dniId, nombreId) {
+    const dniInput = document.getElementById(dniId);
+    const nombreInput = document.getElementById(nombreId);
+    if (!(dniInput instanceof HTMLInputElement) || !(nombreInput instanceof HTMLInputElement)) return;
+
+    const dni = dniInput.value.trim();
+    if (!dni || dni.length !== 8 || isNaN(dni)) {
+        habilitarEdicionNombreCosas(!nombreInput.disabled);
+        return;
+    }
+
+    try {
+        const persona = await consultarPersonaPorDni(dni);
+        if (persona?.nombre) {
+            bloquearNombreCosasDesdeDni(persona.nombre);
+        } else {
+            habilitarEdicionNombreCosas(!nombreInput.disabled);
+        }
+    } catch {
+        habilitarEdicionNombreCosas(!nombreInput.disabled);
+    }
+}
+
 function inicializarAutocompletadoDniOcurrencias() {
     const dniPersona = document.getElementById("dni");
     if (dniPersona instanceof HTMLInputElement) {
@@ -542,6 +729,16 @@ function inicializarAutocompletadoDniOcurrencias() {
             if (e.key !== "Enter") return;
             e.preventDefault();
             autocompletarChoferDesdeDni("encapsuladoDni", "encapsuladoChofer");
+        });
+    }
+
+    const cosasDni = document.getElementById("cosasDni");
+    if (cosasDni instanceof HTMLInputElement) {
+        cosasDni.addEventListener("blur", () => autocompletarNombreDesdeDni("cosasDni", "cosasNombre"));
+        cosasDni.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            autocompletarNombreDesdeDni("cosasDni", "cosasNombre");
         });
     }
 }
@@ -589,7 +786,11 @@ async function registrarIngreso() {
             body.nombre = datos.nombre;
         }
 
-        const response = await fetchAuth(`${API_BASE}/ocurrencias`, {
+        const endpoint = salidaVehiculoEmpresaEspecialId
+            ? `${API_BASE}/ocurrencias/desde-vehiculo-empresa/${salidaVehiculoEmpresaEspecialId}`
+            : `${API_BASE}/ocurrencias`;
+
+        const response = await fetchAuth(endpoint, {
             method: "POST",
             body: JSON.stringify(body)
         });
@@ -602,12 +803,28 @@ async function registrarIngreso() {
         const data = await response.json();
         let advertenciaImagenes = "";
         try {
-            await window.imagenesForm?.uploadFromInput(data.salidaId, "ocurrenciaImagenes");
+            const registroImagenesId = salidaVehiculoEmpresaEspecialId
+                ? data.salidaVehiculoEmpresaId
+                : data.salidaId;
+            if (registroImagenesId) {
+                await window.imagenesForm?.uploadFromInput(registroImagenesId, "ocurrenciaImagenes");
+            }
         } catch (errorImagenes) {
             advertenciaImagenes = ` (Ocurrencia guardada, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
         }
         mensaje.className = "success";
-        mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}`;
+        if (salidaVehiculoEmpresaEspecialId) {
+            mensaje.innerText = `Movimiento a pie registrado y pendiente de Vehiculo MP cerrado correctamente${advertenciaImagenes}`;
+        } else {
+            mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}`;
+        }
+
+        if (salidaVehiculoEmpresaEspecialId) {
+            setTimeout(() => {
+                window.location.href = "../../VehiculoEmpresa/html/vehiculo_empresa.html?refresh=1";
+            }, 700);
+            return;
+        }
 
         limpiarFormularioPorTipo();
         document.getElementById("horaIngreso").value = "";
@@ -616,7 +833,9 @@ async function registrarIngreso() {
 
         cargarActivos();
         const tipo = obtenerTipoOcurrenciaSeleccionado();
-        const foco = tipo === "Persona" ? "dni" : (tipo === "Vehicular" ? "vehiculoDni" : "encapsuladoDni");
+        const foco = tipo === "Persona"
+            ? "dni"
+            : (tipo === "Vehicular" ? "vehiculoDni" : (tipo === "Encapsulado" ? "encapsuladoDni" : "cosasDni"));
         document.getElementById(foco)?.focus();
 
     } catch (error) {
@@ -642,6 +861,52 @@ function irASalida(salidaId, dni, nombre, ocurrencia, fechaIngreso, horaIngreso,
     window.location.href = `ocurrencias_salida.html?${params.toString()}`;
 }
 
+function irASalidaDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        irASalida(
+            datos.salidaId,
+            datos.dni,
+            datos.nombre,
+            datos.ocurrencia,
+            datos.fechaIngreso,
+            datos.horaIngreso,
+            datos.guardiaIngreso,
+            datos.fechaSalida,
+            datos.horaSalida,
+            datos.guardiaSalida,
+            datos.modo
+        );
+    } catch (error) {
+        console.error("Error al abrir complemento de ocurrencias:", error);
+    }
+}
+
+function irAVehiculoEmpresaEspecial(salidaOcurrenciaId, modoVehiculo) {
+    if (!salidaOcurrenciaId) return;
+    const params = new URLSearchParams({
+        salidaOcurrenciaId: String(salidaOcurrenciaId),
+        modoVehiculo: modoVehiculo === "ingreso" ? "ingreso" : "salida"
+    });
+    window.location.href = `../../VehiculoEmpresa/html/vehiculo_empresa.html?${params.toString()}`;
+}
+
+function esRegistroCosasEncargadas(detalle, registro) {
+    if ((detalle?.tipo || "") === "CosasEncargadas") return true;
+    const raw = String(registro?.datos?.ocurrencia || "").toUpperCase();
+    return raw.includes("[TIPO: COSAS ENCARGADAS]");
+}
+
+function esMismoDiaLocal(fechaValor, fechaIsoHoy) {
+    if (!fechaValor) return false;
+    const fecha = new Date(fechaValor);
+    if (Number.isNaN(fecha.getTime())) return false;
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    return `${anio}-${mes}-${dia}` === fechaIsoHoy;
+}
+
 async function cargarActivos() {
     const container = document.getElementById("tabla-activos");
 
@@ -660,10 +925,19 @@ async function cargarActivos() {
             return;
         }
 
+        const hoyIso = (typeof fechaLocalIso === "function") ? fechaLocalIso() : fechaIsoLocal();
         const activas = ocurrencias.filter(o => {
             const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
             const tieneSalida = o.horaSalida !== null && o.horaSalida !== undefined;
-            return tieneIngreso !== tieneSalida;
+            if (tieneIngreso === tieneSalida) return false;
+
+            const detalle = parsearDetalleOcurrencia(o?.datos?.ocurrencia || "");
+            if (esRegistroCosasEncargadas(detalle, o)) {
+                const referencia = o.horaIngreso || o.fechaIngreso || o.fechaCreacion;
+                return esMismoDiaLocal(referencia, hoyIso);
+            }
+
+            return true;
         });
 
         activas.sort((a, b) => {
@@ -702,6 +976,9 @@ async function cargarActivos() {
 
         activas.forEach(o => {
             const datos = o.datos || {};
+            const ocurrencia = datos.ocurrencia || '-';
+            const detalleOcurrencia = parsearDetalleOcurrencia(ocurrencia);
+            const esCosasEncargadas = esRegistroCosasEncargadas(detalleOcurrencia, o);
 
             const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
             const pendienteDe = tieneIngreso ? 'Salida' : 'Ingreso';
@@ -720,8 +997,6 @@ async function cargarActivos() {
                 : (o.dni || '-');
 
             const nombreCompleto = o.nombreCompleto || datos.nombre || '-';
-            const ocurrencia = datos.ocurrencia || '-';
-            const detalleOcurrencia = parsearDetalleOcurrencia(ocurrencia);
             const detalleTipoHtml = construirDetalleTipoHtml(detalleOcurrencia);
             
             const fechaIngresoParam = o.fechaIngreso || '';
@@ -735,12 +1010,34 @@ async function cargarActivos() {
             html += `<td>${nombreCompleto}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaInicial, horaInicial)}</td>`;
             html += `<td>${guardiaInicial}</td>`;
-            html += `<td>${detalleOcurrencia.tipo || '-'}</td>`;
+            html += `<td>${formatearTipoOcurrencia(detalleOcurrencia.tipo)}</td>`;
                 html += `<td class="cell-wrap" style="max-width: 280px;">${detalleTipoHtml}</td>`;
                 html += `<td><button onclick="abrirImagenesRegistroModal(${o.id})" class="btn-inline btn-small">Ver imagenes</button></td>`;
             html += '<td>';
-                const claseBotonPendiente = pendienteDe === 'Ingreso' ? 'btn-success btn-small btn-inline' : 'btn-danger btn-small btn-inline';
-                html += `<button onclick="irASalida(${o.id}, '${o.dni || ''}', '${nombreCompleto.replace(/'/g, "\\'")}', '${ocurrencia.replace(/'/g, "\\'")}', '${fechaIngresoParam}', '${horaIngresoParam}', '${guardiaInicial}', '${fechaSalidaParam}', '${horaSalidaParam}', '${guardiaSalida}', '${modo}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
+                if (esCosasEncargadas) {
+                    html += '<span class="muted">Solo informativo</span>';
+                } else {
+                    const claseBotonPendiente = pendienteDe === 'Ingreso' ? 'btn-success btn-small btn-inline' : 'btn-danger btn-small btn-inline';
+                    const payloadSalida = encodeURIComponent(JSON.stringify({
+                        salidaId: o.id,
+                        dni: o.dni || '',
+                        nombre: nombreCompleto || '',
+                        ocurrencia: ocurrencia || '',
+                        fechaIngreso: fechaIngresoParam,
+                        horaIngreso: horaIngresoParam,
+                        guardiaIngreso: guardiaInicial,
+                        fechaSalida: fechaSalidaParam,
+                        horaSalida: horaSalidaParam,
+                        guardiaSalida,
+                        modo
+                    }));
+                    html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
+                    if ((detalleOcurrencia.tipo || "Persona") === "Persona") {
+                        const modoVehiculo = pendienteDe === "Ingreso" ? "ingreso" : "salida";
+                        const textoVehiculo = pendienteDe === "Ingreso" ? "Ingreso con Veh. MP" : "Salida con Veh. MP";
+                        html += `<button onclick="irAVehiculoEmpresaEspecial(${o.id}, '${modoVehiculo}')" class="btn-warning btn-small btn-inline">${textoVehiculo}</button>`;
+                    }
+                }
             html += '</td></tr>';
         });
 

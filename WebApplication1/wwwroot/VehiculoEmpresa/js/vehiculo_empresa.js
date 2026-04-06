@@ -2,6 +2,78 @@
 
 let personaEncontrada = null;
 
+async function inicializarDesdeOcurrenciaEspecial() {
+    const params = new URLSearchParams(window.location.search);
+    const salidaOcurrenciaId = params.get("salidaOcurrenciaId");
+    const modoVehiculo = (params.get("modoVehiculo") || "salida").toLowerCase();
+    if (!salidaOcurrenciaId) return;
+
+    const mensaje = document.getElementById("mensaje");
+    const dniInput = document.getElementById("dni");
+    const conductorInput = document.getElementById("conductor");
+    const tipoInicialSelect = document.getElementById("tipoInicial");
+    const boton = document.getElementById("btn-registrar");
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/${salidaOcurrenciaId}`);
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo cargar la ocurrencia origen";
+            throw new Error(error);
+        }
+
+        const detalle = await response.json();
+        if (detalle?.tipoOperacion !== "Ocurrencias") {
+            throw new Error("El registro origen no corresponde a Ocurrencias.");
+        }
+
+        const datos = detalle.datos || {};
+        const ocurrenciaTexto = String(datos.ocurrencia || "");
+        if (ocurrenciaTexto.trimStart().startsWith("[TIPO:")) {
+            throw new Error("Este flujo especial solo aplica para ocurrencias de tipo Persona.");
+        }
+
+        const dni = String(detalle.dni || "").trim();
+        const conductor = String(detalle.nombreCompleto || datos.nombre || "").trim();
+
+        if (dniInput) {
+            dniInput.value = dni;
+            dniInput.readOnly = true;
+            dniInput.dataset.salidaOcurrenciaId = salidaOcurrenciaId;
+        }
+
+        if (conductorInput) {
+            conductorInput.value = conductor;
+            conductorInput.disabled = true;
+            conductorInput.placeholder = "(Autocompletado por ocurrencia)";
+        }
+
+        personaEncontrada = conductor ? { nombre: conductor } : null;
+
+        if (tipoInicialSelect) {
+            tipoInicialSelect.value = modoVehiculo === "ingreso" ? "Ingreso" : "Salida";
+            tipoInicialSelect.disabled = true;
+        }
+
+        actualizarFormularioPorTipoInicial();
+
+        if (boton) {
+            boton.innerHTML = modoVehiculo === "ingreso"
+                ? '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO ESPECIAL'
+                : '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA ESPECIAL';
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Modo especial activo: al registrar Vehiculo MP se cerrara automaticamente la ocurrencia pendiente.";
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
 function escaparHtmlBasico(texto) {
     return String(texto || "")
         .replace(/&/g, "&amp;")
@@ -126,6 +198,8 @@ async function registrarMovimientoInicial() {
     const fechaMovimientoInput = document.getElementById("fechaMovimiento")?.value || obtenerFechaLocalISO();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
+    const salidaOcurrenciaId = document.getElementById("dni")?.dataset?.salidaOcurrenciaId || "";
+    const esModoEspecialOcurrencia = Boolean(salidaOcurrenciaId);
 
     mensaje.innerText = "";
     mensaje.className = "";
@@ -190,7 +264,11 @@ async function registrarMovimientoInicial() {
             body.conductor = conductor;
         }
 
-        const response = await fetchAuth(`${API_BASE}/vehiculo-empresa`, {
+        const endpoint = esModoEspecialOcurrencia
+            ? `${API_BASE}/vehiculo-empresa/desde-ocurrencias/${salidaOcurrenciaId}`
+            : `${API_BASE}/vehiculo-empresa`;
+
+        const response = await fetchAuth(endpoint, {
             method: "POST",
             body: JSON.stringify(body)
         });
@@ -235,6 +313,13 @@ async function registrarMovimientoInicial() {
         if (inputImagenes) window.imagenesForm?.clearSelection("vehiculoEmpresaImagenes");
         actualizarPreviewImagenesVehiculoEmpresa();
 
+        if (esModoEspecialOcurrencia) {
+            setTimeout(() => {
+                window.location.href = "../../Ocurrencias/html/ocurrencias.html?refresh=1";
+            }, 700);
+            return;
+        }
+
         setTimeout(cargarActivos, 500);
 
     } catch (error) {
@@ -249,6 +334,23 @@ function irAMovimiento(salidaId, modo) {
         modo
     });
     window.location.href = `vehiculo_empresa_ingreso.html?${params.toString()}`;
+}
+
+function irAIngresoVehiculoProveedorEspecial(salidaEmpresaId) {
+    if (!salidaEmpresaId) return;
+    const params = new URLSearchParams({
+        salidaEmpresaId: String(salidaEmpresaId)
+    });
+    window.location.href = `../../VehiculosProveedores/html/vehiculos_proveedores.html?${params.toString()}`;
+}
+
+function irAOcurrenciaEspecialPie(salidaEmpresaId, modoPie) {
+    if (!salidaEmpresaId) return;
+    const params = new URLSearchParams({
+        salidaEmpresaId: String(salidaEmpresaId),
+        modoPie: (modoPie === "ingreso" ? "ingreso" : "salida")
+    });
+    window.location.href = `../../Ocurrencias/html/ocurrencias.html?${params.toString()}`;
 }
 
 async function cargarActivos() {
@@ -352,7 +454,14 @@ async function cargarActivos() {
             html += `<td>${origen}</td>`;
             html += `<td>${destino}</td>`;
             html += `<td>${construirFechaHoraCelda(fecha, hora)}</td>`;
-            html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button><button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
+            const botonCruceEspecial = tieneSalida
+                ? `<button class="btn-warning btn-small" onclick="irAIngresoVehiculoProveedorEspecial(${s.id})">Ingreso por Veh. Proveedor</button>`
+                : "";
+            const modoPie = tieneSalida ? "ingreso" : "salida";
+            const textoPie = tieneSalida ? "Ingreso a pie" : "Salida a pie";
+            const botonPie = `<button class="btn-inline btn-small" onclick="irAOcurrenciaEspecialPie(${s.id}, '${modoPie}')">${textoPie}</button>`;
+
+            html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button>${botonPie}${botonCruceEspecial}<button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
             html += '</tr>';
         });
 

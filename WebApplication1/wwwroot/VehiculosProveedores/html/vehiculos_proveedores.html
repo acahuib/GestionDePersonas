@@ -71,7 +71,7 @@
         </div>
 
         <div>
-            <button onclick="registrarEntrada()" class="btn-success btn-block">
+            <button id="btnRegistrarEntrada" onclick="registrarEntrada()" class="btn-success btn-block">
                 <img src="/images/check-circle.svg" class="icon-white"> Registrar ENTRADA
             </button>
         </div>
@@ -148,6 +148,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dniId: "dni",
         nombreId: "nombreCompleto"
     });
+
+    inicializarDesdeVehiculoEmpresaEspecial();
 });
 </script>
 

@@ -129,10 +129,32 @@ namespace WebApplication1.Services
             if (tipoMovimiento != "Entrada" && tipoMovimiento != "Ingreso")
                 return;
 
-            var ultimoMovimiento = await GetLastMovimiento(dni, GARITA_ID);
+            var movimientosRecientes = await _context.Movimientos
+                .AsNoTracking()
+                .Where(m => m.Dni == dni && m.PuntoControlId == GARITA_ID)
+                .OrderByDescending(m => m.FechaHora)
+                .Take(30)
+                .ToListAsync();
+
+            if (!movimientosRecientes.Any())
+                return;
+
+            var idsMovimientosRecientes = movimientosRecientes.Select(m => m.Id).ToList();
+            var movimientosInformativosCosas = await _context.OperacionDetalle
+                .AsNoTracking()
+                .Where(o => idsMovimientosRecientes.Contains(o.MovimientoId)
+                    && o.TipoOperacion == "Ocurrencias"
+                    && o.DatosJSON.Contains("[TIPO: COSAS ENCARGADAS]"))
+                .Select(o => o.MovimientoId)
+                .Distinct()
+                .ToListAsync();
+
+            var movimientosInformativosSet = movimientosInformativosCosas.ToHashSet();
+            var ultimoMovimiento = movimientosRecientes
+                .FirstOrDefault(m => !movimientosInformativosSet.Contains(m.Id));
 
             if (ultimoMovimiento == null)
-                return; // Primera vez, permitir entrada
+                return; // Solo tiene registros informativos, permitir entrada
 
             if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
             {

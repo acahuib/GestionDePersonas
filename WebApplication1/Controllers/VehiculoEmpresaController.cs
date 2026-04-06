@@ -7,6 +7,7 @@ using WebApplication1.Data;
 using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Security.Claims;
 
 namespace WebApplication1.Controllers
@@ -215,6 +216,190 @@ namespace WebApplication1.Controllers
             return BadRequest("Registro espejo entre VehiculoEmpresa y VehiculosProveedores deshabilitado temporalmente.");
         }
 
+        [HttpPost("desde-ocurrencias/{salidaOcurrenciaId:int}")]
+        public async Task<IActionResult> RegistrarDesdeOcurrencias(
+            int salidaOcurrenciaId,
+            [FromBody] SalidaVehiculoEmpresaDto dto)
+        {
+            try
+            {
+                var salidaOcurrencia = await _salidasService.ObtenerSalidaPorId(salidaOcurrenciaId);
+                if (salidaOcurrencia == null)
+                    return NotFound("Registro de Ocurrencias no encontrado.");
+
+                if (!string.Equals(salidaOcurrencia.TipoOperacion, "Ocurrencias", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("El registro origen no corresponde a Ocurrencias.");
+
+                var horaIngresoOcurrencia = salidaOcurrencia.HoraIngreso;
+                var horaSalidaOcurrencia = salidaOcurrencia.HoraSalida;
+                var pendienteSalida = horaIngresoOcurrencia.HasValue && !horaSalidaOcurrencia.HasValue;
+                var pendienteIngreso = !horaIngresoOcurrencia.HasValue && horaSalidaOcurrencia.HasValue;
+
+                if (!pendienteSalida && !pendienteIngreso)
+                    return BadRequest("La ocurrencia no está en estado pendiente para usar este flujo especial.");
+
+                var dniNormalizado = (salidaOcurrencia.Dni ?? dto.Dni ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(dniNormalizado))
+                    return BadRequest("La ocurrencia no tiene DNI asociado.");
+
+                using var docOcurrencia = JsonDocument.Parse(salidaOcurrencia.DatosJSON);
+                var datosOcurrencia = docOcurrencia.RootElement;
+                var ocurrenciaTexto = LeerString(datosOcurrencia, "ocurrencia") ?? string.Empty;
+                var esOcurrenciaPersona = !ocurrenciaTexto.TrimStart().StartsWith("[TIPO:", StringComparison.OrdinalIgnoreCase);
+                if (!esOcurrenciaPersona)
+                    return BadRequest("Este flujo especial solo aplica para ocurrencias de tipo Persona.");
+
+                if (string.IsNullOrWhiteSpace(dto.Placa))
+                    return BadRequest("Placa es requerida.");
+
+                var esSalidaVehiculo = pendienteSalida;
+                if (esSalidaVehiculo)
+                {
+                    if (string.IsNullOrWhiteSpace(dto.OrigenSalida) || string.IsNullOrWhiteSpace(dto.DestinoSalida))
+                        return BadRequest("VehiculoEmpresa especial: origenSalida y destinoSalida son requeridos.");
+
+                    if (dto.KmSalida.HasValue && dto.KmSalida.Value < 0)
+                        return BadRequest("VehiculoEmpresa especial: kmSalida no puede ser negativo.");
+
+                    await ValidarPersonaEstaDentroParaSalida(dniNormalizado);
+
+                    if (await TieneSalidaVehiculoPendienteIngreso(dniNormalizado))
+                        return BadRequest("Ya existe una salida de VehiculoEmpresa pendiente de ingreso para este DNI.");
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(dto.OrigenIngreso) || string.IsNullOrWhiteSpace(dto.DestinoIngreso))
+                        return BadRequest("VehiculoEmpresa especial: origenIngreso y destinoIngreso son requeridos.");
+
+                    if (dto.KmIngreso.HasValue && dto.KmIngreso.Value < 0)
+                        return BadRequest("VehiculoEmpresa especial: kmIngreso no puede ser negativo.");
+                }
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                if (persona == null)
+                {
+                    var nombreOcurrencia = LeerString(datosOcurrencia, "nombre");
+                    if (string.IsNullOrWhiteSpace(nombreOcurrencia))
+                        nombreOcurrencia = dto.Conductor;
+                    if (string.IsNullOrWhiteSpace(nombreOcurrencia))
+                        nombreOcurrencia = dniNormalizado;
+
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = nombreOcurrencia.Trim(),
+                        Tipo = "VehiculoEmpresa"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                var tipoRegistro = NormalizarTipoRegistro(dto.TipoRegistro);
+                var horaOperacion = esSalidaVehiculo ? ResolverHoraPeru(dto.HoraSalida) : ResolverHoraPeru(dto.HoraIngreso);
+                var fechaOperacion = horaOperacion.Date;
+                var tipoMovimiento = esSalidaVehiculo ? "Salida" : "Entrada";
+
+                var movimientoVehiculo = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniNormalizado,
+                    1,
+                    tipoMovimiento,
+                    usuarioId);
+
+                var salidaVehiculo = await _salidasService.CrearSalidaDetalle(
+                    movimientoVehiculo.Id,
+                    "VehiculoEmpresa",
+                    new
+                    {
+                        tipoRegistro,
+                        conductor = persona.Nombre,
+                        placa = dto.Placa?.Trim(),
+                        kmSalida = esSalidaVehiculo ? dto.KmSalida : null,
+                        kmIngreso = esSalidaVehiculo ? null : dto.KmIngreso,
+                        origenSalida = esSalidaVehiculo ? dto.OrigenSalida?.Trim() : null,
+                        destinoSalida = esSalidaVehiculo ? dto.DestinoSalida?.Trim() : null,
+                        origenIngreso = esSalidaVehiculo ? null : dto.OrigenIngreso?.Trim(),
+                        destinoIngreso = esSalidaVehiculo ? null : dto.DestinoIngreso?.Trim(),
+                        origen = esSalidaVehiculo ? dto.OrigenSalida?.Trim() : dto.OrigenIngreso?.Trim(),
+                        destino = esSalidaVehiculo ? dto.DestinoSalida?.Trim() : dto.DestinoIngreso?.Trim(),
+                        guardiaSalida = esSalidaVehiculo ? guardiaNombre : null,
+                        guardiaIngreso = esSalidaVehiculo ? null : guardiaNombre,
+                        observacion = string.IsNullOrWhiteSpace(dto.Observacion)
+                            ? (esSalidaVehiculo
+                                ? "Cruce especial desde Ocurrencias Persona (salida con Vehiculo MP)."
+                                : "Cruce especial desde Ocurrencias Persona (ingreso con Vehiculo MP).")
+                            : dto.Observacion,
+                        salidaOcurrenciaIdOrigen = salidaOcurrenciaId
+                    },
+                    usuarioId,
+                    esSalidaVehiculo ? null : horaOperacion,
+                    esSalidaVehiculo ? null : fechaOperacion,
+                    esSalidaVehiculo ? horaOperacion : null,
+                    esSalidaVehiculo ? fechaOperacion : null,
+                    dniNormalizado
+                );
+
+                var datosOcurrenciaNode = JsonNode.Parse(salidaOcurrencia.DatosJSON) as JsonObject ?? new JsonObject();
+                var observacionActual = datosOcurrenciaNode["ocurrencia"]?.GetValue<string>() ?? string.Empty;
+                var marcaCruce = esSalidaVehiculo
+                    ? "Cierre especial por salida con Vehiculo MP."
+                    : "Cierre especial por ingreso con Vehiculo MP.";
+                var ocurrenciaActualizada = string.IsNullOrWhiteSpace(observacionActual)
+                    ? marcaCruce
+                    : $"{observacionActual} | {marcaCruce}";
+
+                datosOcurrenciaNode["ocurrencia"] = ocurrenciaActualizada;
+                datosOcurrenciaNode["guardiaSalida"] = esSalidaVehiculo
+                    ? guardiaNombre
+                    : (datosOcurrenciaNode["guardiaSalida"] ?? null);
+                datosOcurrenciaNode["guardiaIngreso"] = esSalidaVehiculo
+                    ? (datosOcurrenciaNode["guardiaIngreso"] ?? null)
+                    : guardiaNombre;
+                datosOcurrenciaNode["cruceEspecialVehiculoEmpresa"] = true;
+                datosOcurrenciaNode["fechaCruceEspecialVehiculoEmpresa"] = horaOperacion;
+                datosOcurrenciaNode["vehiculoEmpresaSalidaId"] = salidaVehiculo.Id;
+
+                salidaOcurrencia.DatosJSON = datosOcurrenciaNode.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+                if (esSalidaVehiculo)
+                {
+                    salidaOcurrencia.HoraSalida = horaOperacion;
+                    salidaOcurrencia.FechaSalida = fechaOperacion;
+                }
+                else
+                {
+                    salidaOcurrencia.HoraIngreso = horaOperacion;
+                    salidaOcurrencia.FechaIngreso = fechaOperacion;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    mensaje = "Cruce especial registrado. Ocurrencias y Vehiculo Empresa quedaron consistentes.",
+                    salidaOcurrenciaId,
+                    salidaVehiculoEmpresaId = salidaVehiculo.Id,
+                    modo = esSalidaVehiculo ? "SalidaVehiculo" : "IngresoVehiculo"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpPut("{id}/ingreso")]
         public async Task<IActionResult> ActualizarIngreso(int id, ActualizarIngresoVehiculoEmpresaDto dto)
         {
@@ -247,7 +432,9 @@ namespace WebApplication1.Controllers
             {
                 tipoRegistro = LeerString(datosActuales, "tipoRegistro") ?? "VehiculoEmpresa",
                 conductor = datosActuales.TryGetProperty("conductor", out var cond) && cond.ValueKind == JsonValueKind.String ? cond.GetString() : null,
-                placa = datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null,
+                placa = string.IsNullOrWhiteSpace(dto.Placa)
+                    ? (datosActuales.TryGetProperty("placa", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : null)
+                    : dto.Placa.Trim(),
                 kmSalida = LeerInt(datosActuales, "kmSalida"),
                 kmIngreso = dto.KmIngreso,
                 origenSalida = LeerString(datosActuales, "origenSalida", "origen"),
@@ -350,7 +537,7 @@ namespace WebApplication1.Controllers
             {
                 tipoRegistro = LeerString(datosActuales, "tipoRegistro") ?? "VehiculoEmpresa",
                 conductor = LeerString(datosActuales, "conductor"),
-                placa = LeerString(datosActuales, "placa"),
+                placa = string.IsNullOrWhiteSpace(dto.Placa) ? LeerString(datosActuales, "placa") : dto.Placa.Trim(),
                 kmSalida = dto.KmSalida,
                 kmIngreso = LeerInt(datosActuales, "kmIngreso"),
                 origenSalida = dto.OrigenSalida,
@@ -457,6 +644,7 @@ namespace WebApplication1.Controllers
 
             return null;
         }
+
     }
 }
 

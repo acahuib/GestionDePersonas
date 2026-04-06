@@ -143,6 +143,11 @@ namespace WebApplication1.Controllers
                 : dto.Fecha.Date;
 
             var turnoNormalizado = (dto.Turno ?? string.Empty).Trim();
+            var esTurnoDia = string.Equals(turnoNormalizado, "7am-7pm", StringComparison.OrdinalIgnoreCase);
+            var esRelevoDiurnoSolicitado = dto.EsRelevoDiurno;
+            if (esRelevoDiurnoSolicitado && !esTurnoDia)
+                return BadRequest("El relevo solo se permite en turno dia (7am-7pm)");
+
             if (string.Equals(turnoNormalizado, "7pm-7am", StringComparison.OrdinalIgnoreCase)
                 && fechaRegistro == horaRegistro.Date
                 && horaRegistro.TimeOfDay < TimeSpan.FromHours(7))
@@ -234,8 +239,11 @@ namespace WebApplication1.Controllers
 
                 var guardiasExistentes = guardiasGaritaActuales.Any() || guardiasOtrasZonasActuales.Any();
 
-                if (tieneGuardias && !tieneObjetos && guardiasExistentes)
+                if (tieneGuardias && !tieneObjetos && guardiasExistentes && !esRelevoDiurnoSolicitado)
                     return BadRequest("Ya se registraron los guardias para este turno y fecha.");
+
+                if (esRelevoDiurnoSolicitado && !tieneGuardias)
+                    return BadRequest("Para aplicar relevo diurno debe enviar los guardias del turno.");
 
                 if (!tieneGuardias && !guardiasExistentes)
                     return BadRequest("Registre primero los guardias del turno.");
@@ -252,6 +260,13 @@ namespace WebApplication1.Controllers
                     ? objetosNormalizados.Select(o => (object)new { o.nombre, o.cantidad }).ToList()
                     : objetosActuales;
 
+                var relevosDiurnosCountActual = 0;
+                if (datosExistentes.TryGetProperty("relevosDiurnosCount", out var relevosCountEl)
+                    && relevosCountEl.ValueKind == JsonValueKind.Number)
+                {
+                    relevosDiurnosCountActual = relevosCountEl.GetInt32();
+                }
+
                 var datosActualizados = new
                 {
                     turno = turnoNormalizado,
@@ -262,6 +277,10 @@ namespace WebApplication1.Controllers
                     guardiasGarita = guardiasGaritaFinal,
                     guardiasOtrasZonas = guardiasOtrasZonasFinal,
                     objetos = objetosFinal,
+                    esRelevoDiurno = esRelevoDiurnoSolicitado,
+                    relevosDiurnosCount = esRelevoDiurnoSolicitado ? (relevosDiurnosCountActual + 1) : relevosDiurnosCountActual,
+                    guardiaUltimoRelevoDiurno = esRelevoDiurnoSolicitado ? usuario.NombreCompleto : (datosExistentes.TryGetProperty("guardiaUltimoRelevoDiurno", out var grd) && grd.ValueKind == JsonValueKind.String ? grd.GetString() : null),
+                    fechaHoraUltimoRelevoDiurno = esRelevoDiurnoSolicitado ? horaRegistro : (datosExistentes.TryGetProperty("fechaHoraUltimoRelevoDiurno", out var fhr) && fhr.ValueKind != JsonValueKind.Null ? fhr.GetDateTime() : (DateTime?)null),
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones)
                         ? (datosExistentes.TryGetProperty("observaciones", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
                         : dto.Observaciones.Trim()
@@ -303,6 +322,10 @@ namespace WebApplication1.Controllers
                     guardiasGarita = guardiasGaritaFinal,
                     guardiasOtrasZonas = guardiasOtrasZonasFinal,
                     objetos = objetosFinal,
+                    esRelevoDiurno = false,
+                    relevosDiurnosCount = 0,
+                    guardiaUltimoRelevoDiurno = (string?)null,
+                    fechaHoraUltimoRelevoDiurno = (DateTime?)null,
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim()
                 },
                 usuarioId,

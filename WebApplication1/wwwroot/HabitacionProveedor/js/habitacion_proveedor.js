@@ -64,22 +64,53 @@ function asegurarEstilosTablaHabitacionesCompacta() {
 }
 
 function actualizarUIByTipoIngreso() {
-    const tipo = document.getElementById("tipoIngresoHabitacion")?.value || "Proveedor";
-    const infoProveedor = document.getElementById("registro-desde-proveedor");
-    const ayuda = document.getElementById("ayudaTipoIngreso");
+}
 
-    if (tipo === "InformativoPersonalMina") {
-        if (infoProveedor) infoProveedor.style.display = "none";
+function limpiarPrefillHabitacionProveedorStorage() {
+    try {
+        sessionStorage.removeItem("prefillHabitacionProveedor");
+    } catch {
+        // Ignorar errores de storage.
+    }
+}
+
+function activarRegistroManualHabitacion() {
+    const dniInput = document.getElementById("dni");
+    const nombreInput = document.getElementById("nombreApellidos");
+    const origenInput = document.getElementById("origen");
+    const infoProveedor = document.getElementById("registro-desde-proveedor");
+    const personaInfo = document.getElementById("persona-info");
+
+    if (dniInput) {
+        dniInput.readOnly = false;
+        dniInput.dataset.proveedorSalidaId = "";
+        dniInput.value = "";
     }
 
-    if (ayuda) ayuda.innerText = "Modo informativo: registro de habitación sin cierre espejo en Proveedores.";
+    if (nombreInput) {
+        nombreInput.disabled = false;
+        nombreInput.placeholder = "Solo si DNI no registrado";
+        nombreInput.value = "";
+    }
+
+    if (origenInput) {
+        origenInput.value = "";
+    }
+
+    if (infoProveedor) infoProveedor.style.display = "none";
+    if (personaInfo) personaInfo.style.display = "none";
+
+    personaEncontrada = null;
+    limpiarPrefillHabitacionProveedorStorage();
+    window.history.replaceState({}, document.title, "habitacion_proveedor.html");
+    actualizarUIByTipoIngreso();
+    dniInput?.focus();
 }
 
 function aplicarPrefillProveedorEnFormulario(proveedorSalidaId, dni, nombreCompleto, origen) {
     const dniInput = document.getElementById("dni");
     const nombreInput = document.getElementById("nombreApellidos");
     const origenInput = document.getElementById("origen");
-    const tipoSelect = document.getElementById("tipoIngresoHabitacion");
     const infoProveedor = document.getElementById("registro-desde-proveedor");
 
     if (dniInput && dni) {
@@ -99,10 +130,6 @@ function aplicarPrefillProveedorEnFormulario(proveedorSalidaId, dni, nombreCompl
     }
 
     if (proveedorSalidaId) {
-        if (tipoSelect) {
-            tipoSelect.value = "Proveedor";
-            tipoSelect.disabled = true;
-        }
         if (infoProveedor) {
             infoProveedor.style.display = "block";
         }
@@ -116,12 +143,15 @@ async function cargarPrefillDesdeProveedor() {
     let nombreCompleto = params.get("nombreCompleto");
     let origen = params.get("origen");
 
-    if (!dni || !nombreCompleto || !origen) {
+    const tieneDatosEnQuery = !!(proveedorSalidaId || dni || nombreCompleto || origen);
+    if (!tieneDatosEnQuery) return;
+
+    if (proveedorSalidaId && (!dni || !nombreCompleto || !origen)) {
         try {
             const rawPrefill = sessionStorage.getItem("prefillHabitacionProveedor");
             if (rawPrefill) {
                 const prefill = JSON.parse(rawPrefill);
-                const coincide = !proveedorSalidaId || String(prefill?.proveedorSalidaId || "") === String(proveedorSalidaId);
+                const coincide = String(prefill?.proveedorSalidaId || "") === String(proveedorSalidaId);
                 if (coincide) {
                     dni = dni || prefill?.dni || "";
                     nombreCompleto = nombreCompleto || prefill?.nombreCompleto || "";
@@ -132,8 +162,6 @@ async function cargarPrefillDesdeProveedor() {
             // Ignorar errores de lectura de storage.
         }
     }
-
-    if (!proveedorSalidaId && !dni && !nombreCompleto && !origen) return;
 
     if (proveedorSalidaId && (!dni || !nombreCompleto || !origen)) {
         try {
@@ -150,6 +178,9 @@ async function cargarPrefillDesdeProveedor() {
     }
 
     aplicarPrefillProveedorEnFormulario(proveedorSalidaId, dni, nombreCompleto, origen);
+    if (proveedorSalidaId) {
+        limpiarPrefillHabitacionProveedorStorage();
+    }
 
     if (!nombreCompleto && dni) {
         try {
@@ -243,7 +274,6 @@ async function registrarIngreso() {
         mensaje.innerText = "";
     }
 
-    const tipoIngreso = document.getElementById("tipoIngresoHabitacion")?.value || "Proveedor";
     const dni = document.getElementById("dni")?.value?.trim() || "";
     const nombreApellidos = document.getElementById("nombreApellidos")?.value?.trim() || "";
     const origen = document.getElementById("origen")?.value?.trim() || "";
@@ -254,10 +284,10 @@ async function registrarIngreso() {
     const proveedorSalidaId = document.getElementById("dni")?.dataset?.proveedorSalidaId || "";
     const vieneDesdeProveedor = !!proveedorSalidaId;
 
-    if (!dni || !origen) {
+    if (!dni || !origen || !cuarto) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete los campos obligatorios (DNI y Origen).";
+            mensaje.innerText = "Complete los campos obligatorios (DNI, Origen y Cuarto).";
         }
         return;
     }
@@ -300,7 +330,6 @@ async function registrarIngreso() {
 
         const body = {
             dni,
-            tipoIngreso,
             proveedorSalidaId: proveedorSalidaId ? parseInt(proveedorSalidaId, 10) : null,
             origen,
             cuarto: cuarto || null,
@@ -333,12 +362,6 @@ async function registrarIngreso() {
         document.getElementById("dni").readOnly = false;
         document.getElementById("dni").dataset.proveedorSalidaId = "";
 
-        const tipoIngresoSelect = document.getElementById("tipoIngresoHabitacion");
-        if (tipoIngresoSelect) {
-            tipoIngresoSelect.value = "Proveedor";
-            tipoIngresoSelect.disabled = false;
-        }
-
         document.getElementById("nombreApellidos").value = "";
         document.getElementById("nombreApellidos").disabled = false;
         document.getElementById("nombreApellidos").placeholder = "Solo si DNI no registrado";
@@ -356,6 +379,7 @@ async function registrarIngreso() {
         const infoProveedor = document.getElementById("registro-desde-proveedor");
         if (infoProveedor) infoProveedor.style.display = "none";
 
+        limpiarPrefillHabitacionProveedorStorage();
         window.history.replaceState({}, document.title, "habitacion_proveedor.html");
         actualizarUIByTipoIngreso();
         personaEncontrada = null;
@@ -592,7 +616,6 @@ async function cargarActivos() {
                     id: p.id,
                     dni: p.dni || "N/A",
                     nombreCompleto: p.nombreCompleto || "N/A",
-                    tipoIngreso: datos.tipoIngreso || "Proveedor",
                     origen: datos.origen || "N/A",
                     cuarto: cuartoNormalizado,
                     frazadas: datos.frazadas || "-",
@@ -632,13 +655,10 @@ async function cargarActivos() {
             }
 
             const personasHtml = ocupantes.map((o) => {
-                const tipoIngresoTexto = o.tipoIngreso === "InformativoPersonalMina"
-                    ? "Informativo personal mina"
-                    : "Proveedor sincronizado";
                 return `
                     <div class="hp-persona-item">
                         <div><strong>${o.nombreCompleto}</strong> (${o.dni})</div>
-                        <div class="hp-persona-meta">${tipoIngresoTexto} | Origen: ${o.origen}</div>
+                        <div class="hp-persona-meta">Origen: ${o.origen}</div>
                     </div>
                 `;
             }).join("");
@@ -653,9 +673,7 @@ async function cargarActivos() {
 
             const accionesHtml = `<div class="hp-acciones-lista">${ocupantes
                 .map((o) => {
-                    const textoSalida = o.tipoIngreso === "InformativoPersonalMina"
-                        ? "Liberar (informativo)"
-                        : "Salida proveedor";
+                    const textoSalida = "Registrar salida";
                     const payloadSalida = encodeURIComponent(JSON.stringify({
                         salidaId: o.id,
                         dni: o.dni,
@@ -693,10 +711,6 @@ async function cargarActivos() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const tipoIngreso = document.getElementById("tipoIngresoHabitacion");
-    if (tipoIngreso) {
-        tipoIngreso.addEventListener("change", actualizarUIByTipoIngreso);
-    }
     actualizarUIByTipoIngreso();
 
     const params = new URLSearchParams(window.location.search);

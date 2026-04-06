@@ -86,6 +86,7 @@ async function initCuadernoHistorial() {
 
     const construirDetalle = (datos) => {
         const partes = [];
+        const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
         const pushIf = (label, valor) => {
             if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
                 partes.push({
@@ -94,6 +95,10 @@ async function initCuadernoHistorial() {
                 });
             }
         };
+
+        if (cierreAdministrativo) {
+            pushIf("Estado cierre", "Cerrado administrativamente");
+        }
 
         pushIf("Proveedor", datos.proveedor);
         pushIf("Ticket", datos.ticket);
@@ -120,6 +125,12 @@ async function initCuadernoHistorial() {
         pushIf("Categoria", datos.categoria);
         pushIf("Estado", datos.estado);
         pushIf("Observacion cierre", datos.observacionCierre);
+        pushIf("Motivo cierre", datos.motivoCierreAdministrativo);
+        pushIf("Obs. cierre", datos.observacionesCierreAdministrativo);
+        pushIf("Guardia cierre", datos.guardiaCierreAdministrativo);
+        if (datos.fechaCierreAdministrativo) {
+            pushIf("Fecha cierre", formatearFechaHoraDetalle(datos.fechaCierreAdministrativo));
+        }
 
         if (Array.isArray(datos.equipoA) && datos.equipoA.length) {
             const listado = datos.equipoA.join("; ");
@@ -178,6 +189,8 @@ async function initCuadernoHistorial() {
         const raw = String(texto || "").trim();
         const base = {
             tipo: "Persona",
+            dni: "",
+            nombre: "",
             placa: "",
             tractoPlaca: "",
             plataformaPlaca: "",
@@ -185,6 +198,8 @@ async function initCuadernoHistorial() {
             empresa: "",
             procedencia: "",
             destino: "",
+            queEncarga: "",
+            aQuienDeja: "",
             observacion: raw
         };
 
@@ -195,6 +210,7 @@ async function initCuadernoHistorial() {
         const tipoRaw = (tipoMatch?.[1] || "").trim().toUpperCase();
         if (tipoRaw === "VEHICULAR") base.tipo = "Vehicular";
         if (tipoRaw === "ENCAPSULADO") base.tipo = "Encapsulado";
+        if (tipoRaw === "COSAS ENCARGADAS") base.tipo = "CosasEncargadas";
 
         const extraer = (clave) => {
             const prefijo = `${clave.toLowerCase()}:`;
@@ -202,6 +218,8 @@ async function initCuadernoHistorial() {
             return parte ? parte.substring(parte.indexOf(":") + 1).trim() : "";
         };
 
+        base.dni = extraer("DNI");
+        base.nombre = extraer("Nombre");
         base.placa = extraer("Placa");
         base.tractoPlaca = extraer("Tracto Placa 1");
         base.plataformaPlaca = extraer("Plataforma Placa 2");
@@ -209,7 +227,9 @@ async function initCuadernoHistorial() {
         base.empresa = extraer("Empresa/Proveedor");
         base.procedencia = extraer("Procedencia");
         base.destino = extraer("Destino");
-        base.observacion = extraer("Observacion") || raw;
+        base.queEncarga = extraer("Que encarga");
+        base.aQuienDeja = extraer("A quien deja encargado");
+        base.observacion = extraer("Observacion") || (base.tipo === "Persona" ? raw : "");
 
         return base;
     };
@@ -223,23 +243,70 @@ async function initCuadernoHistorial() {
             partes.push(`<div class="detalle-item"><strong>${escaparHtml(label)}:</strong> ${escaparHtml(texto)}</div>`);
         };
 
+        const parsearCamposDesdeTexto = (textoRaw) => {
+            const texto = String(textoRaw || "").trim();
+            if (!texto || !texto.includes("|")) {
+                return [];
+            }
+
+            return texto
+                .split("|")
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .map((pieza) => {
+                    const idx = pieza.indexOf(":");
+                    if (idx <= 0) {
+                        return { label: "Detalle", valor: pieza };
+                    }
+
+                    const label = pieza.slice(0, idx).trim();
+                    const valor = pieza.slice(idx + 1).trim();
+                    if (!label || !valor) {
+                        return null;
+                    }
+
+                    return { label, valor };
+                })
+                .filter((x) => x && x.label && x.valor);
+        };
+
         if (tipo === "Vehicular") {
+            pushIf("DNI", detalle.dni);
             pushIf("Placa", detalle.placa);
             pushIf("Chofer", detalle.chofer);
             pushIf("Empresa", detalle.empresa);
             pushIf("Procedencia", detalle.procedencia);
             pushIf("Destino", detalle.destino);
         } else if (tipo === "Encapsulado") {
+            pushIf("DNI", detalle.dni);
             pushIf("Tracto", detalle.tractoPlaca);
             pushIf("Plataforma", detalle.plataformaPlaca);
             pushIf("Chofer", detalle.chofer);
             pushIf("Empresa", detalle.empresa);
             pushIf("Procedencia", detalle.procedencia);
             pushIf("Destino", detalle.destino);
+        } else if (tipo === "CosasEncargadas") {
+            pushIf("DNI", detalle.dni);
+            pushIf("Nombre", detalle.nombre);
+            pushIf("Empresa", detalle.empresa);
+            pushIf("Que encarga", detalle.queEncarga);
+            pushIf("A quien deja encargado", detalle.aQuienDeja);
+        } else {
+            const camposPersona = parsearCamposDesdeTexto(detalle?.observacion);
+            if (camposPersona.length) {
+                camposPersona.forEach((c) => pushIf(c.label, c.valor));
+            }
         }
 
-        pushIf("Observacion", detalle?.observacion);
+        if (!partes.length || tipo !== "Persona") {
+            pushIf("Observacion", detalle?.observacion);
+        }
         return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
+    };
+
+    const formatearTipoOcurrencia = (tipo) => {
+        if (tipo === "CosasEncargadas") return "Cosas encargadas";
+        return tipo || "Persona";
     };
 
     const renderHeaders = () => {
@@ -272,6 +339,9 @@ async function initCuadernoHistorial() {
             const columnaImagenesVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
                 ? "<th>Imagenes</th>"
                 : "";
+            const columnaImagenesVehiculosProveedores = tipoOperacion === "VehiculosProveedores"
+                ? "<th>Imagenes</th>"
+                : "";
 
             thead.innerHTML = `
                 <tr>
@@ -284,6 +354,7 @@ async function initCuadernoHistorial() {
                     ${columnaMovimientosProveedor}
                     ${columnaKmVehiculoEmpresa}
                     ${columnaImagenesVehiculoEmpresa}
+                    ${columnaImagenesVehiculosProveedores}
                     <th>Detalle</th>
                 </tr>
             `;
@@ -455,7 +526,7 @@ async function initCuadernoHistorial() {
         if (!tbody) return;
 
         const totalColumnas = vistaHistorial === "entradas-salidas"
-            ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : 7))
+            ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7))
             : 6;
 
         if (!items.length) {
@@ -490,7 +561,7 @@ async function initCuadernoHistorial() {
                                 <td>${item.guardiaIngreso || "-"}</td>
                                 <td>${construirFechaHoraCelda(item.fechaSalida, item.horaSalida)}</td>
                                 <td>${item.guardiaSalida || "-"}</td>
-                                <td>${detalle.tipo || "Persona"}</td>
+                                <td>${formatearTipoOcurrencia(detalle.tipo)}</td>
                                 <td class="cell-wrap" style="max-width: 320px;">${detalleTipoHtml}</td>
                                 <td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>
                             </tr>
@@ -506,6 +577,9 @@ async function initCuadernoHistorial() {
                     const columnaImagenesVehiculoEmpresa = tipoOperacion === "VehiculoEmpresa"
                         ? `<td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>`
                         : "";
+                    const columnaImagenesVehiculosProveedores = tipoOperacion === "VehiculosProveedores"
+                        ? `<td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>`
+                        : "";
 
                     return `
                         <tr>
@@ -518,6 +592,7 @@ async function initCuadernoHistorial() {
                             ${columnaMovimientosProveedor}
                             ${columnaKmVehiculoEmpresa}
                             ${columnaImagenesVehiculoEmpresa}
+                            ${columnaImagenesVehiculosProveedores}
                             <td>${item.detalle}</td>
                         </tr>
                     `;
@@ -576,7 +651,7 @@ async function initCuadernoHistorial() {
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
                 const totalColumnas = vistaHistorial === "entradas-salidas"
-                    ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : 7))
+                    ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7))
                     : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }

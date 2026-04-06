@@ -9,6 +9,7 @@ using WebApplication1.Models;
 using WebApplication1.Services;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace WebApplication1.Controllers
 {
@@ -55,6 +56,10 @@ namespace WebApplication1.Controllers
             {
                 if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
                     return BadRequest("Descripción de ocurrencia es requerida");
+
+                var esCosasEncargadas = dto.Ocurrencia.Contains("[TIPO: COSAS ENCARGADAS]", StringComparison.OrdinalIgnoreCase);
+                if (esCosasEncargadas && dto.HoraSalida.HasValue)
+                    return BadRequest("Cosas encargadas es un registro informativo y no admite salida");
 
                 if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
                     return BadRequest("Ocurrencias: solo envíe horaIngreso O horaSalida, no ambos");
@@ -150,6 +155,108 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [HttpPost("desde-vehiculo-empresa/{salidaEmpresaId:int}")]
+        public async Task<IActionResult> RegistrarDesdeVehiculoEmpresa(int salidaEmpresaId, [FromBody] SalidaOcurrenciasDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
+                    return BadRequest("Descripción de ocurrencia es requerida");
+
+                if (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue)
+                    return BadRequest("Ocurrencias: solo envíe horaIngreso O horaSalida, no ambos");
+
+                if (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue)
+                    return BadRequest("Ocurrencias: debe enviar horaIngreso O horaSalida");
+
+                var salidaEmpresa = await _salidasService.ObtenerSalidaPorId(salidaEmpresaId);
+                if (salidaEmpresa == null)
+                    return NotFound("Registro de VehiculoEmpresa no encontrado.");
+
+                if (!string.Equals(salidaEmpresa.TipoOperacion, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("El registro origen no corresponde a VehiculoEmpresa.");
+
+                var esIngresoOcurrencia = dto.HoraIngreso.HasValue;
+                var pendienteIngresoVehiculo = salidaEmpresa.HoraSalida.HasValue && !salidaEmpresa.HoraIngreso.HasValue;
+                var pendienteSalidaVehiculo = salidaEmpresa.HoraIngreso.HasValue && !salidaEmpresa.HoraSalida.HasValue;
+
+                if (esIngresoOcurrencia && !pendienteIngresoVehiculo)
+                    return BadRequest("VehiculoEmpresa no está pendiente de ingreso para este cruce especial.");
+
+                if (!esIngresoOcurrencia && !pendienteSalidaVehiculo)
+                    return BadRequest("VehiculoEmpresa no está pendiente de salida para este cruce especial.");
+
+                var dni = string.IsNullOrWhiteSpace(dto.Dni)
+                    ? (salidaEmpresa.Dni ?? string.Empty).Trim()
+                    : dto.Dni.Trim();
+
+                if (string.IsNullOrWhiteSpace(dni))
+                    return BadRequest("No se encontró DNI para el registro especial.");
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                var tipoMovimiento = esIngresoOcurrencia ? "Entrada" : "Salida";
+                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(dni, 1, tipoMovimiento, usuarioId);
+                if (movimiento == null)
+                    return StatusCode(500, "Error al registrar movimiento");
+
+                var horaIngresoBase = dto.HoraIngreso.HasValue ? ResolverHoraPeru(dto.HoraIngreso) : ResolverHoraPeru(null);
+                var horaSalidaBase = dto.HoraSalida.HasValue ? ResolverHoraPeru(dto.HoraSalida) : ResolverHoraPeru(null);
+
+                var datosEmpresaNode = JsonNode.Parse(salidaEmpresa.DatosJSON) as JsonObject ?? new JsonObject();
+                var observacionActual = datosEmpresaNode["observacion"]?.GetValue<string>() ?? string.Empty;
+                var marcaCruce = esIngresoOcurrencia
+                    ? "Cierre especial por ingreso a pie en Ocurrencias."
+                    : "Cierre especial por salida a pie en Ocurrencias.";
+                var detallePie = dto.Ocurrencia.Trim();
+                var marcaCompleta = string.IsNullOrWhiteSpace(detallePie)
+                    ? marcaCruce
+                    : $"{marcaCruce} Detalle: {detallePie}";
+                datosEmpresaNode["observacion"] = string.IsNullOrWhiteSpace(observacionActual)
+                    ? marcaCompleta
+                    : $"{observacionActual} | {marcaCompleta}";
+                datosEmpresaNode["cruceEspecialOcurrenciasPie"] = true;
+                datosEmpresaNode["fechaCruceEspecialOcurrenciasPie"] = esIngresoOcurrencia ? horaIngresoBase : horaSalidaBase;
+                datosEmpresaNode["guardiaCruceEspecialOcurrenciasPie"] = guardiaNombre;
+
+                salidaEmpresa.DatosJSON = datosEmpresaNode.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+                if (esIngresoOcurrencia)
+                {
+                    salidaEmpresa.HoraIngreso = horaIngresoBase;
+                    salidaEmpresa.FechaIngreso = horaIngresoBase.Date;
+                }
+                else
+                {
+                    salidaEmpresa.HoraSalida = horaSalidaBase;
+                    salidaEmpresa.FechaSalida = horaSalidaBase.Date;
+                }
+                salidaEmpresa.MovimientoId = movimiento.Id;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    mensaje = "Cruce especial registrado. Se cerró el pendiente de VehiculoEmpresa sin crear un nuevo registro en Ocurrencias.",
+                    salidaVehiculoEmpresaId = salidaEmpresaId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpPut("{id}/nombre")]
         public async Task<IActionResult> ActualizarNombre(int id, [FromBody] ActualizarNombreOcurrenciasDto dto)
         {
@@ -214,6 +321,12 @@ namespace WebApplication1.Controllers
                 using (JsonDocument doc = JsonDocument.Parse(salidaExistente.DatosJSON))
                 {
                     var root = doc.RootElement;
+                    var ocurrenciaActual = root.TryGetProperty("ocurrencia", out var ocurrenciaProp) && ocurrenciaProp.ValueKind != JsonValueKind.Null
+                        ? (ocurrenciaProp.GetString() ?? string.Empty)
+                        : string.Empty;
+                    var esCosasEncargadas = ocurrenciaActual.Contains("[TIPO: COSAS ENCARGADAS]", StringComparison.OrdinalIgnoreCase);
+                    if (esCosasEncargadas && (dto.HoraIngreso.HasValue || dto.HoraSalida.HasValue))
+                        return BadRequest("Cosas encargadas es un registro informativo y no admite ingreso/salida complementaria");
 
                     var horaIngresoNueva = dto.HoraIngreso.HasValue
                         ? ResolverHoraPeru(dto.HoraIngreso)

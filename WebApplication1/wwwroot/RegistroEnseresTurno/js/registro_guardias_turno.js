@@ -20,6 +20,7 @@ const CONFIG_TURNOS_GUARDIAS = {
 };
 
 let guardiasYaRegistrados = false;
+let permiteRelevoDiurno = false;
 
 function obtenerMensajePlanoRGT(error) {
     if (!error) return "No se pudo completar la operación.";
@@ -109,9 +110,13 @@ function actualizarEstadoBotonGuardar() {
     const btn = document.querySelector("button[onclick='guardarGuardias()']");
     if (!btn) return;
 
-    btn.disabled = guardiasYaRegistrados;
-    btn.style.opacity = guardiasYaRegistrados ? "0.6" : "1";
-    btn.style.cursor = guardiasYaRegistrados ? "not-allowed" : "pointer";
+    const bloqueoTotal = guardiasYaRegistrados && !permiteRelevoDiurno;
+    btn.disabled = bloqueoTotal;
+    btn.style.opacity = bloqueoTotal ? "0.6" : "1";
+    btn.style.cursor = bloqueoTotal ? "not-allowed" : "pointer";
+    btn.innerHTML = permiteRelevoDiurno
+        ? '<img src="/images/check-lg.svg" class="icon-white"> Guardar RELEVO diurno'
+        : '<img src="/images/check-lg.svg" class="icon-white"> Guardar Guardias del Turno';
 }
 
 function obtenerRegistroGuardiasPorTurnoFecha(registros, turno, fechaIso) {
@@ -171,6 +176,7 @@ async function verificarEstadoGuardiasTurno() {
     const mensaje = document.getElementById("mensaje");
 
     guardiasYaRegistrados = false;
+    permiteRelevoDiurno = false;
     actualizarEstadoBotonGuardar();
 
     if (!turno || !fechaOperativa) return;
@@ -190,12 +196,15 @@ async function verificarEstadoGuardiasTurno() {
         }
 
         guardiasYaRegistrados = true;
+        permiteRelevoDiurno = turno === "7am-7pm";
         actualizarEstadoBotonGuardar();
         precargarGuardiasDesdeRegistro(turno, registro.datos || {});
 
         if (mensaje) {
-            mensaje.className = "error";
-            mensaje.innerText = `Ya se registraron guardias para ${turnoTextoRGT(turno)} en fecha operativa ${fechaOperativa}.`;
+            mensaje.className = permiteRelevoDiurno ? "success" : "error";
+            mensaje.innerText = permiteRelevoDiurno
+                ? `Turno dia ya registrado en fecha operativa ${fechaOperativa}. Puede actualizar los 3 guardias con el botón de relevo.`
+                : `Ya se registraron guardias para ${turnoTextoRGT(turno)} en fecha operativa ${fechaOperativa}.`;
         }
     } catch {
     }
@@ -217,7 +226,7 @@ async function guardarGuardias() {
         return;
     }
 
-    if (guardiasYaRegistrados) {
+    if (guardiasYaRegistrados && !permiteRelevoDiurno) {
         mensaje.className = "error";
         mensaje.innerText = "Ya se registraron los guardias para este turno y fecha.";
         return;
@@ -257,6 +266,7 @@ async function guardarGuardias() {
             method: "POST",
             body: JSON.stringify({
                 turno,
+                esRelevoDiurno: permiteRelevoDiurno,
                 fecha: construirDateTimeLocal(fechaOperativa, "00:00"),
                 horaRegistro: horaRegistroInput
                     ? construirDateTimeLocal(obtenerFechaLocalISO(), horaRegistroInput)
@@ -274,7 +284,9 @@ async function guardarGuardias() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "Guardias del turno registrados correctamente";
+        mensaje.innerText = permiteRelevoDiurno
+            ? "Relevo diurno aplicado correctamente"
+            : "Guardias del turno registrados correctamente";
 
         document.querySelectorAll("[data-slot] .slot-nombre").forEach(i => i.value = "");
         document.getElementById("horaRegistro").value = "";

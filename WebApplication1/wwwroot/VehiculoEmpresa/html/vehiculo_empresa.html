@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const tipoInicial = document.getElementById("tipoInicial");
     tipoInicial.addEventListener("change", actualizarFormularioPorTipoInicial);
     actualizarFormularioPorTipoInicial();
+    inicializarDesdeOcurrenciaEspecial();
     inicializarPreviewImagenesVehiculoEmpresa();
 
     dniInput.addEventListener("blur", buscarPersonaPorDni);

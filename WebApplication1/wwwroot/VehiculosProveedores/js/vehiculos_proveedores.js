@@ -2,6 +2,77 @@
 
 let personaEncontrada = null;
 
+async function inicializarDesdeVehiculoEmpresaEspecial() {
+    const params = new URLSearchParams(window.location.search);
+    const salidaEmpresaId = params.get("salidaEmpresaId");
+    if (!salidaEmpresaId) return;
+
+    const mensaje = document.getElementById("mensaje");
+    const dniInput = document.getElementById("dni");
+    const nombreInput = document.getElementById("nombreCompleto");
+    const placaInput = document.getElementById("placa");
+    const procedenciaInput = document.getElementById("procedencia");
+    const proveedorInput = document.getElementById("proveedor");
+    const observacionInput = document.getElementById("observacion");
+    const botonRegistrar = document.getElementById("btnRegistrarEntrada");
+
+    dniInput.dataset.salidaEmpresaId = salidaEmpresaId;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/salidas/${salidaEmpresaId}`);
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo cargar el registro de VehiculoEmpresa";
+            throw new Error(error);
+        }
+
+        const detalle = await response.json();
+        if (detalle?.tipoOperacion !== "VehiculoEmpresa") {
+            throw new Error("El registro origen no es de VehiculoEmpresa.");
+        }
+
+        const datos = detalle.datos || {};
+        const dni = String(detalle.dni || "").trim();
+        const nombre = String(detalle.nombreCompleto || datos.conductor || "").trim();
+
+        dniInput.value = dni;
+        if (nombre) {
+            nombreInput.value = nombre;
+            personaEncontrada = { nombre };
+            const personaInfo = document.getElementById("persona-info");
+            const personaNombre = document.getElementById("persona-nombre");
+            if (personaInfo) personaInfo.style.display = "block";
+            if (personaNombre) personaNombre.textContent = nombre;
+            nombreInput.disabled = true;
+        }
+
+        placaInput.value = String(datos.placa || "").trim();
+        procedenciaInput.value = String(datos.destinoSalida || datos.destino || datos.procedencia || "Vehiculo Empresa").trim();
+        if (!proveedorInput.value.trim()) {
+            proveedorInput.value = "Cruce especial desde Vehiculo Empresa";
+        }
+        if (!observacionInput.value.trim()) {
+            observacionInput.value = "Cruce especial VE->VP (sin pendiente de salida).";
+        }
+
+        dniInput.readOnly = true;
+        placaInput.readOnly = true;
+
+        if (botonRegistrar) {
+            botonRegistrar.innerHTML = '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO ESPECIAL';
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Modo especial activo: este registro cerrara pendientes de VehiculoEmpresa y VehiculosProveedores.";
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
     const personaInfo = document.getElementById("persona-info");
@@ -85,6 +156,8 @@ async function registrarEntrada() {
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
+    const salidaEmpresaId = document.getElementById("dni")?.dataset?.salidaEmpresaId || "";
+    const esModoEspecial = Boolean(salidaEmpresaId);
 
     mensaje.innerText = "";
     mensaje.className = "";
@@ -123,11 +196,19 @@ async function registrarEntrada() {
             body.horaIngreso = combinarFechaHoraLocal(fechaIngresoInput, horaIngresoInput);
         }
 
+        if (!esModoEspecial && !horaIngresoInput) {
+            body.horaIngreso = ahoraLocalDateTime();
+        }
+
         if (!personaEncontrada) {
             body.nombreApellidos = nombreCompleto;
         }
 
-        const response = await fetchAuth(`${API_BASE}/vehiculos-proveedores`, {
+        const endpoint = esModoEspecial
+            ? `${API_BASE}/vehiculos-proveedores/desde-vehiculo-empresa/${salidaEmpresaId}`
+            : `${API_BASE}/vehiculos-proveedores`;
+
+        const response = await fetchAuth(endpoint, {
             method: "POST",
             body: JSON.stringify(body)
         });
@@ -140,16 +221,26 @@ async function registrarEntrada() {
         const result = await response.json();
         let advertenciaImagenes = "";
 
-        try {
-            if (result && result.salidaId) {
-                await window.imagenesForm?.uploadFromInput(result.salidaId, "vehiculosProveedoresImagenes");
+        if (!esModoEspecial) {
+            try {
+                if (result && result.salidaId) {
+                    await window.imagenesForm?.uploadFromInput(result.salidaId, "vehiculosProveedoresImagenes");
+                }
+            } catch (errorImagenes) {
+                advertenciaImagenes = ` (Registro guardado, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
             }
-        } catch (errorImagenes) {
-            advertenciaImagenes = ` (Registro guardado, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
         }
 
         const nombreCompletoRegistro = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
+        if (esModoEspecial) {
+            mensaje.innerText = `CRUCE especial registrado para ${nombreCompletoRegistro} - Placa: ${placa}.`;
+            setTimeout(() => {
+                window.location.href = "../../VehiculoEmpresa/html/vehiculo_empresa.html?refresh=1";
+            }, 700);
+            return;
+        }
+
         mensaje.innerText = `ENTRADA registrada para ${nombreCompletoRegistro} - Placa: ${placa}${advertenciaImagenes}`;
 
         document.getElementById("dni").value = "";
@@ -363,6 +454,17 @@ function combinarFechaHoraLocal(fechaIso, horaTexto) {
     return /^\d{2}:\d{2}$/.test(horaLimpia)
         ? `${fechaIso}T${horaLimpia}:00`
         : `${fechaIso}T${horaLimpia}`;
+}
+
+function ahoraLocalDateTime() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
 
