@@ -267,6 +267,108 @@ namespace WebApplication1.Controllers
                     relevosDiurnosCountActual = relevosCountEl.GetInt32();
                 }
 
+                var cambiosTurnoActuales = new List<object>();
+                if (datosExistentes.TryGetProperty("cambiosTurno", out var cambiosEl) && cambiosEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var cambio in cambiosEl.EnumerateArray())
+                    {
+                        if (cambio.ValueKind != JsonValueKind.Object) continue;
+
+                        var fechaHoraCambio = cambio.TryGetProperty("fechaHoraCambio", out var fh) && fh.ValueKind != JsonValueKind.Null
+                            ? fh.GetDateTime()
+                            : (DateTime?)null;
+                        var fechaCambio = cambio.TryGetProperty("fecha", out var fc) && fc.ValueKind != JsonValueKind.Null
+                            ? fc.GetDateTime().Date
+                            : (DateTime?)null;
+                        var turnoCambio = cambio.TryGetProperty("turno", out var tc) && tc.ValueKind == JsonValueKind.String
+                            ? tc.GetString()
+                            : null;
+                        var guardiaResponsableCambio = cambio.TryGetProperty("guardiaResponsableCambio", out var grc) && grc.ValueKind == JsonValueKind.String
+                            ? grc.GetString()
+                            : null;
+
+                        var ggCambio = new List<string>();
+                        if (cambio.TryGetProperty("guardiasGarita", out var ggEl) && ggEl.ValueKind == JsonValueKind.Array)
+                        {
+                            ggCambio = ggEl.EnumerateArray()
+                                .Where(x => x.ValueKind == JsonValueKind.String)
+                                .Select(x => (x.GetString() ?? string.Empty).Trim())
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .ToList();
+                        }
+
+                        var gozCambio = new List<object>();
+                        if (cambio.TryGetProperty("guardiasOtrasZonas", out var gozEl) && gozEl.ValueKind == JsonValueKind.Array)
+                        {
+                            gozCambio = gozEl.EnumerateArray()
+                                .Where(x => x.ValueKind == JsonValueKind.Object)
+                                .Select(x => new
+                                {
+                                    guardia = x.TryGetProperty("guardia", out var g) && g.ValueKind == JsonValueKind.String ? (g.GetString() ?? string.Empty).Trim() : string.Empty,
+                                    zona = x.TryGetProperty("zona", out var z) && z.ValueKind == JsonValueKind.String ? (z.GetString() ?? string.Empty).Trim() : string.Empty
+                                })
+                                .Where(x => !string.IsNullOrWhiteSpace(x.guardia) && !string.IsNullOrWhiteSpace(x.zona))
+                                .Select(x => (object)new { x.guardia, x.zona })
+                                .ToList();
+                        }
+
+                        cambiosTurnoActuales.Add(new
+                        {
+                            fechaHoraCambio,
+                            fecha = fechaCambio,
+                            turno = turnoCambio,
+                            guardiaResponsableCambio,
+                            guardiasGarita = ggCambio,
+                            guardiasOtrasZonas = gozCambio
+                        });
+                    }
+                }
+
+                if (esRelevoDiurnoSolicitado)
+                {
+                    bool mismaGarita = guardiasGaritaFinal.SequenceEqual(
+                        guardiasGaritaActuales,
+                        StringComparer.OrdinalIgnoreCase);
+
+                    var zonasActualesMap = guardiasOtrasZonasActuales
+                        .Select(z =>
+                        {
+                            var tipo = z.GetType();
+                            var zona = (tipo.GetProperty("zona")?.GetValue(z)?.ToString() ?? string.Empty).Trim();
+                            var guardia = (tipo.GetProperty("guardia")?.GetValue(z)?.ToString() ?? string.Empty).Trim();
+                            return new { zona = zona.ToUpperInvariant(), guardia };
+                        })
+                        .Where(x => !string.IsNullOrWhiteSpace(x.zona))
+                        .ToDictionary(x => x.zona, x => x.guardia, StringComparer.OrdinalIgnoreCase);
+
+                    var zonasNuevasMap = guardiasOtrasZonasFinal
+                        .Select(z =>
+                        {
+                            var tipo = z.GetType();
+                            var zona = (tipo.GetProperty("zona")?.GetValue(z)?.ToString() ?? string.Empty).Trim();
+                            var guardia = (tipo.GetProperty("guardia")?.GetValue(z)?.ToString() ?? string.Empty).Trim();
+                            return new { zona = zona.ToUpperInvariant(), guardia };
+                        })
+                        .Where(x => !string.IsNullOrWhiteSpace(x.zona))
+                        .ToDictionary(x => x.zona, x => x.guardia, StringComparer.OrdinalIgnoreCase);
+
+                    bool mismasZonas = zonasActualesMap.Count == zonasNuevasMap.Count
+                        && zonasActualesMap.All(kv => zonasNuevasMap.TryGetValue(kv.Key, out var guardia) && string.Equals(guardia, kv.Value, StringComparison.OrdinalIgnoreCase));
+
+                    if (mismaGarita && mismasZonas)
+                        return BadRequest("No hay cambios de guardias para registrar en el cambio de turno.");
+
+                    cambiosTurnoActuales.Add(new
+                    {
+                        fechaHoraCambio = horaRegistro,
+                        fecha = fechaRegistro,
+                        turno = turnoNormalizado,
+                        guardiaResponsableCambio = usuario.NombreCompleto,
+                        guardiasGarita = guardiasGaritaFinal,
+                        guardiasOtrasZonas = guardiasOtrasZonasFinal
+                    });
+                }
+
                 var datosActualizados = new
                 {
                     turno = turnoNormalizado,
@@ -281,6 +383,7 @@ namespace WebApplication1.Controllers
                     relevosDiurnosCount = esRelevoDiurnoSolicitado ? (relevosDiurnosCountActual + 1) : relevosDiurnosCountActual,
                     guardiaUltimoRelevoDiurno = esRelevoDiurnoSolicitado ? usuario.NombreCompleto : (datosExistentes.TryGetProperty("guardiaUltimoRelevoDiurno", out var grd) && grd.ValueKind == JsonValueKind.String ? grd.GetString() : null),
                     fechaHoraUltimoRelevoDiurno = esRelevoDiurnoSolicitado ? horaRegistro : (datosExistentes.TryGetProperty("fechaHoraUltimoRelevoDiurno", out var fhr) && fhr.ValueKind != JsonValueKind.Null ? fhr.GetDateTime() : (DateTime?)null),
+                    cambiosTurno = cambiosTurnoActuales,
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones)
                         ? (datosExistentes.TryGetProperty("observaciones", out var obs) && obs.ValueKind == JsonValueKind.String ? obs.GetString() : null)
                         : dto.Observaciones.Trim()
@@ -326,6 +429,7 @@ namespace WebApplication1.Controllers
                     relevosDiurnosCount = 0,
                     guardiaUltimoRelevoDiurno = (string?)null,
                     fechaHoraUltimoRelevoDiurno = (DateTime?)null,
+                    cambiosTurno = new List<object>(),
                     observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim()
                 },
                 usuarioId,

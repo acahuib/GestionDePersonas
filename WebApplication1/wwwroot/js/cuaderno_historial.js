@@ -24,6 +24,29 @@ async function initCuadernoHistorial() {
     let registros = [];
     let registrosFiltrados = [];
 
+    const fechaIsoLocal = (date = new Date()) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+    };
+
+    const obtenerRangoSemanaActual = () => {
+        const hoy = new Date();
+        const inicio = new Date(hoy);
+        const dia = inicio.getDay(); // 0 domingo, 1 lunes, ...
+        const deltaLunes = dia === 0 ? -6 : (1 - dia);
+        inicio.setDate(inicio.getDate() + deltaLunes);
+
+        const fin = new Date(inicio);
+        fin.setDate(fin.getDate() + 6);
+
+        return {
+            inicioIso: fechaIsoLocal(inicio),
+            finIso: fechaIsoLocal(fin)
+        };
+    };
+
     const paginacion = (() => {
         let el = container.querySelector("[data-historial-paginacion]");
         if (!el) {
@@ -168,6 +191,33 @@ async function initCuadernoHistorial() {
             partes.push({ label: "Zonas", valor: listado });
         }
 
+        if (Array.isArray(datos.cambiosTurno) && datos.cambiosTurno.length) {
+            const listadoCambios = datos.cambiosTurno
+                .map((cambio, idx) => {
+                    const fechaHora = formatearFechaHoraDetalle(cambio?.fechaHoraCambio);
+                    const turnoCambio = String(cambio?.turno || "").trim();
+                    const turnoTexto = turnoCambio === "7am-7pm"
+                        ? "7am-7pm (Turno dia)"
+                        : (turnoCambio === "7pm-7am" ? "7pm-7am (Turno noche)" : "-");
+
+                    const garita = Array.isArray(cambio?.guardiasGarita)
+                        ? cambio.guardiasGarita.filter(Boolean).join(", ")
+                        : "";
+                    const zonas = Array.isArray(cambio?.guardiasOtrasZonas)
+                        ? cambio.guardiasOtrasZonas.map((g) => `${g?.guardia || "-"} (${g?.zona || "-"})`).join(", ")
+                        : "";
+                    const guardiasTexto = [
+                        garita ? `Garita: ${garita}` : "",
+                        zonas ? `Zonas: ${zonas}` : ""
+                    ].filter(Boolean).join("; ");
+
+                    return `Cambio ${idx + 1}: Cambio de turno a la hora de ${fechaHora}; ${turnoTexto}; Nuevos guardias: ${guardiasTexto || "-"}`;
+                })
+                .join(" | ");
+
+            partes.push({ label: "Cambios de turno", valor: listadoCambios });
+        }
+
         if (!partes.length) {
             return {
                 html: "-",
@@ -189,6 +239,7 @@ async function initCuadernoHistorial() {
         const raw = String(texto || "").trim();
         const base = {
             tipo: "Persona",
+            acompanandoA: "",
             dni: "",
             nombre: "",
             placa: "",
@@ -202,6 +253,20 @@ async function initCuadernoHistorial() {
             aQuienDeja: "",
             observacion: raw
         };
+
+        const lowerRaw = raw.toLowerCase();
+        if (lowerRaw.startsWith("acompañando a") && raw.includes(";") && raw.includes("[TIPO:")) {
+            const idxSep = raw.indexOf(";");
+            const cabecera = raw.substring(0, idxSep).trim();
+            const detalleTipado = raw.substring(idxSep + 1).trim();
+            const acomp = cabecera.replace(/^acompañando a\s*/i, "").trim();
+
+            const detalleInterno = parsearDetalleOcurrencia(detalleTipado);
+            return {
+                ...detalleInterno,
+                acompanandoA: acomp
+            };
+        }
 
         if (!raw.startsWith("[TIPO:")) return base;
 
@@ -242,6 +307,8 @@ async function initCuadernoHistorial() {
             if (!texto) return;
             partes.push(`<div class="detalle-item"><strong>${escaparHtml(label)}:</strong> ${escaparHtml(texto)}</div>`);
         };
+
+        pushIf("Acompañando a", detalle?.acompanandoA);
 
         const parsearCamposDesdeTexto = (textoRaw) => {
             const texto = String(textoRaw || "").trim();
@@ -619,6 +686,7 @@ async function initCuadernoHistorial() {
     const aplicarFiltros = () => {
         const texto = (inputTexto?.value || "").trim().toLowerCase();
         const fecha = inputFecha?.value || "";
+        const rangoSemana = obtenerRangoSemanaActual();
         const tipoRegistroFiltro = (selectTipoRegistro?.value || "").trim();
         const tipoPersonaLocalFiltro = (selectTipoPersonaLocal?.value || "").trim();
 
@@ -632,8 +700,12 @@ async function initCuadernoHistorial() {
             }
             if (fecha) {
                 if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
-                const fechaItem = item.fechaFiltro.toISOString().split("T")[0];
+                const fechaItem = fechaIsoLocal(item.fechaFiltro);
                 if (fechaItem !== fecha) return false;
+            } else {
+                if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
+                const fechaItem = fechaIsoLocal(item.fechaFiltro);
+                if (fechaItem < rangoSemana.inicioIso || fechaItem > rangoSemana.finIso) return false;
             }
             return true;
         });

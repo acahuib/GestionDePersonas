@@ -50,15 +50,15 @@
                 <option value="CosasEncargadas">Cosas encargadas</option>
             </select>
 
-            <div id="bloquePersona">
-                <div id="bloqueMovimientoInicialPersona" style="margin-bottom:10px;">
-                    <label style="margin-bottom:6px;display:block;">Movimiento inicial (solo Persona) *</label>
-                    <select id="movimientoInicialPersona">
-                        <option value="Ingreso">Ingreso</option>
-                        <option value="Salida">Salida</option>
-                    </select>
-                </div>
+            <div id="bloqueMovimientoInicialPersona" style="margin-bottom:10px;">
+                <label style="margin-bottom:6px;display:block;">Movimiento inicial (Persona/Vehicular) *</label>
+                <select id="movimientoInicialPersona">
+                    <option value="Ingreso">Ingreso</option>
+                    <option value="Salida">Salida</option>
+                </select>
+            </div>
 
+            <div id="bloquePersona">
                 <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
                 <input type="text" id="dni" placeholder="DNI si lo proporciona" maxlength="8">
 
@@ -66,7 +66,7 @@
                     <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="persona-nombre"></span>
                 </div>
 
-                <label>Nombre <span class="muted">(Opcional)</span></label>
+                <label>Nombre *</label>
                 <input type="text" id="nombre" placeholder="Nombre o descripción de la persona">
 
                 <label>Descripción de Ocurrencia *</label>
@@ -149,6 +149,23 @@
             <p id="imagenes-preview-resumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</p>
             <div id="imagenes-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px 0;"></div>
 
+            <div class="form-card" style="margin-top:10px;">
+                <h3 style="margin-bottom:6px;">Acompanantes (opcional)</h3>
+                <p class="muted" style="margin-top:0;">Escanee DNI y agregue acompanantes antes de registrar el titular.</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                    <div style="flex:1;min-width:180px;">
+                        <label>DNI acompanante</label>
+                        <input type="text" id="acompananteDniInput" placeholder="DNI (8 dígitos)" maxlength="8">
+                    </div>
+                    <div style="flex:1;min-width:220px;">
+                        <label>Nombre acompanante (si no existe por DNI)</label>
+                        <input type="text" id="acompananteNombreInput" placeholder="Nombre completo del acompanante">
+                    </div>
+                    <button type="button" class="btn-inline btn-small" onclick="agregarAcompanantePendienteOcurrencia()">Agregar acompañante</button>
+                </div>
+                <div id="acompanantes-pendientes-ocurrencia" style="margin-top:8px;"></div>
+            </div>
+
             <div style="margin-top: 10px;">
                 <button id="btnRegistrarOcurrencia" onclick="registrarIngreso()" class="btn-success btn-block">
                     <img src="/images/check-lg.svg" class="icon-white"> Registrar INGRESO
@@ -219,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     inicializarAutocompletadoDniOcurrencias();
     inicializarPreviewImagenes();
+    inicializarAcompanantesPendientesOcurrencia();
     inicializarDesdeVehiculoEmpresaEspecial();
 });
 </script>

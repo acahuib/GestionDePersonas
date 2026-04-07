@@ -2,6 +2,7 @@
 
 let personaEncontrada = null;
 let salidaVehiculoEmpresaEspecialId = null;
+let acompanantesPendientesOcurrencia = [];
 
 function obtenerInputImagenes() {
     const input = document.getElementById("ocurrenciaImagenes");
@@ -41,15 +42,15 @@ function actualizarUIRegistroInicial() {
     const btnRegistrar = document.getElementById("btnRegistrarOcurrencia");
 
     if (bloqueMovimientoPersona) {
-        bloqueMovimientoPersona.style.display = tipo === "Persona" ? "block" : "none";
+        bloqueMovimientoPersona.style.display = (tipo === "Persona" || tipo === "Vehicular") ? "block" : "none";
     }
 
-    if (tipo !== "Persona") {
+    if (tipo !== "Persona" && tipo !== "Vehicular") {
         const selector = document.getElementById("movimientoInicialPersona");
         if (selector instanceof HTMLSelectElement) selector.value = "Ingreso";
     }
 
-    const movimiento = tipo === "Persona" ? obtenerMovimientoInicialPersona() : "Ingreso";
+    const movimiento = (tipo === "Persona" || tipo === "Vehicular") ? obtenerMovimientoInicialPersona() : "Ingreso";
     const esSalida = movimiento === "Salida";
     const esCosasEncargadas = tipo === "CosasEncargadas";
 
@@ -212,6 +213,123 @@ function leerValor(id) {
     return document.getElementById(id)?.value?.trim() || "";
 }
 
+function renderAcompanantesPendientesOcurrencia() {
+    const contenedor = document.getElementById("acompanantes-pendientes-ocurrencia");
+    if (!contenedor) return;
+
+    if (!acompanantesPendientesOcurrencia.length) {
+        contenedor.innerHTML = '<p class="muted">Sin acompanantes agregados.</p>';
+        return;
+    }
+
+    contenedor.innerHTML = acompanantesPendientesOcurrencia.map((acompanante, index) => `
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;margin-bottom:6px;">
+            <span><strong>${acompanante.dni}</strong>${acompanante.nombre ? ` - ${acompanante.nombre}` : ""}</span>
+            <button type="button" class="btn-danger btn-small" onclick="quitarAcompanantePendienteOcurrencia(${index})">Quitar</button>
+        </div>
+    `).join("");
+}
+
+function quitarAcompanantePendienteOcurrencia(index) {
+    acompanantesPendientesOcurrencia = acompanantesPendientesOcurrencia.filter((_, i) => i !== index);
+    renderAcompanantesPendientesOcurrencia();
+}
+
+async function agregarAcompanantePendienteOcurrencia() {
+    const inputDni = document.getElementById("acompananteDniInput");
+    const inputNombre = document.getElementById("acompananteNombreInput");
+    if (!(inputDni instanceof HTMLInputElement)) return;
+
+    const dni = inputDni.value.trim();
+    const nombreManual = inputNombre instanceof HTMLInputElement ? inputNombre.value.trim() : "";
+    if (dni.length !== 8 || isNaN(dni)) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI de acompanante invalido.";
+        }
+        return;
+    }
+
+    if (acompanantesPendientesOcurrencia.some((a) => a.dni === dni)) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Ese DNI ya fue agregado como acompanante.";
+        }
+        return;
+    }
+
+    let nombre = "";
+    try {
+        const persona = await consultarPersonaPorDni(dni);
+        nombre = persona?.nombre || "";
+    } catch {
+    }
+
+    if (!nombre) {
+        nombre = nombreManual;
+    }
+
+    if (!nombre) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Si el DNI no existe, ingrese el nombre del acompanante.";
+        }
+        return;
+    }
+
+    acompanantesPendientesOcurrencia.push({ dni, nombre });
+    inputDni.value = "";
+    if (inputNombre instanceof HTMLInputElement) inputNombre.value = "";
+    renderAcompanantesPendientesOcurrencia();
+    inputDni.focus();
+}
+
+function inicializarAcompanantesPendientesOcurrencia() {
+    renderAcompanantesPendientesOcurrencia();
+
+    const inputDni = document.getElementById("acompananteDniInput");
+    if (inputDni instanceof HTMLInputElement) {
+        inputDni.addEventListener("keypress", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            agregarAcompanantePendienteOcurrencia();
+        });
+    }
+}
+
+async function registrarAcompanantesPendientesOcurrencia(tipoReferencia, salidaReferenciaId, movimiento) {
+    if (!salidaReferenciaId || !acompanantesPendientesOcurrencia.length) {
+        return { registrados: 0, errores: [] };
+    }
+
+    let registrados = 0;
+    const errores = [];
+
+    for (const acompanante of acompanantesPendientesOcurrencia) {
+        try {
+            const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanante-desde/${encodeURIComponent(tipoReferencia)}/${salidaReferenciaId}`, {
+                method: "POST",
+                body: JSON.stringify({ dni: acompanante.dni, nombre: acompanante.nombre, movimiento })
+            });
+
+            if (!response || !response.ok) {
+                const error = response ? await readApiError(response) : "No se pudo registrar acompanante";
+                errores.push(`${acompanante.dni}: ${error}`);
+                continue;
+            }
+
+            registrados += 1;
+        } catch (error) {
+            errores.push(`${acompanante.dni}: ${getPlainErrorMessage(error)}`);
+        }
+    }
+
+    return { registrados, errores };
+}
+
 function formatearTipoOcurrencia(tipo) {
     if (tipo === "CosasEncargadas") return "Cosas encargadas";
     return tipo || "Persona";
@@ -251,6 +369,10 @@ function construirDescripcionPorTipo() {
 
         if (!validarDniOpcional(dni)) {
             return { ok: false, error: "DNI debe tener 8 dígitos numéricos" };
+        }
+
+        if (!nombre) {
+            return { ok: false, error: "Nombre es obligatorio para ocurrencias de tipo Persona" };
         }
 
         return {
@@ -397,6 +519,12 @@ function limpiarFormularioPorTipo() {
     if (inputImagenes) {
         window.imagenesForm?.clearSelection("ocurrenciaImagenes");
     }
+    acompanantesPendientesOcurrencia = [];
+    const inputAcompanante = document.getElementById("acompananteDniInput");
+    const inputNombreAcompanante = document.getElementById("acompananteNombreInput");
+    if (inputAcompanante) inputAcompanante.value = "";
+    if (inputNombreAcompanante) inputNombreAcompanante.value = "";
+    renderAcompanantesPendientesOcurrencia();
     actualizarPreviewImagenes();
 }
 
@@ -458,6 +586,56 @@ function construirDetalleTipoHtml(detalle) {
         partes.push(`<div><strong>${label}:</strong> ${texto}</div>`);
     };
 
+    const parsearCamposPersona = (textoRaw) => {
+        const texto = String(textoRaw || "").trim();
+        if (!texto) return [];
+
+        if (/^acompañando a\s+/i.test(texto) && texto.includes(";") && texto.includes("[TIPO:")) {
+            const idx = texto.indexOf(";");
+            const cabecera = texto.substring(0, idx).trim();
+            const resto = texto.substring(idx + 1).trim();
+            const acompanandoA = cabecera.replace(/^acompañando a\s*/i, "").trim();
+
+            const partesInternas = resto.split("|").map((p) => p.trim()).filter(Boolean);
+            const campos = [];
+            if (acompanandoA) campos.push({ label: "Acompañando a", valor: acompanandoA });
+
+            partesInternas.forEach((pieza) => {
+                const idxCampo = pieza.indexOf(":");
+                if (idxCampo <= 0) {
+                    if (!/^\[TIPO:/i.test(pieza)) {
+                        campos.push({ label: "Detalle", valor: pieza });
+                    }
+                    return;
+                }
+
+                const label = pieza.slice(0, idxCampo).trim();
+                const valor = pieza.slice(idxCampo + 1).trim();
+                if (!label || !valor) return;
+
+                campos.push({ label, valor });
+            });
+
+            return campos;
+        }
+
+        if (!texto.includes("|")) return [];
+
+        return texto
+            .split("|")
+            .map((p) => p.trim())
+            .filter(Boolean)
+            .map((pieza) => {
+                const idxCampo = pieza.indexOf(":");
+                if (idxCampo <= 0) return null;
+                const label = pieza.slice(0, idxCampo).trim();
+                const valor = pieza.slice(idxCampo + 1).trim();
+                if (!label || !valor) return null;
+                return { label, valor };
+            })
+            .filter(Boolean);
+    };
+
     if (tipo === "Vehicular") {
         pushIf("Placa", detalle.placa);
         pushIf("Chofer", detalle.chofer);
@@ -477,9 +655,16 @@ function construirDetalleTipoHtml(detalle) {
         pushIf("Empresa", detalle.empresa);
         pushIf("Que encarga", detalle.queEncarga);
         pushIf("A quien deja encargado", detalle.aQuienDeja);
+    } else {
+        const camposPersona = parsearCamposPersona(detalle?.observacion);
+        if (camposPersona.length) {
+            camposPersona.forEach((c) => pushIf(c.label, c.valor));
+        }
     }
 
-    pushIf("Observacion", detalle?.observacion);
+    if (!partes.length || tipo !== "Persona") {
+        pushIf("Observacion", detalle?.observacion);
+    }
 
     return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
 }
@@ -763,7 +948,9 @@ async function registrarIngreso() {
             ocurrencia: datos.ocurrencia
         };
 
-        const movimientoInicial = (datos.tipo === "Persona") ? obtenerMovimientoInicialPersona() : "Ingreso";
+        const movimientoInicial = (datos.tipo === "Persona" || datos.tipo === "Vehicular")
+            ? obtenerMovimientoInicialPersona()
+            : "Ingreso";
         const esSalidaInicial = movimientoInicial === "Salida";
 
         if (esSalidaInicial) {
@@ -812,11 +999,22 @@ async function registrarIngreso() {
         } catch (errorImagenes) {
             advertenciaImagenes = ` (Ocurrencia guardada, pero no se pudieron subir imagenes: ${getPlainErrorMessage(errorImagenes)})`;
         }
+
+        const salidaReferenciaId = data?.salidaId || data?.salidaOcurrenciaId || data?.id || 0;
+        const movimientoAcompanantes = esSalidaInicial ? "Salida" : "Entrada";
+        const resultadoAcompanantes = await registrarAcompanantesPendientesOcurrencia("Ocurrencias", salidaReferenciaId, movimientoAcompanantes);
+        const textoAcompanantes = resultadoAcompanantes.registrados > 0
+            ? ` | Acompanantes registrados: ${resultadoAcompanantes.registrados}`
+            : "";
+        const textoErroresAcompanantes = resultadoAcompanantes.errores.length
+            ? ` | Errores en acompanantes: ${resultadoAcompanantes.errores.join(" ; ")}`
+            : "";
+
         mensaje.className = "success";
         if (salidaVehiculoEmpresaEspecialId) {
-            mensaje.innerText = `Movimiento a pie registrado y pendiente de Vehiculo MP cerrado correctamente${advertenciaImagenes}`;
+            mensaje.innerText = `Movimiento a pie registrado y pendiente de Vehiculo MP cerrado correctamente${advertenciaImagenes}${textoAcompanantes}${textoErroresAcompanantes}`;
         } else {
-            mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}`;
+            mensaje.innerText = `${esSalidaInicial ? "Salida" : "Ingreso"} registrado correctamente${advertenciaImagenes}${textoAcompanantes}${textoErroresAcompanantes}`;
         }
 
         if (salidaVehiculoEmpresaEspecialId) {
@@ -889,6 +1087,47 @@ function irAVehiculoEmpresaEspecial(salidaOcurrenciaId, modoVehiculo) {
         modoVehiculo: modoVehiculo === "ingreso" ? "ingreso" : "salida"
     });
     window.location.href = `../../VehiculoEmpresa/html/vehiculo_empresa.html?${params.toString()}`;
+}
+
+async function registrarAcompananteRapidoDesdeOcurrencia(salidaOcurrenciaId) {
+    if (!salidaOcurrenciaId) return;
+    const mensaje = document.getElementById("mensaje");
+    const dni = window.prompt("Escanee o ingrese DNI del acompañante (8 dígitos):", "");
+    if (dni === null) return;
+
+    const dniLimpio = String(dni).trim();
+    if (dniLimpio.length !== 8 || isNaN(dniLimpio)) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI de acompañante inválido.";
+        }
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanante-desde/Ocurrencias/${salidaOcurrenciaId}`, {
+            method: "POST",
+            body: JSON.stringify({ dni: dniLimpio })
+        });
+
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo registrar acompañante";
+            throw new Error(error);
+        }
+
+        const data = await response.json();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = `Acompañante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
+        }
+
+        cargarActivos();
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
 }
 
 function esRegistroCosasEncargadas(detalle, registro) {

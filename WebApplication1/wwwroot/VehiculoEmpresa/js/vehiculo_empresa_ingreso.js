@@ -6,6 +6,50 @@ function setElementValueIfExists(id, value) {
     element.value = value ?? "";
 }
 
+let acompanantesVinculadosVehiculo = [];
+
+async function cargarAcompanantesVinculadosVehiculo(salidaId, modo) {
+    const lista = document.getElementById("listaAcompanantesRelacionadosVehiculo");
+    if (!lista || !salidaId) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanantes/vinculados/VehiculoEmpresa/${salidaId}?modo=${encodeURIComponent(modo || "ingreso")}`);
+        if (!response || !response.ok) {
+            acompanantesVinculadosVehiculo = [];
+            lista.innerHTML = '<span class="muted">No se pudieron cargar acompanantes vinculados.</span>';
+            return;
+        }
+
+        const data = await response.json();
+        acompanantesVinculadosVehiculo = Array.isArray(data?.acompanantes) ? data.acompanantes : [];
+
+        if (!acompanantesVinculadosVehiculo.length) {
+            lista.innerHTML = '<span class="muted">No hay acompanantes pendientes para este principal.</span>';
+            return;
+        }
+
+        lista.innerHTML = acompanantesVinculadosVehiculo.map((a) => `
+            <label style="display:flex;align-items:center;gap:10px;margin:6px 0;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#f8fafc;cursor:pointer;">
+                <input type="checkbox" class="acompanante-rel-check-vehiculo" value="${a.id}" checked style="width:18px;height:18px;cursor:pointer;">
+                <span style="display:block;line-height:1.3;">
+                    <strong>${a.dni || '-'}</strong> - ${a.nombre || 'S/N'}
+                    <span class="muted" style="margin-left:6px;">(${a.pendienteDe || '-'})</span>
+                </span>
+            </label>
+        `).join("");
+    } catch {
+        acompanantesVinculadosVehiculo = [];
+        lista.innerHTML = '<span class="muted">No se pudieron cargar acompanantes vinculados.</span>';
+    }
+}
+
+function obtenerAcompanantesSeleccionadosVehiculo() {
+    const checks = Array.from(document.querySelectorAll('.acompanante-rel-check-vehiculo:checked'));
+    return checks
+        .map((c) => Number(c.value))
+        .filter((n) => Number.isFinite(n) && n > 0);
+}
+
 function formatearTipoRegistro(tipoRegistro) {
     return tipoRegistro === "Almacen" ? "Almacen" : "Normal";
 }
@@ -23,6 +67,7 @@ function cargarDatosDesdeUrl() {
     configurarVistaPorModo(modo);
 
     cargarDetalleOperacion(idACargar);
+    cargarAcompanantesVinculadosVehiculo(idACargar, modo);
 }
 
 function configurarVistaPorModo(modo) {
@@ -184,6 +229,31 @@ async function registrarMovimientoComplementario() {
             throw new Error(error);
         }
 
+        let textoAcompanantes = "";
+        const idsSeleccionados = obtenerAcompanantesSeleccionadosVehiculo();
+        if (idsSeleccionados.length > 0) {
+            const bodyAcompanantes = esIngreso
+                ? { horaIngreso: body.horaIngreso }
+                : { horaSalida: body.horaSalida };
+            bodyAcompanantes.salidaIds = idsSeleccionados;
+
+            const responseAcompanantes = await fetchAuth(`${API_BASE}/ocurrencias/acompanantes/finalizar-desde/VehiculoEmpresa/${salidaId}`, {
+                method: "PUT",
+                body: JSON.stringify(bodyAcompanantes)
+            });
+
+            if (responseAcompanantes?.ok) {
+                const dataAcompanantes = await responseAcompanantes.json();
+                const completados = Number(dataAcompanantes?.completados || 0);
+                if (completados > 0) {
+                    textoAcompanantes = ` | Acompanantes finalizados: ${completados}`;
+                }
+            } else if (responseAcompanantes) {
+                const errorAcompanantes = await readApiError(responseAcompanantes);
+                textoAcompanantes = ` | Advertencia acompanantes: ${errorAcompanantes}`;
+            }
+        }
+
         await window.imagenesComplemento?.uploadSelected({
             registroId: salidaId,
             inputId: "vehiculoEmpresaComplementoImagenes"
@@ -191,8 +261,8 @@ async function registrarMovimientoComplementario() {
 
         mensaje.className = "success";
         mensaje.innerText = esIngreso
-            ? "✅ INGRESO registrado correctamente"
-            : "✅ SALIDA registrada correctamente";
+            ? `✅ INGRESO registrado correctamente${textoAcompanantes}`
+            : `✅ SALIDA registrada correctamente${textoAcompanantes}`;
 
         setTimeout(() => {
             window.location.href = "vehiculo_empresa.html?refresh=1";

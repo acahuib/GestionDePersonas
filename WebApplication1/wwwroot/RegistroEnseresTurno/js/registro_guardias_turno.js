@@ -20,7 +20,8 @@ const CONFIG_TURNOS_GUARDIAS = {
 };
 
 let guardiasYaRegistrados = false;
-let permiteRelevoDiurno = false;
+let permiteCambioTurno = false;
+let guardandoGuardias = false;
 
 function obtenerMensajePlanoRGT(error) {
     if (!error) return "No se pudo completar la operación.";
@@ -103,20 +104,24 @@ function renderizarSlots() {
         </div>
     `).join("");
 
-    actualizarEstadoBotonGuardar();
+    actualizarEstadoAccionesGuardias();
 }
 
-function actualizarEstadoBotonGuardar() {
-    const btn = document.querySelector("button[onclick='guardarGuardias()']");
-    if (!btn) return;
+function actualizarEstadoAccionesGuardias() {
+    const btnGuardar = document.getElementById("btnGuardarGuardias");
+    const btnCambio = document.getElementById("btnCambioTurno");
 
-    const bloqueoTotal = guardiasYaRegistrados && !permiteRelevoDiurno;
-    btn.disabled = bloqueoTotal;
-    btn.style.opacity = bloqueoTotal ? "0.6" : "1";
-    btn.style.cursor = bloqueoTotal ? "not-allowed" : "pointer";
-    btn.innerHTML = permiteRelevoDiurno
-        ? '<img src="/images/check-lg.svg" class="icon-white"> Guardar RELEVO diurno'
-        : '<img src="/images/check-lg.svg" class="icon-white"> Guardar Guardias del Turno';
+    if (btnGuardar) {
+        const bloqueoGuardar = guardiasYaRegistrados;
+        btnGuardar.disabled = bloqueoGuardar;
+        btnGuardar.style.opacity = bloqueoGuardar ? "0.6" : "1";
+        btnGuardar.style.cursor = bloqueoGuardar ? "not-allowed" : "pointer";
+        btnGuardar.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Guardar Guardias del Turno';
+    }
+
+    if (btnCambio) {
+        btnCambio.style.display = permiteCambioTurno ? "inline-flex" : "none";
+    }
 }
 
 function obtenerRegistroGuardiasPorTurnoFecha(registros, turno, fechaIso) {
@@ -169,15 +174,15 @@ function precargarGuardiasDesdeRegistro(turno, datos) {
     });
 }
 
-async function verificarEstadoGuardiasTurno() {
+async function verificarEstadoGuardiasTurno(mostrarMensajeEstado = true) {
     const turno = document.getElementById("turno")?.value;
     const fecha = document.getElementById("fecha")?.value;
     const fechaOperativa = obtenerFechaOperativaTurnoRGT(turno, fecha);
     const mensaje = document.getElementById("mensaje");
 
     guardiasYaRegistrados = false;
-    permiteRelevoDiurno = false;
-    actualizarEstadoBotonGuardar();
+    permiteCambioTurno = false;
+    actualizarEstadoAccionesGuardias();
 
     if (!turno || !fechaOperativa) return;
 
@@ -188,7 +193,7 @@ async function verificarEstadoGuardiasTurno() {
         const registros = await response.json();
         const registro = obtenerRegistroGuardiasPorTurnoFecha(registros, turno, fechaOperativa);
         if (!registro) {
-            if (mensaje) {
+            if (mensaje && mostrarMensajeEstado) {
                 mensaje.className = "";
                 mensaje.innerText = "";
             }
@@ -196,52 +201,31 @@ async function verificarEstadoGuardiasTurno() {
         }
 
         guardiasYaRegistrados = true;
-        permiteRelevoDiurno = turno === "7am-7pm";
-        actualizarEstadoBotonGuardar();
+        permiteCambioTurno = turno === "7am-7pm";
+        actualizarEstadoAccionesGuardias();
         precargarGuardiasDesdeRegistro(turno, registro.datos || {});
 
-        if (mensaje) {
-            mensaje.className = permiteRelevoDiurno ? "success" : "error";
-            mensaje.innerText = permiteRelevoDiurno
-                ? `Turno dia ya registrado en fecha operativa ${fechaOperativa}. Puede actualizar los 3 guardias con el botón de relevo.`
+        if (mensaje && mostrarMensajeEstado) {
+            mensaje.className = permiteCambioTurno ? "success" : "error";
+            mensaje.innerText = permiteCambioTurno
+                ? `Turno dia ya registrado en fecha operativa ${fechaOperativa}. Si hubo relevo, use el botón "Registrar cambio de turno".`
                 : `Ya se registraron guardias para ${turnoTextoRGT(turno)} en fecha operativa ${fechaOperativa}.`;
         }
     } catch {
     }
 }
 
-
-async function guardarGuardias() {
-    const turno  = document.getElementById("turno").value;
-    const fecha  = document.getElementById("fecha").value;
-    const fechaOperativa = obtenerFechaOperativaTurnoRGT(turno, fecha);
-    const horaRegistroInput = document.getElementById("horaRegistro").value;
-    const mensaje = document.getElementById("mensaje");
-    mensaje.className = "";
-    mensaje.innerText = "";
-
-    if (!turno || !fechaOperativa) {
-        mensaje.className = "error";
-        mensaje.innerText = "Seleccione turno y fecha";
-        return;
-    }
-
-    if (guardiasYaRegistrados && !permiteRelevoDiurno) {
-        mensaje.className = "error";
-        mensaje.innerText = "Ya se registraron los guardias para este turno y fecha.";
-        return;
-    }
-
-    const config = CONFIG_TURNOS_GUARDIAS[turno];
+function recolectarGuardiasFormulario(config) {
     const slots = document.querySelectorAll("[data-slot]");
     const guardiasGarita = [];
     const guardiasOtrasZonas = [];
     const faltantes = [];
 
     slots.forEach((slot, idx) => {
-        const slotIndex = Number(slot.querySelector(".slot-nombre").getAttribute("data-slot-index") ?? idx);
+        const input = slot.querySelector(".slot-nombre");
+        const slotIndex = Number(input?.getAttribute("data-slot-index") ?? idx);
         const slotConfig = config.slots[slotIndex];
-        const nombre = slot.querySelector(".slot-nombre").value.trim();
+        const nombre = input?.value?.trim() || "";
 
         if (!nombre) {
             faltantes.push(slotConfig?.puesto || `Puesto ${idx + 1}`);
@@ -255,6 +239,46 @@ async function guardarGuardias() {
         }
     });
 
+    return { guardiasGarita, guardiasOtrasZonas, faltantes };
+}
+
+async function registrarGuardiasInterno(esCambioTurno = false) {
+    const turno = document.getElementById("turno").value;
+    const fecha = document.getElementById("fecha").value;
+    const fechaOperativa = obtenerFechaOperativaTurnoRGT(turno, fecha);
+    const horaRegistroInput = document.getElementById("horaRegistro").value;
+    const mensaje = document.getElementById("mensaje");
+
+    mensaje.className = "";
+    mensaje.innerText = "";
+
+    if (guardandoGuardias) {
+        return;
+    }
+
+    if (!turno || !fechaOperativa) {
+        mensaje.className = "error";
+        mensaje.innerText = "Seleccione turno y fecha";
+        return;
+    }
+
+    if (!esCambioTurno && guardiasYaRegistrados) {
+        mensaje.className = "error";
+        mensaje.innerText = "Ya se registraron los guardias para este turno y fecha.";
+        return;
+    }
+
+    if (esCambioTurno) {
+        if (!guardiasYaRegistrados || !permiteCambioTurno || turno !== "7am-7pm") {
+            mensaje.className = "error";
+            mensaje.innerText = "El cambio de turno solo aplica cuando el turno dia ya fue registrado.";
+            return;
+        }
+    }
+
+    const config = CONFIG_TURNOS_GUARDIAS[turno];
+    const { guardiasGarita, guardiasOtrasZonas, faltantes } = recolectarGuardiasFormulario(config);
+
     if (faltantes.length > 0) {
         mensaje.className = "error";
         mensaje.innerText = `Complete estos puestos: ${faltantes.join(", ")}`;
@@ -262,11 +286,17 @@ async function guardarGuardias() {
     }
 
     try {
+        guardandoGuardias = true;
+        const btnGuardar = document.getElementById("btnGuardarGuardias");
+        const btnCambio = document.getElementById("btnCambioTurno");
+        if (btnGuardar) btnGuardar.disabled = true;
+        if (btnCambio) btnCambio.disabled = true;
+
         const response = await fetchAuth(`${API_BASE}/registro-informativo-enseres`, {
             method: "POST",
             body: JSON.stringify({
                 turno,
-                esRelevoDiurno: permiteRelevoDiurno,
+                esRelevoDiurno: esCambioTurno,
                 fecha: construirDateTimeLocal(fechaOperativa, "00:00"),
                 horaRegistro: horaRegistroInput
                     ? construirDateTimeLocal(obtenerFechaLocalISO(), horaRegistroInput)
@@ -284,19 +314,33 @@ async function guardarGuardias() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = permiteRelevoDiurno
-            ? "Relevo diurno aplicado correctamente"
+        mensaje.innerText = esCambioTurno
+            ? "Cambio de turno registrado correctamente. Se actualizaron los guardias del turno dia."
             : "Guardias del turno registrados correctamente";
 
-        document.querySelectorAll("[data-slot] .slot-nombre").forEach(i => i.value = "");
         document.getElementById("horaRegistro").value = "";
-
+        await verificarEstadoGuardiasTurno(false);
         await cargarRegistrosDia();
-
     } catch (error) {
         mensaje.className = "error";
         mensaje.innerText = obtenerMensajePlanoRGT(error);
+    } finally {
+        guardandoGuardias = false;
+        const btnGuardar = document.getElementById("btnGuardarGuardias");
+        const btnCambio = document.getElementById("btnCambioTurno");
+        if (btnGuardar) btnGuardar.disabled = false;
+        if (btnCambio) btnCambio.disabled = false;
+        actualizarEstadoAccionesGuardias();
     }
+}
+
+
+async function guardarGuardias() {
+    await registrarGuardiasInterno(false);
+}
+
+async function registrarCambioTurno() {
+    await registrarGuardiasInterno(true);
 }
 
 

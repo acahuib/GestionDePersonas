@@ -10,16 +10,19 @@
     ];
 
     function normalizar(valor) {
-        return (valor || "")
-            .toString()
-            .toLowerCase()
-            .normalize("NFD")
+        const texto = (valor || "").toString().toLowerCase();
+        const normalizado = typeof texto.normalize === "function"
+            ? texto.normalize("NFD")
+            : texto;
+
+        return normalizado
             .replace(/[\u0300-\u036f]/g, "")
             .trim();
     }
 
-            const PAGE_SIZE = 10;
-            let paginaActual = 1;
+    const PAGE_SIZE = 10;
+    let paginaActual = 1;
+    let aplicandoFiltro = false;
 
     function obtenerScopeBusqueda() {
         for (const id of IDS_CONTENEDOR) {
@@ -170,7 +173,32 @@
         return totalPaginas;
     }
 
+    function renderEstadoSinResultados(scope, mostrar) {
+        let estado = document.getElementById("estadoBusquedaActivosGlobal");
+
+        if (!estado) {
+            estado = document.createElement("p");
+            estado.id = "estadoBusquedaActivosGlobal";
+            estado.className = "muted";
+            estado.style.margin = "8px 0";
+            scope.parentElement.appendChild(estado);
+        }
+
+        if (!mostrar) {
+            estado.textContent = "";
+            estado.style.display = "none";
+            return;
+        }
+
+        estado.textContent = "Sin coincidencias para la busqueda.";
+        estado.style.display = "block";
+    }
+
     function aplicarFiltro(resetPagina = true) {
+        if (aplicandoFiltro) return;
+
+        aplicandoFiltro = true;
+        try {
         const scope = obtenerScopeBusqueda();
         const input = document.getElementById("buscadorActivosGlobal");
         if (!scope || !input) return;
@@ -182,7 +210,10 @@
         const criterio = normalizar(input.value);
         const filas = Array.from(scope.querySelectorAll("tbody tr"));
 
-        if (filas.length === 0) return;
+        if (filas.length === 0) {
+            renderEstadoSinResultados(scope, false);
+            return;
+        }
 
         const filasCoincidentes = filas.filter(fila => {
             const textoFila = normalizar(fila.textContent);
@@ -190,6 +221,7 @@
         });
 
         renderPaginacion(scope, filasCoincidentes.length);
+        renderEstadoSinResultados(scope, filasCoincidentes.length === 0 && Boolean(criterio));
 
         const inicio = (paginaActual - 1) * PAGE_SIZE;
         const fin = inicio + PAGE_SIZE;
@@ -199,6 +231,11 @@
             const coincide = filasCoincidentes.includes(fila);
             fila.style.display = coincide && visiblesEnPagina.has(fila) ? "" : "none";
         });
+        } catch (error) {
+            console.error("Error en filtro de activos:", error);
+        } finally {
+            aplicandoFiltro = false;
+        }
     }
 
     function inicializar() {

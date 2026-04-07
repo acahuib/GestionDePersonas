@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.Data;
 using WebApplication1.DTOs;
+using WebApplication1.Helpers;
 using WebApplication1.Models;
 using WebApplication1.Services;
 using System.Security.Claims;
@@ -420,6 +421,414 @@ namespace WebApplication1.Controllers
 
                     return Ok(new { mensaje = "Horario actualizado" });
                 }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpPost("acompanante-desde/{tipoOperacion}/{salidaReferenciaId:int}")]
+        public async Task<IActionResult> RegistrarAcompananteRapido(
+            string tipoOperacion,
+            int salidaReferenciaId,
+            [FromBody] RegistrarAcompananteRapidoDto dto)
+        {
+            try
+            {
+                var tipoNormalizado = (tipoOperacion ?? string.Empty).Trim();
+                if (!string.Equals(tipoNormalizado, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(tipoNormalizado, "Ocurrencias", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest("Tipo de referencia no válido para acompañantes.");
+                }
+
+                var dniAcompanante = (dto?.Dni ?? string.Empty).Trim();
+                if (dniAcompanante.Length != 8 || !dniAcompanante.All(char.IsDigit))
+                    return BadRequest("DNI de acompañante debe tener 8 dígitos.");
+
+                var referencia = await _salidasService.ObtenerSalidaPorId(salidaReferenciaId);
+                if (referencia == null)
+                    return NotFound("Registro de referencia no encontrado.");
+
+                if (!string.Equals(referencia.TipoOperacion, tipoNormalizado, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("El registro de referencia no coincide con el tipo solicitado.");
+
+                var movimientoSolicitado = (dto?.Movimiento ?? string.Empty).Trim();
+                string movimientoAcompanante;
+
+                if (string.Equals(movimientoSolicitado, "Entrada", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(movimientoSolicitado, "Ingreso", StringComparison.OrdinalIgnoreCase))
+                {
+                    movimientoAcompanante = "Entrada";
+                }
+                else if (string.Equals(movimientoSolicitado, "Salida", StringComparison.OrdinalIgnoreCase))
+                {
+                    movimientoAcompanante = "Salida";
+                }
+                else
+                {
+                    var tieneIngreso = referencia.HoraIngreso.HasValue;
+                    var tieneSalida = referencia.HoraSalida.HasValue;
+
+                    if (tieneIngreso && !tieneSalida)
+                        movimientoAcompanante = "Entrada";
+                    else if (!tieneIngreso && tieneSalida)
+                        movimientoAcompanante = "Salida";
+                    else if (tieneIngreso && tieneSalida)
+                        movimientoAcompanante = referencia.HoraSalida >= referencia.HoraIngreso ? "Salida" : "Entrada";
+                    else
+                        movimientoAcompanante = "Entrada";
+                }
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                var persona = await _context.Personas.FindAsync(dniAcompanante);
+                if (persona == null)
+                {
+                    var nombreAcompanante = (dto?.Nombre ?? string.Empty).Trim();
+                    if (string.IsNullOrWhiteSpace(nombreAcompanante))
+                        return BadRequest("El DNI del acompañante no existe. Ingrese su nombre para registrarlo.");
+
+                    persona = new Persona
+                    {
+                        Dni = dniAcompanante,
+                        Nombre = nombreAcompanante,
+                        Tipo = "Ocurrencia"
+                    };
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                using var docRef = JsonDocument.Parse(referencia.DatosJSON);
+                var datosRef = docRef.RootElement;
+
+                var nombrePrincipal = string.Equals(tipoNormalizado, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase)
+                    ? (JsonElementHelper.GetString(datosRef, "conductor") ?? string.Empty).Trim()
+                    : (JsonElementHelper.GetString(datosRef, "nombre") ?? string.Empty).Trim();
+
+                if (string.IsNullOrWhiteSpace(nombrePrincipal))
+                    nombrePrincipal = referencia.Dni?.Trim() ?? "S/N";
+
+                var observacionPrincipal = string.Equals(tipoNormalizado, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase)
+                    ? (JsonElementHelper.GetString(datosRef, "observacion") ?? string.Empty).Trim()
+                    : (JsonElementHelper.GetString(datosRef, "ocurrencia") ?? string.Empty).Trim();
+
+                var textoOcurrencia = string.IsNullOrWhiteSpace(observacionPrincipal)
+                    ? $"Acompañando a {nombrePrincipal}"
+                    : $"Acompañando a {nombrePrincipal}; {observacionPrincipal}";
+
+                var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                    dniAcompanante,
+                    1,
+                    movimientoAcompanante,
+                    usuarioId);
+
+                if (movimiento == null)
+                    return StatusCode(500, "No se pudo registrar movimiento de acompañante.");
+
+                var horaBase = ResolverHoraPeru(null);
+                var horaIngreso = movimientoAcompanante == "Entrada" ? horaBase : (DateTime?)null;
+                var fechaIngreso = movimientoAcompanante == "Entrada" ? horaBase.Date : (DateTime?)null;
+                var horaSalida = movimientoAcompanante == "Salida" ? horaBase : (DateTime?)null;
+                var fechaSalida = movimientoAcompanante == "Salida" ? horaBase.Date : (DateTime?)null;
+
+                var salidaDetalle = await _salidasService.CrearSalidaDetalle(
+                    movimiento.Id,
+                    "Ocurrencias",
+                    new
+                    {
+                        nombre = persona.Nombre,
+                        guardiaIngreso = movimientoAcompanante == "Entrada" ? guardiaNombre : null,
+                        guardiaSalida = movimientoAcompanante == "Salida" ? guardiaNombre : null,
+                        ocurrencia = textoOcurrencia,
+                        acompananteRapido = true,
+                        tipoReferencia = tipoNormalizado,
+                        salidaReferenciaId
+                    },
+                    usuarioId,
+                    horaIngreso,
+                    fechaIngreso,
+                    horaSalida,
+                    fechaSalida,
+                    dniAcompanante);
+
+                return Ok(new
+                {
+                    mensaje = "Acompañante registrado correctamente.",
+                    salidaId = salidaDetalle.Id,
+                    dni = dniAcompanante,
+                    nombre = persona.Nombre,
+                    movimiento = movimientoAcompanante
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("acompanantes/vinculados/{tipoOperacion}/{salidaReferenciaId:int}")]
+        public async Task<IActionResult> ObtenerAcompanantesVinculados(
+            string tipoOperacion,
+            int salidaReferenciaId,
+            [FromQuery] string? modo = null)
+        {
+            try
+            {
+                var tipoNormalizado = (tipoOperacion ?? string.Empty).Trim();
+                if (!string.Equals(tipoNormalizado, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(tipoNormalizado, "Ocurrencias", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest("Tipo de referencia no válido para consultar acompañantes.");
+                }
+
+                var referencia = await _salidasService.ObtenerSalidaPorId(salidaReferenciaId);
+                if (referencia == null)
+                    return NotFound("Registro principal no encontrado.");
+
+                if (!string.Equals(referencia.TipoOperacion, tipoNormalizado, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("El registro principal no coincide con el tipo solicitado.");
+
+                var modoNormalizado = (modo ?? string.Empty).Trim().ToLowerInvariant();
+
+                var candidatos = await _context.OperacionDetalle
+                    .Where(o => o.TipoOperacion == "Ocurrencias")
+                    .Where(o => (o.HoraIngreso.HasValue && !o.HoraSalida.HasValue) || (!o.HoraIngreso.HasValue && o.HoraSalida.HasValue))
+                    .OrderByDescending(o => o.FechaCreacion)
+                    .ToListAsync();
+
+                var resultado = new List<object>();
+
+                foreach (var candidato in candidatos)
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(candidato.DatosJSON);
+                        var root = doc.RootElement;
+
+                        var esAcompanante = root.TryGetProperty("acompananteRapido", out var propAcompanante)
+                            && propAcompanante.ValueKind == JsonValueKind.True;
+                        if (!esAcompanante) continue;
+
+                        var tipoRef = root.TryGetProperty("tipoReferencia", out var propTipo) && propTipo.ValueKind == JsonValueKind.String
+                            ? (propTipo.GetString() ?? string.Empty)
+                            : string.Empty;
+                        if (!string.Equals(tipoRef, tipoNormalizado, StringComparison.OrdinalIgnoreCase)) continue;
+
+                        var salidaRef = 0;
+                        if (root.TryGetProperty("salidaReferenciaId", out var propSalidaRef))
+                        {
+                            if (propSalidaRef.ValueKind == JsonValueKind.Number)
+                                salidaRef = propSalidaRef.GetInt32();
+                            else if (propSalidaRef.ValueKind == JsonValueKind.String)
+                                int.TryParse(propSalidaRef.GetString(), out salidaRef);
+                        }
+                        if (salidaRef != salidaReferenciaId) continue;
+
+                        var pendienteDe = !candidato.HoraIngreso.HasValue ? "Ingreso" : "Salida";
+
+                        var nombre = root.TryGetProperty("nombre", out var propNombre) && propNombre.ValueKind == JsonValueKind.String
+                            ? (propNombre.GetString() ?? string.Empty)
+                            : string.Empty;
+                        if (string.IsNullOrWhiteSpace(nombre)) nombre = candidato.Dni ?? "S/N";
+
+                        resultado.Add(new
+                        {
+                            id = candidato.Id,
+                            dni = candidato.Dni,
+                            nombre,
+                            pendienteDe
+                        });
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                return Ok(new
+                {
+                    tipoReferencia = tipoNormalizado,
+                    salidaReferenciaId,
+                    modo = modoNormalizado,
+                    total = resultado.Count,
+                    acompanantes = resultado
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpPut("acompanantes/finalizar-desde/{tipoOperacion}/{salidaReferenciaId:int}")]
+        public async Task<IActionResult> FinalizarAcompanantesDesdeReferencia(
+            string tipoOperacion,
+            int salidaReferenciaId,
+            [FromBody] FinalizarAcompanantesVinculadosDto dto)
+        {
+            try
+            {
+                var tipoNormalizado = (tipoOperacion ?? string.Empty).Trim();
+                if (!string.Equals(tipoNormalizado, "VehiculoEmpresa", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(tipoNormalizado, "Ocurrencias", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest("Tipo de referencia no válido para finalizar acompañantes.");
+                }
+
+                if (dto == null || (dto.HoraIngreso.HasValue && dto.HoraSalida.HasValue) || (!dto.HoraIngreso.HasValue && !dto.HoraSalida.HasValue))
+                    return BadRequest("Debe enviar solo horaIngreso o solo horaSalida para finalizar acompañantes.");
+
+                var referencia = await _salidasService.ObtenerSalidaPorId(salidaReferenciaId);
+                if (referencia == null)
+                    return NotFound("Registro principal no encontrado.");
+
+                if (!string.Equals(referencia.TipoOperacion, tipoNormalizado, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("El registro principal no coincide con el tipo solicitado.");
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                var horaComplemento = dto.HoraIngreso.HasValue
+                    ? ResolverHoraPeru(dto.HoraIngreso)
+                    : ResolverHoraPeru(dto.HoraSalida);
+                var fechaComplemento = horaComplemento.Date;
+                var esIngreso = dto.HoraIngreso.HasValue;
+
+                var candidatos = await _context.OperacionDetalle
+                    .Where(o => o.TipoOperacion == "Ocurrencias")
+                    .Where(o => (o.HoraIngreso.HasValue && !o.HoraSalida.HasValue) || (!o.HoraIngreso.HasValue && o.HoraSalida.HasValue))
+                    .OrderByDescending(o => o.FechaCreacion)
+                    .ToListAsync();
+
+                var vinculados = new List<(OperacionDetalle Registro, JsonElement Root)>();
+                foreach (var candidato in candidatos)
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(candidato.DatosJSON);
+                        var root = doc.RootElement;
+
+                        var esAcompanante = root.TryGetProperty("acompananteRapido", out var propAcompanante)
+                            && propAcompanante.ValueKind == JsonValueKind.True;
+                        if (!esAcompanante) continue;
+
+                        var tipoRef = root.TryGetProperty("tipoReferencia", out var propTipo) && propTipo.ValueKind == JsonValueKind.String
+                            ? (propTipo.GetString() ?? string.Empty)
+                            : string.Empty;
+                        if (!string.Equals(tipoRef, tipoNormalizado, StringComparison.OrdinalIgnoreCase)) continue;
+
+                        var salidaRef = 0;
+                        if (root.TryGetProperty("salidaReferenciaId", out var propSalidaRef))
+                        {
+                            if (propSalidaRef.ValueKind == JsonValueKind.Number)
+                                salidaRef = propSalidaRef.GetInt32();
+                            else if (propSalidaRef.ValueKind == JsonValueKind.String)
+                                int.TryParse(propSalidaRef.GetString(), out salidaRef);
+                        }
+                        if (salidaRef != salidaReferenciaId) continue;
+
+                        vinculados.Add((candidato, root));
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                var idsSeleccionados = (dto.SalidaIds ?? new List<int>())
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToHashSet();
+
+                var completados = 0;
+                foreach (var (registro, root) in vinculados)
+                {
+                    if (idsSeleccionados.Count > 0 && !idsSeleccionados.Contains(registro.Id))
+                        continue;
+
+                    var puedeCompletar = esIngreso ? !registro.HoraIngreso.HasValue : !registro.HoraSalida.HasValue;
+                    if (!puedeCompletar) continue;
+
+                    var guardiaIngresoActual = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                        ? gi.GetString()
+                        : null;
+                    var guardiaSalidaActual = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
+                        ? gs.GetString()
+                        : null;
+                    var nombreActual = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null
+                        ? n.GetString()
+                        : null;
+                    var ocurrenciaActual = root.TryGetProperty("ocurrencia", out var oc) && oc.ValueKind != JsonValueKind.Null
+                        ? oc.GetString()
+                        : null;
+
+                    var datosActualizados = new
+                    {
+                        nombre = nombreActual,
+                        guardiaIngreso = esIngreso ? guardiaNombre : guardiaIngresoActual,
+                        guardiaSalida = esIngreso ? guardiaSalidaActual : guardiaNombre,
+                        ocurrencia = ocurrenciaActual
+                    };
+
+                    await _salidasService.ActualizarSalidaDetalle(
+                        registro.Id,
+                        datosActualizados,
+                        usuarioId,
+                        esIngreso ? horaComplemento : registro.HoraIngreso,
+                        esIngreso ? fechaComplemento : registro.FechaIngreso,
+                        esIngreso ? registro.HoraSalida : horaComplemento,
+                        esIngreso ? registro.FechaSalida : fechaComplemento);
+
+                    var dniMovimiento = registro.Dni;
+                    if (string.IsNullOrWhiteSpace(dniMovimiento))
+                    {
+                        dniMovimiento = await _context.Movimientos
+                            .Where(m => m.Id == registro.MovimientoId)
+                            .Select(m => m.Dni)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(dniMovimiento))
+                    {
+                        var movimiento = await _movimientosService.RegistrarMovimientoEnBD(
+                            dniMovimiento,
+                            1,
+                            esIngreso ? "Entrada" : "Salida",
+                            usuarioId);
+
+                        registro.MovimientoId = movimiento.Id;
+                        await _context.SaveChangesAsync();
+                    }
+
+                    completados += 1;
+                }
+
+                return Ok(new
+                {
+                    mensaje = "Acompañantes vinculados finalizados.",
+                    completados,
+                    totalVinculados = vinculados.Count,
+                    totalSeleccionados = idsSeleccionados.Count,
+                    tipoReferencia = tipoNormalizado,
+                    salidaReferenciaId
+                });
             }
             catch (Exception ex)
             {

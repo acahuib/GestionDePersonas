@@ -3,6 +3,50 @@
 let salidaId = null;
 let ocurrencia = '';
 let modoComplemento = 'salida';
+let acompanantesVinculados = [];
+
+async function cargarAcompanantesVinculados() {
+    if (!salidaId) return;
+    const lista = document.getElementById('listaAcompanantesRelacionados');
+    if (!lista) return;
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanantes/vinculados/Ocurrencias/${salidaId}?modo=${encodeURIComponent(modoComplemento)}`);
+        if (!response || !response.ok) {
+            lista.innerHTML = '<span class="muted">No se pudieron cargar acompanantes vinculados.</span>';
+            acompanantesVinculados = [];
+            return;
+        }
+
+        const data = await response.json();
+        acompanantesVinculados = Array.isArray(data?.acompanantes) ? data.acompanantes : [];
+
+        if (!acompanantesVinculados.length) {
+            lista.innerHTML = '<span class="muted">No hay acompanantes pendientes para este principal.</span>';
+            return;
+        }
+
+        lista.innerHTML = acompanantesVinculados.map((a) => `
+            <label style="display:flex;align-items:center;gap:10px;margin:6px 0;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#f8fafc;cursor:pointer;">
+                <input type="checkbox" class="acompanante-rel-check" value="${a.id}" checked style="width:18px;height:18px;cursor:pointer;">
+                <span style="display:block;line-height:1.3;">
+                    <strong>${a.dni || '-'}</strong> - ${a.nombre || 'S/N'}
+                    <span class="muted" style="margin-left:6px;">(${a.pendienteDe || '-'})</span>
+                </span>
+            </label>
+        `).join('');
+    } catch {
+        lista.innerHTML = '<span class="muted">No se pudieron cargar acompanantes vinculados.</span>';
+        acompanantesVinculados = [];
+    }
+}
+
+function obtenerAcompanantesSeleccionados() {
+    const checks = Array.from(document.querySelectorAll('.acompanante-rel-check:checked'));
+    return checks
+        .map((c) => Number(c.value))
+        .filter((n) => Number.isFinite(n) && n > 0);
+}
 
 function formatearTipoOcurrencia(tipo) {
     if (tipo === 'CosasEncargadas') return 'Cosas encargadas';
@@ -255,6 +299,7 @@ function cargarDatos() {
     document.getElementById('readonly-guardia-ingreso').value = guardiaInicial || '-';
     const detalle = parsearDetalleOcurrencia(ocurrencia || '');
     renderizarDetalleEditable(detalle);
+    cargarAcompanantesVinculados();
 }
 
 async function registrarSalida() {
@@ -305,6 +350,31 @@ async function registrarSalida() {
             throw new Error(error);
         }
 
+        let textoAcompanantes = '';
+        const idsSeleccionados = obtenerAcompanantesSeleccionados();
+        if (idsSeleccionados.length > 0) {
+            const bodyAcompanantes = modoComplemento === 'ingreso'
+                ? { horaIngreso: horaSalida }
+                : { horaSalida: horaSalida };
+            bodyAcompanantes.salidaIds = idsSeleccionados;
+
+            const responseAcompanantes = await fetchAuth(`${API_BASE}/ocurrencias/acompanantes/finalizar-desde/Ocurrencias/${salidaId}`, {
+                method: 'PUT',
+                body: JSON.stringify(bodyAcompanantes)
+            });
+
+            if (responseAcompanantes?.ok) {
+                const dataAcompanantes = await responseAcompanantes.json();
+                const completados = Number(dataAcompanantes?.completados || 0);
+                if (completados > 0) {
+                    textoAcompanantes = ` | Acompanantes finalizados: ${completados}`;
+                }
+            } else if (responseAcompanantes) {
+                const errorAcompanantes = await readApiError(responseAcompanantes);
+                textoAcompanantes = ` | Advertencia acompanantes: ${errorAcompanantes}`;
+            }
+        }
+
         await window.imagenesComplemento?.uploadSelected({
             registroId: salidaId,
             inputId: 'ocurrenciaComplementoImagenes'
@@ -312,8 +382,8 @@ async function registrarSalida() {
 
         mensaje.className = 'success';
         mensaje.innerText = modoComplemento === 'ingreso'
-            ? '✅ INGRESO registrado correctamente'
-            : '✅ SALIDA registrada correctamente';
+            ? `✅ INGRESO registrado correctamente${textoAcompanantes}`
+            : `✅ SALIDA registrada correctamente${textoAcompanantes}`;
 
         setTimeout(() => {
             window.location.href = 'ocurrencias.html?refresh=1';

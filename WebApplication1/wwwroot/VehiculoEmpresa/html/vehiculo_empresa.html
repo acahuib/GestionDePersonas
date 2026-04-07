@@ -76,6 +76,23 @@
                 <div id="vehiculoEmpresaImagenesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
             </div>
 
+            <div class="form-card" style="margin-top:10px;">
+                <h3 style="margin-bottom:6px;">Acompanantes (opcional)</h3>
+                <p class="muted" style="margin-top:0;">Escanee DNI y agregue acompañantes antes de registrar al conductor.</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                    <div style="flex:1;min-width:180px;">
+                        <label>DNI acompanante</label>
+                        <input type="text" id="acompananteDniVehiculoInput" placeholder="DNI (8 dígitos)" maxlength="8">
+                    </div>
+                    <div style="flex:1;min-width:220px;">
+                        <label>Nombre acompanante (si no existe por DNI)</label>
+                        <input type="text" id="acompananteNombreVehiculoInput" placeholder="Nombre completo del acompanante">
+                    </div>
+                    <button type="button" class="btn-inline btn-small" onclick="agregarAcompanantePendienteVehiculo()">Agregar acompañante</button>
+                </div>
+                <div id="acompanantes-pendientes-vehiculo" style="margin-top:8px;"></div>
+            </div>
+
             <div>
                 <button onclick="registrarMovimientoInicial()" id="btn-registrar" class="btn-danger btn-block">
                     <img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA
@@ -133,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarFormularioPorTipoInicial();
     inicializarDesdeOcurrenciaEspecial();
     inicializarPreviewImagenesVehiculoEmpresa();
+    inicializarAcompanantesPendientesVehiculo();
 
     dniInput.addEventListener("blur", buscarPersonaPorDni);
     dniInput.addEventListener("keypress", (e) => {

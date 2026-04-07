@@ -48,8 +48,12 @@
                 <p class="muted">Primero seleccione el turno.</p>
             </div>
 
-            <button onclick="guardarGuardias()" class="btn-success btn-block">
+            <button id="btnGuardarGuardias" onclick="guardarGuardias()" class="btn-success btn-block">
                 <img src="/images/check-lg.svg" class="icon-white"> Guardar Guardias del Turno
+            </button>
+
+            <button id="btnCambioTurno" onclick="registrarCambioTurno()" class="btn-inline btn-small" style="display:none; margin-top:8px;">
+                Registrar cambio de turno
             </button>
 
             <p id="mensaje"></p>

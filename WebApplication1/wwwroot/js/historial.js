@@ -33,6 +33,29 @@ let paginaActual = 1;
 let registros = [];
 let registrosFiltrados = [];
 
+function fechaIsoLocalHistorial(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function establecerRangoFechasDefault() {
+    const inputInicio = document.getElementById("fechaInicio");
+    const inputFin = document.getElementById("fechaFin");
+    if (!inputInicio || !inputFin) return;
+
+    const hoy = new Date();
+    const haceSiete = new Date(hoy);
+    haceSiete.setDate(haceSiete.getDate() - 7);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    inputInicio.value = fechaIsoLocalHistorial(haceSiete);
+    inputFin.value = fechaIsoLocalHistorial(manana);
+}
+
 function cargarFiltroTipo() {
     const selector = document.getElementById("filtroTipo");
     if (!selector) return;
@@ -340,8 +363,7 @@ function configurarEventos() {
         document.getElementById("filtroMovimiento").value = "";
         const filtroTipo = document.getElementById("filtroTipo");
         if (filtroTipo) filtroTipo.value = "";
-        document.getElementById("fechaInicio").value = "";
-        document.getElementById("fechaFin").value = "";
+        establecerRangoFechasDefault();
         aplicarFiltros();
     });
     document.getElementById("btnRecargar").addEventListener("click", cargarHistorial);
@@ -363,6 +385,7 @@ function configurarEventos() {
 window.addEventListener("DOMContentLoaded", () => {
     cargarFiltroTipo();
     configurarEventos();
+    establecerRangoFechasDefault();
     cargarHistorial();
 });
 

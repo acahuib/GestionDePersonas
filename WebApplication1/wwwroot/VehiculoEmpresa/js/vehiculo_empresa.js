@@ -1,6 +1,7 @@
 ﻿// Script frontend para vehiculo_empresa.
 
 let personaEncontrada = null;
+let acompanantesPendientesVehiculo = [];
 
 async function inicializarDesdeOcurrenciaEspecial() {
     const params = new URLSearchParams(window.location.search);
@@ -129,6 +130,128 @@ function actualizarFormularioPorTipoInicial() {
     boton.innerHTML = esSalida
         ? '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA'
         : '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO';
+}
+
+function renderAcompanantesPendientesVehiculo() {
+    const contenedor = document.getElementById("acompanantes-pendientes-vehiculo");
+    if (!contenedor) return;
+
+    if (!acompanantesPendientesVehiculo.length) {
+        contenedor.innerHTML = '<p class="muted">Sin acompanantes agregados.</p>';
+        return;
+    }
+
+    contenedor.innerHTML = acompanantesPendientesVehiculo.map((acompanante, index) => `
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;margin-bottom:6px;">
+            <span><strong>${acompanante.dni}</strong>${acompanante.nombre ? ` - ${acompanante.nombre}` : ""}</span>
+            <button type="button" class="btn-danger btn-small" onclick="quitarAcompanantePendienteVehiculo(${index})">Quitar</button>
+        </div>
+    `).join("");
+}
+
+function quitarAcompanantePendienteVehiculo(index) {
+    acompanantesPendientesVehiculo = acompanantesPendientesVehiculo.filter((_, i) => i !== index);
+    renderAcompanantesPendientesVehiculo();
+}
+
+async function buscarNombrePorDniVehiculo(dni) {
+    if (!dni || dni.length !== 8 || isNaN(dni)) return "";
+    try {
+        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
+        if (!response || !response.ok) return "";
+        const persona = await response.json();
+        return persona?.nombre || "";
+    } catch {
+        return "";
+    }
+}
+
+async function agregarAcompanantePendienteVehiculo() {
+    const inputDni = document.getElementById("acompananteDniVehiculoInput");
+    const inputNombre = document.getElementById("acompananteNombreVehiculoInput");
+    if (!(inputDni instanceof HTMLInputElement)) return;
+
+    const dni = inputDni.value.trim();
+    const nombreManual = inputNombre instanceof HTMLInputElement ? inputNombre.value.trim() : "";
+    const mensaje = document.getElementById("mensaje");
+
+    if (dni.length !== 8 || isNaN(dni)) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI de acompanante invalido.";
+        }
+        return;
+    }
+
+    if (acompanantesPendientesVehiculo.some((a) => a.dni === dni)) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Ese DNI ya fue agregado como acompanante.";
+        }
+        return;
+    }
+
+    let nombre = await buscarNombrePorDniVehiculo(dni);
+    if (!nombre) {
+        nombre = nombreManual;
+    }
+
+    if (!nombre) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Si el DNI no existe, ingrese el nombre del acompanante.";
+        }
+        return;
+    }
+
+    acompanantesPendientesVehiculo.push({ dni, nombre });
+    inputDni.value = "";
+    if (inputNombre instanceof HTMLInputElement) inputNombre.value = "";
+    renderAcompanantesPendientesVehiculo();
+    inputDni.focus();
+}
+
+function inicializarAcompanantesPendientesVehiculo() {
+    renderAcompanantesPendientesVehiculo();
+
+    const inputDni = document.getElementById("acompananteDniVehiculoInput");
+    if (inputDni instanceof HTMLInputElement) {
+        inputDni.addEventListener("keypress", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            agregarAcompanantePendienteVehiculo();
+        });
+    }
+}
+
+async function registrarAcompanantesPendientesVehiculo(salidaReferenciaId, movimiento) {
+    if (!salidaReferenciaId || !acompanantesPendientesVehiculo.length) {
+        return { registrados: 0, errores: [] };
+    }
+
+    let registrados = 0;
+    const errores = [];
+
+    for (const acompanante of acompanantesPendientesVehiculo) {
+        try {
+            const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanante-desde/VehiculoEmpresa/${salidaReferenciaId}`, {
+                method: "POST",
+                body: JSON.stringify({ dni: acompanante.dni, nombre: acompanante.nombre, movimiento })
+            });
+
+            if (!response || !response.ok) {
+                const error = response ? await readApiError(response) : "No se pudo registrar acompanante";
+                errores.push(`${acompanante.dni}: ${error}`);
+                continue;
+            }
+
+            registrados += 1;
+        } catch (error) {
+            errores.push(`${acompanante.dni}: ${getPlainErrorMessage(error)}`);
+        }
+    }
+
+    return { registrados, errores };
 }
 
 async function buscarPersonaPorDni() {
@@ -289,9 +412,19 @@ async function registrarMovimientoInicial() {
             textoImagenes = ` | Registro guardado, pero no se subieron imagenes: ${getPlainErrorMessage(errorImagen)}`;
         }
 
+        const salidaReferenciaId = result?.salidaId || result?.id || 0;
+        const movimientoAcompanantes = esSalidaInicial ? "Salida" : "Entrada";
+        const resultadoAcompanantes = await registrarAcompanantesPendientesVehiculo(salidaReferenciaId, movimientoAcompanantes);
+        const textoAcompanantes = resultadoAcompanantes.registrados > 0
+            ? ` | Acompanantes registrados: ${resultadoAcompanantes.registrados}`
+            : "";
+        const textoErroresAcompanantes = resultadoAcompanantes.errores.length
+            ? ` | Errores en acompanantes: ${resultadoAcompanantes.errores.join(" ; ")}`
+            : "";
+
         mensaje.className = "success";
         const tipoTexto = esSalidaInicial ? "SALIDA" : "INGRESO";
-        mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}${textoImagenes}`;
+        mensaje.innerText = `${tipoTexto} registrada para ${nombreConductor} - Placa: ${placa}${textoImagenes}${textoAcompanantes}${textoErroresAcompanantes}`;
 
         document.getElementById("dni").value = "";
         document.getElementById("conductor").value = "";
@@ -312,6 +445,12 @@ async function registrarMovimientoInicial() {
         const inputImagenes = obtenerInputImagenesVehiculoEmpresa();
         if (inputImagenes) window.imagenesForm?.clearSelection("vehiculoEmpresaImagenes");
         actualizarPreviewImagenesVehiculoEmpresa();
+        acompanantesPendientesVehiculo = [];
+        const inputAcompanante = document.getElementById("acompananteDniVehiculoInput");
+        const inputNombreAcompanante = document.getElementById("acompananteNombreVehiculoInput");
+        if (inputAcompanante) inputAcompanante.value = "";
+        if (inputNombreAcompanante) inputNombreAcompanante.value = "";
+        renderAcompanantesPendientesVehiculo();
 
         if (esModoEspecialOcurrencia) {
             setTimeout(() => {
@@ -351,6 +490,45 @@ function irAOcurrenciaEspecialPie(salidaEmpresaId, modoPie) {
         modoPie: (modoPie === "ingreso" ? "ingreso" : "salida")
     });
     window.location.href = `../../Ocurrencias/html/ocurrencias.html?${params.toString()}`;
+}
+
+async function registrarAcompananteRapidoDesdeVehiculoEmpresa(salidaEmpresaId) {
+    if (!salidaEmpresaId) return;
+    const mensaje = document.getElementById("mensaje");
+    const dni = window.prompt("Escanee o ingrese DNI del acompañante (8 dígitos):", "");
+    if (dni === null) return;
+
+    const dniLimpio = String(dni).trim();
+    if (dniLimpio.length !== 8 || isNaN(dniLimpio)) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI de acompañante inválido.";
+        }
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/acompanante-desde/VehiculoEmpresa/${salidaEmpresaId}`, {
+            method: "POST",
+            body: JSON.stringify({ dni: dniLimpio })
+        });
+
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo registrar acompañante";
+            throw new Error(error);
+        }
+
+        const data = await response.json();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = `Acompañante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
 }
 
 async function cargarActivos() {
@@ -460,7 +638,6 @@ async function cargarActivos() {
             const modoPie = tieneSalida ? "ingreso" : "salida";
             const textoPie = tieneSalida ? "Ingreso a pie" : "Salida a pie";
             const botonPie = `<button class="btn-inline btn-small" onclick="irAOcurrenciaEspecialPie(${s.id}, '${modoPie}')">${textoPie}</button>`;
-
             html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button>${botonPie}${botonCruceEspecial}<button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
             html += '</tr>';
         });
