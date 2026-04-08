@@ -3,6 +3,273 @@
 let personaEncontrada = null;
 let salidaVehiculoEmpresaEspecialId = null;
 let acompanantesPendientesOcurrencia = [];
+let contextoEdicionInicialOcurrencia = null;
+
+function escaparAtributoHtml(texto) {
+    return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function obtenerFechaHoraInputOcurrencia(valorIso) {
+    const base = valorIso ? new Date(valorIso) : new Date();
+    const fecha = Number.isNaN(base.getTime()) ? new Date() : base;
+    const yyyy = fecha.getFullYear();
+    const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dd = String(fecha.getDate()).padStart(2, "0");
+    const hh = String(fecha.getHours()).padStart(2, "0");
+    const mi = String(fecha.getMinutes()).padStart(2, "0");
+    return {
+        fecha: `${yyyy}-${mm}-${dd}`,
+        hora: `${hh}:${mi}`
+    };
+}
+
+function renderCamposEdicionTipoOcurrencia(tipo, detalle) {
+    const contenedor = document.getElementById("edit-ocurrencia-campos");
+    if (!contenedor) return;
+
+    if (tipo === "Vehicular") {
+        contenedor.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div><label>Placa *</label><input type="text" id="editOcuPlaca" value="${escaparAtributoHtml(detalle.placa || "")}"></div>
+                <div><label>Empresa/Proveedor *</label><input type="text" id="editOcuEmpresa" value="${escaparAtributoHtml(detalle.empresa || "")}"></div>
+                <div><label>Procedencia *</label><input type="text" id="editOcuProcedencia" value="${escaparAtributoHtml(detalle.procedencia || "")}"></div>
+                <div><label>Destino *</label><input type="text" id="editOcuDestino" value="${escaparAtributoHtml(detalle.destino || "")}"></div>
+                <div style="grid-column:1 / -1;"><label>Observacion *</label><textarea id="editOcuObservacion" rows="3">${escaparAtributoHtml(detalle.observacion || "")}</textarea></div>
+            </div>
+        `;
+        return;
+    }
+
+    if (tipo === "Encapsulado") {
+        contenedor.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div><label>Tracto placa 1 *</label><input type="text" id="editOcuTracto" value="${escaparAtributoHtml(detalle.tractoPlaca || "")}"></div>
+                <div><label>Plataforma placa 2 *</label><input type="text" id="editOcuPlataforma" value="${escaparAtributoHtml(detalle.plataformaPlaca || "")}"></div>
+                <div><label>Empresa/Proveedor *</label><input type="text" id="editOcuEmpresa" value="${escaparAtributoHtml(detalle.empresa || "")}"></div>
+                <div><label>Procedencia *</label><input type="text" id="editOcuProcedencia" value="${escaparAtributoHtml(detalle.procedencia || "")}"></div>
+                <div><label>Destino *</label><input type="text" id="editOcuDestino" value="${escaparAtributoHtml(detalle.destino || "")}"></div>
+                <div style="grid-column:1 / -1;"><label>Observacion *</label><textarea id="editOcuObservacion" rows="3">${escaparAtributoHtml(detalle.observacion || "")}</textarea></div>
+            </div>
+        `;
+        return;
+    }
+
+    if (tipo === "CosasEncargadas") {
+        contenedor.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div><label>Empresa/Proveedor *</label><input type="text" id="editOcuEmpresa" value="${escaparAtributoHtml(detalle.empresa || "")}"></div>
+                <div><label>A quien deja encargado *</label><input type="text" id="editOcuAQuien" value="${escaparAtributoHtml(detalle.aQuienDeja || "")}"></div>
+                <div style="grid-column:1 / -1;"><label>Que encarga *</label><textarea id="editOcuQueEncarga" rows="3">${escaparAtributoHtml(detalle.queEncarga || "")}</textarea></div>
+            </div>
+        `;
+        return;
+    }
+
+    contenedor.innerHTML = `
+        <div>
+            <label>Detalle de Ocurrencia *</label>
+            <textarea id="editOcuPersonaDetalle" rows="4">${escaparAtributoHtml(detalle.observacion || "")}</textarea>
+        </div>
+    `;
+}
+
+function cerrarModalEditarInicialOcurrencia() {
+    const modal = document.getElementById("modal-editar-inicial-ocurrencia");
+    if (modal) modal.remove();
+    contextoEdicionInicialOcurrencia = null;
+}
+
+function construirOcurrenciaTextoDesdeEdicion() {
+    const tipo = document.getElementById("editOcuTipo")?.value || "Persona";
+    const dni = String(contextoEdicionInicialOcurrencia?.dni || "").trim() || "S/N";
+    const nombre = String(contextoEdicionInicialOcurrencia?.nombre || "").trim() || "S/N";
+
+    if (tipo === "Vehicular") {
+        const placa = (document.getElementById("editOcuPlaca")?.value || "").trim();
+        const empresa = (document.getElementById("editOcuEmpresa")?.value || "").trim();
+        const procedencia = (document.getElementById("editOcuProcedencia")?.value || "").trim();
+        const destino = (document.getElementById("editOcuDestino")?.value || "").trim();
+        const observacion = (document.getElementById("editOcuObservacion")?.value || "").trim();
+        if (!placa || !empresa || !procedencia || !destino || !observacion) return null;
+
+        return [
+            "[TIPO: VEHICULAR]",
+            `DNI: ${dni}`,
+            `Placa: ${placa}`,
+            `Chofer: ${nombre}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(" | ");
+    }
+
+    if (tipo === "Encapsulado") {
+        const tracto = (document.getElementById("editOcuTracto")?.value || "").trim();
+        const plataforma = (document.getElementById("editOcuPlataforma")?.value || "").trim();
+        const empresa = (document.getElementById("editOcuEmpresa")?.value || "").trim();
+        const procedencia = (document.getElementById("editOcuProcedencia")?.value || "").trim();
+        const destino = (document.getElementById("editOcuDestino")?.value || "").trim();
+        const observacion = (document.getElementById("editOcuObservacion")?.value || "").trim();
+        if (!tracto || !plataforma || !empresa || !procedencia || !destino || !observacion) return null;
+
+        return [
+            "[TIPO: ENCAPSULADO]",
+            `DNI: ${dni}`,
+            `Tracto Placa 1: ${tracto}`,
+            `Plataforma Placa 2: ${plataforma}`,
+            `Chofer: ${nombre}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Procedencia: ${procedencia}`,
+            `Destino: ${destino}`,
+            `Observacion: ${observacion}`
+        ].join(" | ");
+    }
+
+    if (tipo === "CosasEncargadas") {
+        const empresa = (document.getElementById("editOcuEmpresa")?.value || "").trim();
+        const queEncarga = (document.getElementById("editOcuQueEncarga")?.value || "").trim();
+        const aQuien = (document.getElementById("editOcuAQuien")?.value || "").trim();
+        if (!empresa || !queEncarga || !aQuien) return null;
+
+        return [
+            "[TIPO: COSAS ENCARGADAS]",
+            `DNI: ${dni}`,
+            `Nombre: ${nombre}`,
+            `Empresa/Proveedor: ${empresa}`,
+            `Que encarga: ${queEncarga}`,
+            `A quien deja encargado: ${aQuien}`
+        ].join(" | ");
+    }
+
+    const detalle = (document.getElementById("editOcuPersonaDetalle")?.value || "").trim();
+    return detalle || null;
+}
+
+function abrirModalEditarInicialOcurrenciaDesdePayload(payloadCodificado) {
+    const mensaje = document.getElementById("mensaje");
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const id = Number(datos?.id || 0);
+        if (!Number.isFinite(id) || id <= 0) return;
+
+        const detalle = parsearDetalleOcurrencia(datos?.ocurrencia || "");
+        const tipo = detalle.tipo || "Persona";
+        const fechaHora = obtenerFechaHoraInputOcurrencia(datos?.horaInicialIso);
+
+        cerrarModalEditarInicialOcurrencia();
+        contextoEdicionInicialOcurrencia = {
+            id,
+            dni: String(datos?.dni || ""),
+            nombre: String(datos?.nombre || "")
+        };
+
+        const modal = document.createElement("div");
+        modal.id = "modal-editar-inicial-ocurrencia";
+        modal.style.position = "fixed";
+        modal.style.inset = "0";
+        modal.style.background = "rgba(0,0,0,0.45)";
+        modal.style.zIndex = "2100";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.padding = "12px";
+
+        modal.innerHTML = `
+            <div style="width:min(760px,98vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:14px;box-shadow:0 14px 32px rgba(0,0,0,0.22);">
+                <h3 style="margin:0 0 6px 0;">Editar Registro Inicial - Ocurrencias</h3>
+                <p class="muted" style="margin-top:0;">DNI y Nombre permanecen fijos. Solo edite el registro inicial.</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div><label>DNI</label><input type="text" value="${escaparAtributoHtml(datos?.dni || "")}" readonly></div>
+                    <div><label>Nombre</label><input type="text" value="${escaparAtributoHtml(datos?.nombre || "")}" readonly></div>
+                    <div><label>Tipo</label>
+                        <select id="editOcuTipo">
+                            <option value="Persona" ${tipo === "Persona" ? "selected" : ""}>Persona</option>
+                            <option value="Vehicular" ${tipo === "Vehicular" ? "selected" : ""}>Vehicular</option>
+                            <option value="Encapsulado" ${tipo === "Encapsulado" ? "selected" : ""}>Encapsulado</option>
+                            <option value="CosasEncargadas" ${tipo === "CosasEncargadas" ? "selected" : ""}>Cosas encargadas</option>
+                        </select>
+                    </div>
+                    <div><label>Lado inicial</label><input type="text" value="${escaparAtributoHtml(datos?.ladoInicial || "Registro inicial")}" readonly></div>
+                    <div><label>Fecha inicial *</label><input type="date" id="editOcuFechaInicial" value="${fechaHora.fecha}"></div>
+                    <div><label>Hora inicial *</label><input type="time" id="editOcuHoraInicial" value="${fechaHora.hora}"></div>
+                </div>
+
+                <div id="edit-ocurrencia-campos" style="margin-top:10px;"></div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                    <button type="button" class="btn-secondary btn-small" onclick="cerrarModalEditarInicialOcurrencia()">Cancelar</button>
+                    <button type="button" class="btn-success btn-small" onclick="guardarEdicionInicialOcurrencia()">Guardar cambios</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const tipoSelect = document.getElementById("editOcuTipo");
+        if (tipoSelect instanceof HTMLSelectElement) {
+            tipoSelect.addEventListener("change", () => {
+                renderCamposEdicionTipoOcurrencia(tipoSelect.value, detalle);
+            });
+        }
+
+        renderCamposEdicionTipoOcurrencia(tipo, detalle);
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function guardarEdicionInicialOcurrencia() {
+    const mensaje = document.getElementById("mensaje");
+    const id = Number(contextoEdicionInicialOcurrencia?.id || 0);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    const fecha = (document.getElementById("editOcuFechaInicial")?.value || "").trim();
+    const hora = (document.getElementById("editOcuHoraInicial")?.value || "").trim();
+    const ocurrencia = construirOcurrenciaTextoDesdeEdicion();
+
+    if (!fecha || !hora || !ocurrencia) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Complete los datos obligatorios para editar.";
+        }
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/${id}/edicion-inicial`, {
+            method: "PUT",
+            body: JSON.stringify({
+                horaInicial: construirDateTimeLocal(fecha, hora),
+                ocurrencia
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo actualizar ocurrencia");
+        }
+
+        cerrarModalEditarInicialOcurrencia();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Registro inicial de ocurrencia actualizado.";
+        }
+        setTimeout(cargarActivos, 250);
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
 
 function obtenerInputImagenes() {
     const input = document.getElementById("ocurrenciaImagenes");
@@ -34,7 +301,22 @@ function obtenerMovimientoInicialPersona() {
     return selector?.value === "Salida" ? "Salida" : "Ingreso";
 }
 
+function asegurarOpcionesMovimientoInicial() {
+    const selector = document.getElementById("movimientoInicialPersona");
+    if (!(selector instanceof HTMLSelectElement)) return;
+
+    const opciones = Array.from(selector.options).map((o) => o.value);
+    if (!opciones.includes("Ingreso")) {
+        selector.add(new Option("Ingreso", "Ingreso"));
+    }
+    if (!opciones.includes("Salida")) {
+        selector.add(new Option("Salida", "Salida"));
+    }
+}
+
 function actualizarUIRegistroInicial() {
+    asegurarOpcionesMovimientoInicial();
+
     const tipo = obtenerTipoOcurrenciaSeleccionado();
     const bloqueMovimientoPersona = document.getElementById("bloqueMovimientoInicialPersona");
     const labelFecha = document.getElementById("labelFechaMovimientoInicial");
@@ -81,6 +363,8 @@ function actualizarUIRegistroInicial() {
 }
 
 function inicializarSelectorMovimientoPersona() {
+    asegurarOpcionesMovimientoInicial();
+
     const selector = document.getElementById("movimientoInicialPersona");
     if (selector instanceof HTMLSelectElement) {
         selector.addEventListener("change", actualizarUIRegistroInicial);
@@ -291,11 +575,38 @@ function inicializarAcompanantesPendientesOcurrencia() {
     renderAcompanantesPendientesOcurrencia();
 
     const inputDni = document.getElementById("acompananteDniInput");
+    const inputNombre = document.getElementById("acompananteNombreInput");
+
+    if (typeof habilitarAutocompletePersona === "function") {
+        habilitarAutocompletePersona({
+            dniId: "acompananteDniInput",
+            nombreId: "acompananteNombreInput",
+            minChars: 2
+        });
+    }
+
+    const autocompletarNombreDesdeDniAcompanante = async () => {
+        if (!(inputDni instanceof HTMLInputElement) || !(inputNombre instanceof HTMLInputElement)) return;
+        const dni = inputDni.value.trim();
+        if (!dni || dni.length !== 8 || isNaN(dni)) return;
+
+        try {
+            const persona = await consultarPersonaPorDni(dni);
+            if (persona?.nombre) {
+                inputNombre.value = persona.nombre;
+            }
+        } catch {
+        }
+    };
+
     if (inputDni instanceof HTMLInputElement) {
+        inputDni.addEventListener("blur", autocompletarNombreDesdeDniAcompanante);
         inputDni.addEventListener("keypress", (e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            agregarAcompanantePendienteOcurrencia();
+            autocompletarNombreDesdeDniAcompanante().finally(() => {
+                agregarAcompanantePendienteOcurrencia();
+            });
         });
     }
 }
@@ -928,6 +1239,34 @@ function inicializarAutocompletadoDniOcurrencias() {
     }
 }
 
+function inicializarAutocompleteNombreDniOcurrencias() {
+    if (typeof habilitarAutocompletePersona !== "function") return;
+
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombre",
+        minChars: 2
+    });
+
+    habilitarAutocompletePersona({
+        dniId: "vehiculoDni",
+        nombreId: "vehiculoChofer",
+        minChars: 2
+    });
+
+    habilitarAutocompletePersona({
+        dniId: "encapsuladoDni",
+        nombreId: "encapsuladoChofer",
+        minChars: 2
+    });
+
+    habilitarAutocompletePersona({
+        dniId: "cosasDni",
+        nombreId: "cosasNombre",
+        minChars: 2
+    });
+}
+
 async function registrarIngreso() {
     const horaIngresoInput = document.getElementById("horaIngreso").value;
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
@@ -1089,6 +1428,34 @@ function irAVehiculoEmpresaEspecial(salidaOcurrenciaId, modoVehiculo) {
     window.location.href = `../../VehiculoEmpresa/html/vehiculo_empresa.html?${params.toString()}`;
 }
 
+async function registrarIngresoVehiculoProveedorDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const salidaOcurrenciaId = Number(datos?.salidaOcurrenciaId || 0);
+        if (!Number.isFinite(salidaOcurrenciaId) || salidaOcurrenciaId <= 0) {
+            throw new Error("No se encontro referencia de ocurrencia.");
+        }
+
+        const params = new URLSearchParams({
+            salidaOcurrenciaId: String(salidaOcurrenciaId),
+            dni: String(datos?.dni || ""),
+            nombre: String(datos?.nombre || ""),
+            proveedor: String(datos?.proveedor || ""),
+            placa: String(datos?.placa || ""),
+            procedencia: String(datos?.procedencia || ""),
+            observacion: String(datos?.observacion || "")
+        });
+
+        window.location.href = `../../VehiculosProveedores/html/vehiculos_proveedores.html?${params.toString()}`;
+    } catch (error) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
 async function registrarAcompananteRapidoDesdeOcurrencia(salidaOcurrenciaId) {
     if (!salidaOcurrenciaId) return;
     const mensaje = document.getElementById("mensaje");
@@ -1243,6 +1610,16 @@ async function cargarActivos() {
             const fechaSalidaParam = o.fechaSalida || '';
             const horaSalidaParam = o.horaSalida || '';
             const guardiaSalida = datos.guardiaSalida || '-';
+            const ladoInicial = tieneIngreso ? "Ingreso" : "Salida";
+            const horaInicialIso = tieneIngreso ? (o.horaIngreso || o.fechaIngreso) : (o.horaSalida || o.fechaSalida);
+            const payloadEdicion = encodeURIComponent(JSON.stringify({
+                id: o.id,
+                dni: o.dni || '',
+                nombre: nombreCompleto || '',
+                ocurrencia: ocurrencia || '',
+                ladoInicial,
+                horaInicialIso
+            }));
 
             html += '<tr>';
             html += `<td>${dniDisplay}</td>`;
@@ -1252,10 +1629,13 @@ async function cargarActivos() {
             html += `<td>${formatearTipoOcurrencia(detalleOcurrencia.tipo)}</td>`;
                 html += `<td class="cell-wrap" style="max-width: 280px;">${detalleTipoHtml}</td>`;
                 html += `<td><button onclick="abrirImagenesRegistroModal(${o.id})" class="btn-inline btn-small">Ver imagenes</button></td>`;
-            html += '<td>';
+            html += '<td style="vertical-align:middle;">';
+            html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
                 if (esCosasEncargadas) {
+                    html += `<button onclick="abrirModalEditarInicialOcurrenciaDesdePayload('${payloadEdicion}')" class="btn-warning btn-small btn-inline">Editar</button>`;
                     html += '<span class="muted">Solo informativo</span>';
                 } else {
+                    html += `<button onclick="abrirModalEditarInicialOcurrenciaDesdePayload('${payloadEdicion}')" class="btn-warning btn-small btn-inline">Editar</button>`;
                     const claseBotonPendiente = pendienteDe === 'Ingreso' ? 'btn-success btn-small btn-inline' : 'btn-danger btn-small btn-inline';
                     const payloadSalida = encodeURIComponent(JSON.stringify({
                         salidaId: o.id,
@@ -1276,7 +1656,21 @@ async function cargarActivos() {
                         const textoVehiculo = pendienteDe === "Ingreso" ? "Ingreso con Veh. MP" : "Salida con Veh. MP";
                         html += `<button onclick="irAVehiculoEmpresaEspecial(${o.id}, '${modoVehiculo}')" class="btn-warning btn-small btn-inline">${textoVehiculo}</button>`;
                     }
+                    const tipoDetalle = (detalleOcurrencia.tipo || "Persona");
+                    if ((tipoDetalle === "Vehicular" || tipoDetalle === "Persona") && pendienteDe === "Ingreso") {
+                        const payloadVp = encodeURIComponent(JSON.stringify({
+                            salidaOcurrenciaId: o.id,
+                            dni: o.dni || "",
+                            nombre: nombreCompleto || "",
+                            proveedor: detalleOcurrencia.empresa || "",
+                            placa: detalleOcurrencia.placa || "",
+                            procedencia: detalleOcurrencia.procedencia || "",
+                            observacion: detalleOcurrencia.observacion || ""
+                        }));
+                        html += `<button onclick="registrarIngresoVehiculoProveedorDesdePayload('${payloadVp}')" class="btn-warning btn-small btn-inline">Ingreso con Veh. Proveedor</button>`;
+                    }
                 }
+            html += '</div>';
             html += '</td></tr>';
         });
 

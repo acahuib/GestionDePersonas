@@ -185,6 +185,26 @@ async function registrarMovimientoComplementario() {
         return;
     }
 
+    const kmInicialRegistrado = esIngreso
+        ? (document.getElementById("kmSalidaRegistrado")?.value?.trim() || "")
+        : (document.getElementById("kmIngresoRegistrado")?.value?.trim() || "");
+    const kmFinalVacio = !km;
+    const kmInicialVacio = !kmInicialRegistrado;
+
+    if (kmFinalVacio && kmInicialVacio) {
+        const confirmarSinKm = window.confirm(
+            "Este registro quedara sin kilometraje inicial ni final.\n" +
+            "Si desea, puede ingresar ahora el kilometraje final.\n\n" +
+            "¿Desea continuar sin kilometraje?"
+        );
+
+        if (!confirmarSinKm) {
+            const inputKm = document.getElementById(esIngreso ? "kmIngreso" : "kmSalida");
+            inputKm?.focus();
+            return;
+        }
+    }
+
     if (!placa) {
         mensaje.className = "error";
         mensaje.innerText = "La placa es obligatoria";

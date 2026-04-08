@@ -19,6 +19,15 @@ function obtenerCelularesDejados(datos) {
     return Number.isNaN(numero) ? "0" : String(Math.max(0, Math.min(2, numero)));
 }
 
+function escaparHtmlBasico(texto) {
+    return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function construirBotonesCelularesHtml(payloadCodificado, valorActual) {
     const actual = valorActual ?? "0";
     const clase0 = actual === "0" ? "btn-success" : "btn-secondary";
@@ -324,6 +333,111 @@ function irAControlBienes(dni, nombre) {
     window.location.href = `/ControlBienes/html/control_bienes.html?${params.toString()}`;
 }
 
+async function registrarUnidadMpAsistencia(dni, nombre) {
+    const mensaje = document.getElementById("mensaje");
+    const origen = (window.prompt(`Registrar unidad MP para ${nombre || dni}.\nIngrese origen:`)?.trim() || "").toUpperCase();
+    if (!origen) return;
+
+    const placa = (window.prompt(`Registrar unidad MP para ${nombre || dni}.\nIngrese placa:`)?.trim() || "").toUpperCase();
+    if (!placa) return;
+
+    const observacion = (window.prompt("Observacion opcional (Enter para omitir):")?.trim() || "").toUpperCase();
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/vehiculo-empresa/evento-asistencia`, {
+            method: "POST",
+            body: JSON.stringify({
+                dni,
+                conductor: nombre,
+                origen,
+                placa,
+                tipoEvento: "IngresoMP",
+                observacion: observacion || null
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo registrar unidad MP");
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = `Unidad MP registrada para ${nombre || dni} (origen ${origen}, placa ${placa}).`;
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function registrarUnidadMpDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        await esperarGuardadoCelulares(datos.registroId);
+        await registrarUnidadMpAsistencia(datos.dni, datos.nombre);
+    } catch (error) {
+        console.error("Error al registrar unidad MP:", error);
+    }
+}
+
+async function guardarObservacionActivosPersonalLocal(registroId) {
+    const mensaje = document.getElementById("mensaje");
+    const input = document.getElementById(`obs-activo-${registroId}`);
+    if (!(input instanceof HTMLTextAreaElement)) return;
+
+    const observacionActivos = input.value.trim();
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/personal-local/${registroId}/observacion-activos`, {
+            method: "PUT",
+            body: JSON.stringify({
+                observacionActivos: observacionActivos || null
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo guardar observacion");
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Observacion guardada correctamente.";
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function editarTipoPersonaLocalDesdePayload(payloadCodificado) {
+    const mensaje = document.getElementById("mensaje");
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const id = Number(datos?.id || 0);
+        const tipoActual = String(datos?.tipoPersonaLocal || "Normal");
+        if (!Number.isFinite(id) || id <= 0) return;
+
+        edicionAsistencia.abrirModalEditarTipoAsistencia({
+            id,
+            tipoActual,
+            modalId: "modal-editar-tipo-personal-local",
+            selectId: "selectTipoPersonaLocalEditar",
+            onSuccess: cargarActivos
+        });
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
 async function irAControlBienesDesdePayload(payloadCodificado) {
     try {
         const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
@@ -481,6 +595,7 @@ async function cargarActivos() {
         html += '<th>Nombre</th>';
         html += '<th>Fecha / Hora Ingreso</th>';
         html += '<th>Celulares</th>';
+        html += '<th>Observacion</th>';
         html += '<th>Salida Almuerzo</th>';
         html += '<th>Ingreso Almuerzo</th>';
         html += '<th>Acciones</th>';
@@ -501,11 +616,18 @@ async function cargarActivos() {
             const fechaSalidaAlmuerzo = datos.fechaSalidaAlmuerzo ? new Date(datos.fechaSalidaAlmuerzo).toLocaleDateString('es-PE') : "";
             const horaEntradaAlmuerzo = datos.horaEntradaAlmuerzo ? new Date(datos.horaEntradaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : "-";
             const observacion = datos.observacion || datos.observaciones || "";
+            const observacionActivos = (datos.obsActivos || "").trim();
             const celularesDejados = obtenerCelularesDejados(datos);
+            const tipoPersonaLocal = datos.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
 
             const tieneSalidaAlmuerzo = datos.horaSalidaAlmuerzo !== null && datos.horaSalidaAlmuerzo !== undefined;
             const tieneEntradaAlmuerzo = datos.horaEntradaAlmuerzo !== null && datos.horaEntradaAlmuerzo !== undefined;
             const payloadControlBienes = encodeURIComponent(JSON.stringify({
+                registroId: s.id,
+                dni,
+                nombre
+            }));
+            const payloadUnidadMp = encodeURIComponent(JSON.stringify({
                 registroId: s.id,
                 dni,
                 nombre
@@ -518,6 +640,10 @@ async function cargarActivos() {
             }));
             const payloadCelulares = encodeURIComponent(JSON.stringify({
                 id: s.id
+            }));
+            const payloadTipoPersona = encodeURIComponent(JSON.stringify({
+                id: s.id,
+                tipoPersonaLocal
             }));
             const payloadSalidaAlmuerzo = encodeURIComponent(JSON.stringify({
                 registroId: s.id,
@@ -572,17 +698,33 @@ async function cargarActivos() {
             html += `<td>${nombre}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += `<td>${construirBotonesCelularesHtml(payloadCelulares, celularesDejados)}</td>`;
-            html += `<td>${horaSalidaAlmuerzo}</td>`;
-            html += `<td>${horaEntradaAlmuerzo}</td>`;
+            html += `<td>
+                <textarea id="obs-activo-${s.id}" rows="2" style="width:220px;max-width:100%;" placeholder="Obs. opcional para historial">${escaparHtmlBasico(observacionActivos)}</textarea>
+                <div style="margin-top:6px;">
+                    <button type="button" class="btn-secondary btn-small" onclick="guardarObservacionActivosPersonalLocal(${s.id})">Guardar obs</button>
+                </div>
+            </td>`;
+            if (!tieneSalidaAlmuerzo) {
+                html += `<td><button class="btn-warning btn-small" onclick="irASalidaAlmuerzoDesdePayload('${payloadSalidaAlmuerzo}')">Salida Almuerzo</button></td>`;
+            } else {
+                html += `<td>${horaSalidaAlmuerzo}</td>`;
+            }
+
+            if (tieneSalidaAlmuerzo && !tieneEntradaAlmuerzo) {
+                html += `<td><button class="btn-success btn-small" onclick="irAIngresoAlmuerzoDesdePayload('${payloadIngresoAlmuerzo}')">Ingreso Almuerzo</button></td>`;
+            } else {
+                html += `<td>${horaEntradaAlmuerzo}</td>`;
+            }
             html += '<td>';
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
+            html += `<button class="btn-secondary btn-small" onclick="registrarUnidadMpDesdePayload('${payloadUnidadMp}')">Registrar Unidad MP</button> `;
+            html += `<button class="btn-warning btn-small" onclick="editarTipoPersonaLocalDesdePayload('${payloadTipoPersona}')">Editar tipo</button> `;
             html += `<button class="btn-inline btn-small" onclick="cerrarRegistroDesdePayload('${payloadCierre}')">Cerrar registro</button> `;
             
             if (!tieneSalidaAlmuerzo) {
-                html += `<button class="btn-warning btn-small" onclick="irASalidaAlmuerzoDesdePayload('${payloadSalidaAlmuerzo}')">Salida Almuerzo</button> `;
                 html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaDirecta}')">Salida</button>`;
             } else if (!tieneEntradaAlmuerzo) {
-                html += `<button class="btn-success btn-small" onclick="irAIngresoAlmuerzoDesdePayload('${payloadIngresoAlmuerzo}')">Ingreso Almuerzo</button>`;
+                html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaDirecta}')">Salida</button>`;
             } else {
                 html += `<button class="btn-danger btn-small" onclick="irASalidaFinalDesdePayload('${payloadSalidaFinal}')">+Salida</button>`;
             }

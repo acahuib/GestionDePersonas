@@ -428,6 +428,51 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [HttpPut("{id}/edicion-inicial")]
+        public async Task<IActionResult> ActualizarEdicionInicial(int id, [FromBody] ActualizarEdicionInicialOcurrenciaDto dto)
+        {
+            try
+            {
+                var salidaExistente = await _salidasService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Ocurrencia no encontrada");
+
+                if (salidaExistente.TipoOperacion != "Ocurrencias")
+                    return BadRequest("Este endpoint es solo para ocurrencias");
+
+                if (string.IsNullOrWhiteSpace(dto.Ocurrencia))
+                    return BadRequest("La descripción de ocurrencia es obligatoria.");
+
+                var tieneIngresoInicial = salidaExistente.HoraIngreso.HasValue;
+                var tieneSalidaInicial = salidaExistente.HoraSalida.HasValue;
+                if (tieneIngresoInicial == tieneSalidaInicial)
+                    return BadRequest("Solo se puede editar registros pendientes con un movimiento inicial definido.");
+
+                var horaInicial = ResolverHoraPeru(dto.HoraInicial);
+                var fechaInicial = horaInicial.Date;
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+                var datosNode = JsonNode.Parse(salidaExistente.DatosJSON) as JsonObject ?? new JsonObject();
+                datosNode["ocurrencia"] = dto.Ocurrencia.Trim();
+
+                await _salidasService.ActualizarSalidaDetalle(
+                    id,
+                    datosNode,
+                    usuarioId,
+                    tieneIngresoInicial ? horaInicial : null,
+                    tieneIngresoInicial ? fechaInicial : null,
+                    tieneSalidaInicial ? horaInicial : null,
+                    tieneSalidaInicial ? fechaInicial : null
+                );
+
+                return Ok(new { mensaje = "Registro inicial de ocurrencia actualizado" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpPost("acompanante-desde/{tipoOperacion}/{salidaReferenciaId:int}")]
         public async Task<IActionResult> RegistrarAcompananteRapido(
             string tipoOperacion,
@@ -534,7 +579,9 @@ namespace WebApplication1.Controllers
                 if (movimiento == null)
                     return StatusCode(500, "No se pudo registrar movimiento de acompañante.");
 
-                var horaBase = ResolverHoraPeru(null);
+                var horaBase = movimientoAcompanante == "Entrada"
+                    ? (referencia.HoraIngreso ?? referencia.HoraSalida ?? ResolverHoraPeru(null))
+                    : (referencia.HoraSalida ?? referencia.HoraIngreso ?? ResolverHoraPeru(null));
                 var horaIngreso = movimientoAcompanante == "Entrada" ? horaBase : (DateTime?)null;
                 var fechaIngreso = movimientoAcompanante == "Entrada" ? horaBase.Date : (DateTime?)null;
                 var horaSalida = movimientoAcompanante == "Salida" ? horaBase : (DateTime?)null;

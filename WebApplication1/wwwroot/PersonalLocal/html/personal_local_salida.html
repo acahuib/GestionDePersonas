@@ -66,6 +66,32 @@
                         placeholder="Dejar vacío para usar hora actual">
                 </div>
 
+                <div class="form-group" style="margin-top: 8px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="registrarSalidaVehiculoMpCheck" onchange="toggleSalidaVehiculoMp()">
+                        Registrar tambien salida de unidad MP (informativo)
+                    </label>
+                </div>
+
+                <div id="bloqueSalidaVehiculoMp" style="display:none;border:1px dashed #cbd5e1;border-radius:8px;padding:10px;margin-top:8px;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="placaSalidaVehiculoMp">Placa unidad MP: (*)</label>
+                            <input type="text" id="placaSalidaVehiculoMp" placeholder="ABC-123">
+                        </div>
+                        <div class="form-group">
+                            <label for="destinoSalidaVehiculoMp">Destino MP: (*)</label>
+                            <input type="text" id="destinoSalidaVehiculoMp" placeholder="Destino de salida">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="observacionSalidaVehiculoMp">Observacion MP (opcional):</label>
+                            <input type="text" id="observacionSalidaVehiculoMp" placeholder="Detalle opcional">
+                        </div>
+                    </div>
+                </div>
+
                 <div id="mensaje" class="message"></div>
 
                 <div style="display: flex; gap: 10px;">

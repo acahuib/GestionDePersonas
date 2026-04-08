@@ -169,6 +169,78 @@ function irAControlBienesDesdePayload(payloadCodificado) {
     }
 }
 
+async function registrarUnidadMpRetornando(dni, nombre) {
+    const mensaje = document.getElementById("mensaje");
+    const origen = (window.prompt(`Registrar unidad MP para ${nombre || dni}.\nIngrese origen:`)?.trim() || "").toUpperCase();
+    if (!origen) return;
+
+    const placa = (window.prompt(`Registrar unidad MP para ${nombre || dni}.\nIngrese placa:`)?.trim() || "").toUpperCase();
+    if (!placa) return;
+
+    const observacion = (window.prompt("Observacion opcional (Enter para omitir):")?.trim() || "").toUpperCase();
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/vehiculo-empresa/evento-asistencia`, {
+            method: "POST",
+            body: JSON.stringify({
+                dni,
+                conductor: nombre,
+                origen,
+                placa,
+                tipoEvento: "IngresoMP",
+                observacion: observacion || null
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo registrar unidad MP");
+        }
+
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = `Unidad MP registrada para ${nombre || dni} (origen ${origen}, placa ${placa}).`;
+        }
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+function registrarUnidadMpRetornandoDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        registrarUnidadMpRetornando(datos.dni, datos.nombre);
+    } catch (error) {
+        console.error("Error al registrar unidad MP (retornando):", error);
+    }
+}
+
+function editarTipoRetornandoDesdePayload(payloadCodificado) {
+    const mensaje = document.getElementById("mensaje");
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const id = Number(datos?.id || 0);
+        const tipoActual = String(datos?.tipoPersonaLocal || "Retornando");
+        if (!Number.isFinite(id) || id <= 0) return;
+
+        edicionAsistencia.abrirModalEditarTipoAsistencia({
+            id,
+            tipoActual,
+            modalId: "modal-editar-tipo-retornando",
+            selectId: "selectTipoRetornandoEditar",
+            onSuccess: cargarActivosRetornando
+        });
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
 async function cargarActivosRetornando() {
     const container = document.getElementById("lista-activos-retornando");
 
@@ -239,9 +311,18 @@ async function cargarActivosRetornando() {
         activos.forEach((s) => {
             const dni = (s.dni || "").trim();
             const nombre = s.nombreCompleto || "N/A";
+            const tipoPersonaLocal = s?.datos?.tipoPersonaLocal === "Retornando" ? "Retornando" : "Normal";
             const payloadControlBienes = encodeURIComponent(JSON.stringify({
                 dni,
                 nombre
+            }));
+            const payloadUnidadMp = encodeURIComponent(JSON.stringify({
+                dni,
+                nombre
+            }));
+            const payloadTipoPersona = encodeURIComponent(JSON.stringify({
+                id: s.id,
+                tipoPersonaLocal
             }));
             const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
             const horaIngreso = horaIngresoValue
@@ -255,6 +336,8 @@ async function cargarActivosRetornando() {
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
             html += `<button class="btn-secondary btn-small" onclick="irAControlBienesDesdePayload('${payloadControlBienes}')">Registrar Bienes</button> `;
+            html += `<button class="btn-secondary btn-small" onclick="registrarUnidadMpRetornandoDesdePayload('${payloadUnidadMp}')">Registrar Unidad MP</button> `;
+            html += `<button class="btn-warning btn-small" onclick="editarTipoRetornandoDesdePayload('${payloadTipoPersona}')">Editar tipo</button> `;
             html += '<span class="muted">Sin salida en este cuaderno</span>';
             html += '</td>';
             html += '</tr>';

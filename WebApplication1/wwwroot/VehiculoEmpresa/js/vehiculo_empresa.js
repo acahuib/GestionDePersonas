@@ -2,6 +2,205 @@
 
 let personaEncontrada = null;
 let acompanantesPendientesVehiculo = [];
+let contextoEdicionInicialVehiculoEmpresa = null;
+
+function obtenerFechaHoraInputVehiculo(valor) {
+    const base = valor ? new Date(valor) : new Date();
+    const fecha = Number.isNaN(base.getTime()) ? new Date() : base;
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, "0");
+    const d = String(fecha.getDate()).padStart(2, "0");
+    const h = String(fecha.getHours()).padStart(2, "0");
+    const min = String(fecha.getMinutes()).padStart(2, "0");
+    return {
+        fecha: `${y}-${m}-${d}`,
+        hora: `${h}:${min}`
+    };
+}
+
+function combinarFechaHoraLocalVehiculo(fechaIso, horaTexto) {
+    if (!fechaIso || !horaTexto) return null;
+    const horaLimpia = String(horaTexto).trim();
+    if (!horaLimpia) return null;
+
+    if (typeof construirDateTimeLocal === "function") {
+        return construirDateTimeLocal(fechaIso, horaLimpia);
+    }
+
+    return /^\d{2}:\d{2}$/.test(horaLimpia)
+        ? `${fechaIso}T${horaLimpia}:00`
+        : `${fechaIso}T${horaLimpia}`;
+}
+
+function cerrarModalEditarInicialVehiculoEmpresa() {
+    const modal = document.getElementById("modal-editar-inicial-ve");
+    if (modal) modal.remove();
+    contextoEdicionInicialVehiculoEmpresa = null;
+}
+
+function abrirModalEditarInicialVehiculoEmpresaDesdePayload(payloadCodificado) {
+    const mensaje = document.getElementById("mensaje");
+
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const id = Number(datos?.id || 0);
+        if (!Number.isFinite(id) || id <= 0) return;
+
+        const fechaHora = obtenerFechaHoraInputVehiculo(datos?.horaInicialIso);
+        const tipoRegistro = datos?.tipoRegistro === "Almacen" ? "Almacen" : "Normal";
+        const kmInicial = datos?.kmInicial === null || datos?.kmInicial === undefined || String(datos.kmInicial).trim() === ""
+            ? ""
+            : String(datos.kmInicial);
+
+        cerrarModalEditarInicialVehiculoEmpresa();
+        contextoEdicionInicialVehiculoEmpresa = { id };
+
+        const modal = document.createElement("div");
+        modal.id = "modal-editar-inicial-ve";
+        modal.style.position = "fixed";
+        modal.style.inset = "0";
+        modal.style.background = "rgba(0,0,0,0.45)";
+        modal.style.zIndex = "2100";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.padding = "12px";
+
+        modal.innerHTML = `
+            <div style="width:min(720px,98vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:14px;box-shadow:0 14px 32px rgba(0,0,0,0.22);">
+                <h3 style="margin:0 0 6px 0;">Editar Registro Inicial - Vehiculo MP</h3>
+                <p class="muted" style="margin-top:0;">Edite solo datos del primer registro. DNI y conductor no se modifican.</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label>DNI</label>
+                        <input type="text" id="editVeDni" value="${(datos?.dni || "").replace(/"/g, "&quot;")}" readonly>
+                    </div>
+                    <div>
+                        <label>Conductor</label>
+                        <input type="text" id="editVeConductor" value="${(datos?.conductor || "").replace(/"/g, "&quot;")}" readonly>
+                    </div>
+                    <div>
+                        <label>Placa *</label>
+                        <input type="text" id="editVePlaca" value="${(datos?.placa || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Tipo *</label>
+                        <select id="editVeTipoRegistro">
+                            <option value="Normal" ${tipoRegistro === "Normal" ? "selected" : ""}>Normal</option>
+                            <option value="Almacen" ${tipoRegistro === "Almacen" ? "selected" : ""}>Ruta a Almacén</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Fecha del registro inicial *</label>
+                        <input type="date" id="editVeFechaInicial" value="${fechaHora.fecha}">
+                    </div>
+                    <div>
+                        <label>Hora del registro inicial *</label>
+                        <input type="time" id="editVeHoraInicial" value="${fechaHora.hora}">
+                    </div>
+                    <div>
+                        <label>Kilometraje inicial</label>
+                        <input type="number" id="editVeKmInicial" min="0" value="${kmInicial}">
+                    </div>
+                    <div>
+                        <label>Origen inicial *</label>
+                        <input type="text" id="editVeOrigenInicial" value="${(datos?.origenInicial || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label>Destino inicial *</label>
+                        <input type="text" id="editVeDestinoInicial" value="${(datos?.destinoInicial || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label>Observacion</label>
+                        <textarea id="editVeObservacion" rows="3">${(datos?.observacion || "").replace(/</g, "&lt;")}</textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                    <button type="button" class="btn-secondary btn-small" onclick="cerrarModalEditarInicialVehiculoEmpresa()">Cancelar</button>
+                    <button type="button" class="btn-success btn-small" onclick="guardarEdicionInicialVehiculoEmpresa()">Guardar cambios</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById("editVePlaca")?.focus();
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function guardarEdicionInicialVehiculoEmpresa() {
+    const mensaje = document.getElementById("mensaje");
+    const id = Number(contextoEdicionInicialVehiculoEmpresa?.id || 0);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    const placa = (document.getElementById("editVePlaca")?.value || "").trim();
+    const tipoRegistro = document.getElementById("editVeTipoRegistro")?.value === "Almacen" ? "Almacen" : "Normal";
+    const fechaInicial = (document.getElementById("editVeFechaInicial")?.value || "").trim();
+    const horaInicial = (document.getElementById("editVeHoraInicial")?.value || "").trim();
+    const kmTexto = (document.getElementById("editVeKmInicial")?.value || "").trim();
+    const origenInicial = (document.getElementById("editVeOrigenInicial")?.value || "").trim();
+    const destinoInicial = (document.getElementById("editVeDestinoInicial")?.value || "").trim();
+    const observacion = (document.getElementById("editVeObservacion")?.value || "").trim();
+
+    if (!placa || !fechaInicial || !horaInicial || !origenInicial || !destinoInicial) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Complete los campos obligatorios de edición.";
+        }
+        return;
+    }
+
+    let kmInicial = null;
+    if (kmTexto) {
+        const kmNumero = Number.parseInt(kmTexto, 10);
+        if (Number.isNaN(kmNumero) || kmNumero < 0) {
+            if (mensaje) {
+                mensaje.className = "error";
+                mensaje.innerText = "Kilometraje inicial inválido.";
+            }
+            return;
+        }
+        kmInicial = kmNumero;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/vehiculo-empresa/${id}/edicion-inicial`, {
+            method: "PUT",
+            body: JSON.stringify({
+                placa,
+                tipoRegistro,
+                horaInicial: combinarFechaHoraLocalVehiculo(fechaInicial, horaInicial),
+                kmInicial,
+                origenInicial,
+                destinoInicial,
+                observacion: observacion || null
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo editar el registro inicial");
+        }
+
+        cerrarModalEditarInicialVehiculoEmpresa();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Registro inicial actualizado correctamente.";
+        }
+        setTimeout(cargarActivos, 250);
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
 
 async function inicializarDesdeOcurrenciaEspecial() {
     const params = new URLSearchParams(window.location.search);
@@ -215,11 +414,35 @@ function inicializarAcompanantesPendientesVehiculo() {
     renderAcompanantesPendientesVehiculo();
 
     const inputDni = document.getElementById("acompananteDniVehiculoInput");
+    const inputNombre = document.getElementById("acompananteNombreVehiculoInput");
+
+    if (typeof habilitarAutocompletePersona === "function") {
+        habilitarAutocompletePersona({
+            dniId: "acompananteDniVehiculoInput",
+            nombreId: "acompananteNombreVehiculoInput",
+            minChars: 2
+        });
+    }
+
+    const autocompletarNombreDesdeDniAcompananteVehiculo = async () => {
+        if (!(inputDni instanceof HTMLInputElement) || !(inputNombre instanceof HTMLInputElement)) return;
+        const dni = inputDni.value.trim();
+        if (!dni || dni.length !== 8 || isNaN(dni)) return;
+
+        const nombre = await buscarNombrePorDniVehiculo(dni);
+        if (nombre) {
+            inputNombre.value = nombre;
+        }
+    };
+
     if (inputDni instanceof HTMLInputElement) {
+        inputDni.addEventListener("blur", autocompletarNombreDesdeDniAcompananteVehiculo);
         inputDni.addEventListener("keypress", (e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            agregarAcompanantePendienteVehiculo();
+            autocompletarNombreDesdeDniAcompananteVehiculo().finally(() => {
+                agregarAcompanantePendienteVehiculo();
+            });
         });
     }
 }
@@ -621,6 +844,18 @@ async function cargarActivos() {
             const fecha = tieneSalida
                 ? (fechaSalidaValue ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A")
                 : (fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A");
+            const payloadEdicion = encodeURIComponent(JSON.stringify({
+                id: s.id,
+                dni,
+                conductor,
+                placa,
+                tipoRegistro,
+                horaInicialIso: tieneSalida ? horaSalidaValue : horaIngresoValue,
+                kmInicial: tieneSalida ? datos.kmSalida : datos.kmIngreso,
+                origenInicial: origen,
+                destinoInicial: destino,
+                observacion: datos.observacion || ""
+            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
@@ -638,7 +873,7 @@ async function cargarActivos() {
             const modoPie = tieneSalida ? "ingreso" : "salida";
             const textoPie = tieneSalida ? "Ingreso a pie" : "Salida a pie";
             const botonPie = `<button class="btn-inline btn-small" onclick="irAOcurrenciaEspecialPie(${s.id}, '${modoPie}')">${textoPie}</button>`;
-            html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button>${botonPie}${botonCruceEspecial}<button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
+            html += `<td style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn-warning btn-small" onclick="abrirModalEditarInicialVehiculoEmpresaDesdePayload('${payloadEdicion}')">Editar</button><button class="btn-success btn-small" onclick="irAMovimiento(${s.id}, '${modo}')">${pendienteDe}</button>${botonPie}${botonCruceEspecial}<button type="button" class="btn-inline btn-small btn-ver-imagenes" data-registro-id="${s.id}" data-dni="${dni}" data-conductor="${escaparHtmlBasico(conductor)}" data-placa="${escaparHtmlBasico(placa)}">Ver imagenes</button></td>`;
             html += '</tr>';
         });
 

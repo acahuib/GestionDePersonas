@@ -208,6 +208,125 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [HttpPost("evento-asistencia")]
+        public async Task<IActionResult> RegistrarEventoDesdeAsistencia([FromBody] RegistrarEventoAsistenciaVehiculoEmpresaDto dto)
+        {
+            try
+            {
+                var dniNormalizado = (dto.Dni ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(dniNormalizado))
+                    return BadRequest("DNI es requerido.");
+
+                if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
+                    return BadRequest("DNI invalido. Debe tener 8 digitos.");
+
+                if (string.IsNullOrWhiteSpace(dto.Placa))
+                    return BadRequest("Placa es requerida.");
+
+                var tipoEventoNormalizado = (dto.TipoEvento ?? string.Empty).Trim().ToLowerInvariant();
+                var esIngresoMp = tipoEventoNormalizado is "ingresomp" or "ingreso";
+                var esSalidaMp = tipoEventoNormalizado is "salidamp" or "salida";
+                if (!esIngresoMp && !esSalidaMp)
+                    return BadRequest("TipoEvento invalido. Use IngresoMP o SalidaMP.");
+
+                if (esIngresoMp && string.IsNullOrWhiteSpace(dto.Origen))
+                    return BadRequest("Origen es requerido para registrar ingreso MP desde asistencia.");
+
+                if (esSalidaMp && string.IsNullOrWhiteSpace(dto.Destino))
+                    return BadRequest("Destino es requerido para registrar salida MP desde asistencia.");
+
+                await ValidarPersonaEstaDentroParaSalida(dniNormalizado);
+
+                var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+                var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+                var guardiaNombre = usuarioId.HasValue
+                    ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                        ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                        : null);
+                guardiaNombre ??= "S/N";
+
+                var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
+                if (persona == null)
+                {
+                    var nombrePersona = string.IsNullOrWhiteSpace(dto.Conductor)
+                        ? dniNormalizado
+                        : dto.Conductor.Trim();
+
+                    persona = new Models.Persona
+                    {
+                        Dni = dniNormalizado,
+                        Nombre = nombrePersona,
+                        Tipo = "VehiculoEmpresa"
+                    };
+
+                    _context.Personas.Add(persona);
+                    await _context.SaveChangesAsync();
+                }
+
+                var ultimoMovimientoGarita = await _movimientosService.GetLastMovimiento(dniNormalizado, 1);
+                if (ultimoMovimientoGarita == null)
+                    return BadRequest("No se pudo asociar el evento a un movimiento previo de asistencia.");
+
+                var horaEvento = ResolverHoraPeru(dto.HoraEvento);
+                var origenEvento = (dto.Origen ?? string.Empty).Trim();
+                var destinoEvento = (dto.Destino ?? string.Empty).Trim();
+                var observacionBase = esIngresoMp
+                    ? "Registro informativo MP desde asistencia (ingreso con unidad)."
+                    : "Registro informativo MP desde asistencia (salida con unidad).";
+                var observacionFinal = string.IsNullOrWhiteSpace(dto.Observacion)
+                    ? observacionBase
+                    : $"{observacionBase} {dto.Observacion.Trim()}";
+
+                var salida = await _salidasService.CrearSalidaDetalle(
+                    ultimoMovimientoGarita.Id,
+                    "VehiculoEmpresa",
+                    new
+                    {
+                        tipoRegistro = "VehiculoEmpresa",
+                        conductor = persona.Nombre,
+                        placa = dto.Placa.Trim(),
+                        origen = esIngresoMp ? origenEvento : "MP",
+                        destino = esSalidaMp ? destinoEvento : "MP",
+                        origenSalida = esSalidaMp ? "MP" : null,
+                        destinoSalida = esSalidaMp ? destinoEvento : null,
+                        origenIngreso = esIngresoMp ? origenEvento : null,
+                        destinoIngreso = esIngresoMp ? "MP" : null,
+                        guardiaSalida = esSalidaMp ? guardiaNombre : null,
+                        guardiaIngreso = esIngresoMp ? guardiaNombre : null,
+                        modoAsistenciaInformativo = true,
+                        tipoEventoAsistencia = esIngresoMp ? "IngresoMP" : "SalidaMP",
+                        observacion = observacionFinal
+                    },
+                    usuarioId,
+                    horaEvento,
+                    horaEvento.Date,
+                    horaEvento,
+                    horaEvento.Date,
+                    dniNormalizado
+                );
+
+                return Ok(new
+                {
+                    mensaje = esIngresoMp
+                        ? "Unidad MP registrada en modo informativo (sin duplicar ingreso)."
+                        : "Salida MP registrada en modo informativo (sin duplicar salida).",
+                    salidaId = salida.Id,
+                    tipoOperacion = "VehiculoEmpresa",
+                    modo = esIngresoMp ? "IngresoMP" : "SalidaMP"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpPost("desde-vehiculo-proveedor/{salidaProveedorId:int}")]
         public async Task<IActionResult> RegistrarDesdeVehiculoProveedor(
             int salidaProveedorId,
@@ -485,6 +604,77 @@ namespace WebApplication1.Controllers
                 salidaId = id,
                 tipoOperacion = "VehiculoEmpresa",
                 estado = "Ingreso completado"
+            });
+        }
+
+        [HttpPut("{id}/edicion-inicial")]
+        public async Task<IActionResult> ActualizarEdicionInicial(int id, [FromBody] ActualizarEdicionInicialVehiculoEmpresaDto dto)
+        {
+            var salida = await _salidasService.ObtenerSalidaPorId(id);
+            if (salida == null)
+                return NotFound("OperacionDetalle no encontrada");
+
+            if (salida.TipoOperacion != "VehiculoEmpresa")
+                return BadRequest("Este endpoint es solo para vehiculos de empresa");
+
+            var datosActuales = JsonDocument.Parse(salida.DatosJSON).RootElement;
+
+            var tieneSalidaInicial = salida.HoraSalida.HasValue;
+            var tieneIngresoInicial = salida.HoraIngreso.HasValue;
+
+            if (tieneSalidaInicial == tieneIngresoInicial)
+                return BadRequest("Solo se puede editar registros pendientes con un movimiento inicial definido.");
+
+            if (string.IsNullOrWhiteSpace(dto.Placa))
+                return BadRequest("Placa es requerida.");
+
+            if (dto.KmInicial.HasValue && dto.KmInicial.Value < 0)
+                return BadRequest("Kilometraje no puede ser negativo.");
+
+            if (string.IsNullOrWhiteSpace(dto.OrigenInicial) || string.IsNullOrWhiteSpace(dto.DestinoInicial))
+                return BadRequest("Origen y destino son obligatorios.");
+
+            var tipoRegistro = NormalizarTipoRegistro(dto.TipoRegistro);
+            var horaInicial = ResolverHoraPeru(dto.HoraInicial);
+            var fechaInicial = horaInicial.Date;
+
+            var usuarioIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? usuarioId = int.TryParse(usuarioIdString, out var uid) ? uid : null;
+
+            var datosActualizados = new
+            {
+                tipoRegistro,
+                conductor = LeerString(datosActuales, "conductor"),
+                placa = dto.Placa.Trim(),
+                kmSalida = tieneSalidaInicial ? dto.KmInicial : LeerInt(datosActuales, "kmSalida"),
+                kmIngreso = tieneIngresoInicial ? dto.KmInicial : LeerInt(datosActuales, "kmIngreso"),
+                origenSalida = tieneSalidaInicial ? dto.OrigenInicial?.Trim() : LeerString(datosActuales, "origenSalida"),
+                destinoSalida = tieneSalidaInicial ? dto.DestinoInicial?.Trim() : LeerString(datosActuales, "destinoSalida"),
+                origenIngreso = tieneIngresoInicial ? dto.OrigenInicial?.Trim() : LeerString(datosActuales, "origenIngreso"),
+                destinoIngreso = tieneIngresoInicial ? dto.DestinoInicial?.Trim() : LeerString(datosActuales, "destinoIngreso"),
+                origen = dto.OrigenInicial?.Trim(),
+                destino = dto.DestinoInicial?.Trim(),
+                guardiaSalida = LeerString(datosActuales, "guardiaSalida"),
+                guardiaIngreso = LeerString(datosActuales, "guardiaIngreso"),
+                observacion = dto.Observacion ?? LeerString(datosActuales, "observacion")
+            };
+
+            await _salidasService.ActualizarSalidaDetalle(
+                id,
+                datosActualizados,
+                usuarioId,
+                tieneIngresoInicial ? horaInicial : null,
+                tieneIngresoInicial ? fechaInicial : null,
+                tieneSalidaInicial ? horaInicial : null,
+                tieneSalidaInicial ? fechaInicial : null
+            );
+
+            return Ok(new
+            {
+                mensaje = "Registro inicial de vehiculo empresa actualizado",
+                salidaId = id,
+                tipoOperacion = "VehiculoEmpresa",
+                estado = "Actualizado"
             });
         }
 

@@ -23,11 +23,27 @@ function cargarDatosDesdeUrl() {
     }
 }
 
+function toggleSalidaVehiculoMp() {
+    const check = document.getElementById("registrarSalidaVehiculoMpCheck");
+    const bloque = document.getElementById("bloqueSalidaVehiculoMp");
+    if (!check || !bloque) return;
+    bloque.style.display = check.checked ? "block" : "none";
+    if (check.checked) {
+        document.getElementById("placaSalidaVehiculoMp")?.focus();
+    }
+}
+
 async function registrarSalida() {
     const dniElement = document.getElementById("dni");
     const salidaId = dniElement.dataset.salidaId;
+    const dni = (dniElement.value || "").trim();
+    const nombre = (document.getElementById("nombreApellidos")?.value || "").trim();
     const horaSalidaInput = document.getElementById("horaSalida").value;
     const fechaSalidaInput = document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO();
+    const registrarSalidaVehiculoMp = document.getElementById("registrarSalidaVehiculoMpCheck")?.checked === true;
+    const placaSalidaVehiculoMp = (document.getElementById("placaSalidaVehiculoMp")?.value || "").trim();
+    const destinoSalidaVehiculoMp = (document.getElementById("destinoSalidaVehiculoMp")?.value || "").trim();
+    const observacionSalidaVehiculoMp = (document.getElementById("observacionSalidaVehiculoMp")?.value || "").trim();
     const mensaje = document.getElementById("mensaje");
 
     mensaje.innerText = "";
@@ -40,10 +56,46 @@ async function registrarSalida() {
     }
 
     try {
+        const horaSalidaFinal = horaSalidaInput
+            ? construirDateTimeLocal(fechaSalidaInput, horaSalidaInput)
+            : ahoraLocalDateTime();
+
+        if (registrarSalidaVehiculoMp) {
+            if (!placaSalidaVehiculoMp) {
+                mensaje.className = "error";
+                mensaje.innerText = "Si activa salida de unidad MP, la placa es obligatoria.";
+                return;
+            }
+
+            if (!destinoSalidaVehiculoMp) {
+                mensaje.className = "error";
+                mensaje.innerText = "Si activa salida de unidad MP, el destino es obligatorio.";
+                return;
+            }
+
+            const responseVehiculo = await fetchAuth(`${API_BASE}/vehiculo-empresa/evento-asistencia`, {
+                method: "POST",
+                body: JSON.stringify({
+                    dni,
+                    conductor: nombre,
+                    placa: placaSalidaVehiculoMp,
+                    destino: destinoSalidaVehiculoMp,
+                    tipoEvento: "SalidaMP",
+                    horaEvento: horaSalidaFinal,
+                    observacion: observacionSalidaVehiculoMp || null
+                })
+            });
+
+            if (!responseVehiculo.ok) {
+                const errorVehiculo = await readApiError(responseVehiculo);
+                throw new Error(errorVehiculo || "No se pudo registrar la salida MP informativa");
+            }
+        }
+
         const body = {};
 
         if (horaSalidaInput) {
-            body.horaSalida = construirDateTimeLocal(fechaSalidaInput, horaSalidaInput);
+            body.horaSalida = horaSalidaFinal;
         }
 
         const responseSalida = await fetchAuth(`${API_BASE}/personal-local/${salidaId}/salida`, {
@@ -57,7 +109,9 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA registrada correctamente";
+        mensaje.innerText = registrarSalidaVehiculoMp
+            ? "✅ SALIDA registrada correctamente (incluye salida MP informativa)"
+            : "✅ SALIDA registrada correctamente";
 
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";

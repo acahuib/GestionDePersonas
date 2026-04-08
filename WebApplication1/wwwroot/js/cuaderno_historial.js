@@ -18,7 +18,7 @@ async function initCuadernoHistorial() {
     const resumen = container.querySelector("[data-historial-resumen]");
     const tbody = container.querySelector("[data-historial-body]");
     const thead = container.querySelector("thead");
-    const pageSize = 10;
+    const pageSize = 15;
     let paginaActual = 1;
 
     let registros = [];
@@ -140,6 +140,7 @@ async function initCuadernoHistorial() {
                 ? "Retornando"
                 : (tipoRaw === "normal" ? "Personal local" : "No especificado");
             pushIf("Tipo personal", tipoPersonal);
+            pushIf("Obs", datos.obsActivos);
         }
         pushIf("Origen", datos.origen);
         pushIf("Cuarto", datos.cuarto);

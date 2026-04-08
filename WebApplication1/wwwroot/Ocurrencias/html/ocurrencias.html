@@ -229,11 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     addEnterListener("nombre", () => document.getElementById("ocurrencia").focus());
 
-    habilitarAutocompletePersona({
-        dniId: "dni",
-        nombreId: "nombre"
-    });
-
+    inicializarAutocompleteNombreDniOcurrencias();
     inicializarAutocompletadoDniOcurrencias();
     inicializarPreviewImagenes();
     inicializarAcompanantesPendientesOcurrencia();

@@ -8,6 +8,7 @@ using WebApplication1.DTOs;
 using WebApplication1.Services;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace WebApplication1.Controllers
 {
@@ -102,6 +103,7 @@ namespace WebApplication1.Controllers
                 {
                     tipoPersonaLocal,
                     celularesDejados = celularesIniciales,
+                    obsActivos = (string?)null,
                     horaSalidaAlmuerzo = (DateTime?)null,
                     fechaSalidaAlmuerzo = (DateTime?)null,
                     horaEntradaAlmuerzo = (DateTime?)null,
@@ -177,6 +179,7 @@ namespace WebApplication1.Controllers
                     {
                         tipoPersonaLocal,
                         celularesDejados,
+                        obsActivos = LeerObservacionActivos(root),
                         horaSalidaAlmuerzo = fechaHoraActual,
                         fechaSalidaAlmuerzo = fechaHoraActual.Date,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -236,6 +239,7 @@ namespace WebApplication1.Controllers
                     {
                         tipoPersonaLocal,
                         celularesDejados,
+                        obsActivos = LeerObservacionActivos(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = fechaHoraActual,
@@ -303,6 +307,7 @@ namespace WebApplication1.Controllers
                     {
                         tipoPersonaLocal,
                         celularesDejados,
+                        obsActivos = LeerObservacionActivos(root),
                         horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                         fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                         horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -356,6 +361,119 @@ namespace WebApplication1.Controllers
             return await ObtenerSalidaPorIdCore(id);
         }
 
+        [HttpPut("{id}/observacion-activos")]
+        public async Task<IActionResult> ActualizarObservacionActivos(int id, [FromBody] ActualizarObservacionActivosPersonalLocalDto dto)
+        {
+            try
+            {
+                var salidaExistente = await _salidaService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Registro de salida no encontrado");
+
+                var horaSalida = salidaExistente.HoraSalida ?? _salidaService.ObtenerHoraSalidaFromJson(salidaExistente.DatosJSON);
+                if (horaSalida.HasValue)
+                    return BadRequest("No se puede guardar observacion en un registro cerrado");
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+
+                var datosNode = JsonNode.Parse(salidaExistente.DatosJSON) as JsonObject;
+                if (datosNode == null)
+                    datosNode = new JsonObject();
+
+                var observacion = string.IsNullOrWhiteSpace(dto?.ObservacionActivos)
+                    ? null
+                    : dto.ObservacionActivos.Trim();
+
+                datosNode["obsActivos"] = observacion;
+
+                var salidaActualizada = await _salidaService.ActualizarSalidaDetalle(id, datosNode, usuarioId);
+                return Ok(new
+                {
+                    mensaje = "Observacion guardada correctamente",
+                    id = salidaActualizada.Id,
+                    obsActivos = observacion
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpPut("{id}/tipo-persona")]
+        public async Task<IActionResult> ActualizarTipoPersonaLocalRegistro(int id, [FromBody] ActualizarTipoPersonaLocalDto dto)
+        {
+            try
+            {
+                if (dto == null || string.IsNullOrWhiteSpace(dto.TipoPersonaLocal))
+                    return BadRequest("TipoPersonaLocal es requerido");
+
+                var salidaExistente = await _salidaService.ObtenerSalidaPorId(id);
+                if (salidaExistente == null)
+                    return NotFound("Registro de salida no encontrado");
+
+                var horaSalida = salidaExistente.HoraSalida ?? _salidaService.ObtenerHoraSalidaFromJson(salidaExistente.DatosJSON);
+                if (horaSalida.HasValue)
+                    return BadRequest("Solo se puede editar el tipo en registros activos");
+
+                var usuarioId = ExtractUsuarioIdFromToken();
+
+                using var doc = JsonDocument.Parse(salidaExistente.DatosJSON);
+                var root = doc.RootElement;
+                var tipoActual = LeerTipoPersonaLocal(root);
+                var tipoNuevo = NormalizarTipoPersonaLocal(dto.TipoPersonaLocal);
+
+                if (string.Equals(tipoActual, tipoNuevo, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Ok(new
+                    {
+                        mensaje = "El registro ya tiene ese tipo.",
+                        id = salidaExistente.Id,
+                        tipoPersonaLocal = tipoActual
+                    });
+                }
+
+                var celularesActuales = LeerCelularesDejados(root);
+                int? celularesNuevos = string.Equals(tipoNuevo, "Normal", StringComparison.OrdinalIgnoreCase)
+                    ? (celularesActuales ?? 0)
+                    : (int?)null;
+
+                var observacionesBase = LeerObservaciones(root);
+                var observacionesNuevas = string.Equals(tipoNuevo, "Normal", StringComparison.OrdinalIgnoreCase)
+                    ? CombinarObservacionesConCelulares(observacionesBase, celularesNuevos ?? 0)
+                    : LimpiarLineaCelulares(observacionesBase);
+
+                var datosActualizados = new
+                {
+                    tipoPersonaLocal = tipoNuevo,
+                    celularesDejados = celularesNuevos,
+                    obsActivos = LeerObservacionActivos(root),
+                    horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
+                    fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
+                    horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
+                    fechaEntradaAlmuerzo = root.TryGetProperty("fechaEntradaAlmuerzo", out var fea) && fea.ValueKind != JsonValueKind.Null ? fea.GetDateTime() : (DateTime?)null,
+                    guardiaIngreso = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null ? gi.GetString() : null,
+                    guardiaSalida = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null ? gs.GetString() : null,
+                    guardiaSalidaAlmuerzo = root.TryGetProperty("guardiaSalidaAlmuerzo", out var gsa) && gsa.ValueKind != JsonValueKind.Null ? gsa.GetString() : null,
+                    guardiaEntradaAlmuerzo = root.TryGetProperty("guardiaEntradaAlmuerzo", out var gea) && gea.ValueKind != JsonValueKind.Null ? gea.GetString() : null,
+                    observaciones = observacionesNuevas
+                };
+
+                await _salidaService.ActualizarSalidaDetalle(id, datosActualizados, usuarioId);
+
+                return Ok(new
+                {
+                    mensaje = "Tipo de personal actualizado correctamente",
+                    id = salidaExistente.Id,
+                    tipoPersonaLocal = tipoNuevo
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
         [HttpPut("{id}/celulares")]
         public async Task<IActionResult> ActualizarCelularesDejados(int id, [FromBody] ActualizarCelularesPersonalLocalDto dto)
         {
@@ -385,6 +503,7 @@ namespace WebApplication1.Controllers
                 {
                     tipoPersonaLocal,
                     celularesDejados = dto.CelularesDejados,
+                    obsActivos = LeerObservacionActivos(root),
                     horaSalidaAlmuerzo = root.TryGetProperty("horaSalidaAlmuerzo", out var hsa) && hsa.ValueKind != JsonValueKind.Null ? hsa.GetDateTime() : (DateTime?)null,
                     fechaSalidaAlmuerzo = root.TryGetProperty("fechaSalidaAlmuerzo", out var fsa) && fsa.ValueKind != JsonValueKind.Null ? fsa.GetDateTime() : (DateTime?)null,
                     horaEntradaAlmuerzo = root.TryGetProperty("horaEntradaAlmuerzo", out var hea) && hea.ValueKind != JsonValueKind.Null ? hea.GetDateTime() : (DateTime?)null,
@@ -509,6 +628,13 @@ namespace WebApplication1.Controllers
         private static string? LeerObservaciones(JsonElement root)
         {
             return root.TryGetProperty("observaciones", out var obs) && obs.ValueKind != JsonValueKind.Null
+                ? obs.GetString()
+                : null;
+        }
+
+        private static string? LeerObservacionActivos(JsonElement root)
+        {
+            return root.TryGetProperty("obsActivos", out var obs) && obs.ValueKind != JsonValueKind.Null
                 ? obs.GetString()
                 : null;
         }

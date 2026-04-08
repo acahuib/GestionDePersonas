@@ -1,8 +1,244 @@
 ﻿// Script frontend para vehiculos_proveedores.
 
 let personaEncontrada = null;
+let contextoEdicionVehiculoProveedor = null;
+
+function obtenerFechaHoraInputDesdeIso(valor) {
+    const fechaBase = valor ? new Date(valor) : new Date();
+    const fecha = Number.isNaN(fechaBase.getTime()) ? new Date() : fechaBase;
+    const yyyy = fecha.getFullYear();
+    const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dd = String(fecha.getDate()).padStart(2, "0");
+    const hh = String(fecha.getHours()).padStart(2, "0");
+    const mi = String(fecha.getMinutes()).padStart(2, "0");
+
+    return {
+        fecha: `${yyyy}-${mm}-${dd}`,
+        hora: `${hh}:${mi}`
+    };
+}
+
+function cerrarModalEditarVehiculoProveedor() {
+    const modal = document.getElementById("modal-editar-vp");
+    if (modal) modal.remove();
+    contextoEdicionVehiculoProveedor = null;
+}
+
+function abrirModalEditarVehiculoProveedorDesdePayload(payloadCodificado) {
+    const mensaje = document.getElementById("mensaje");
+
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const id = Number(datos?.id || 0);
+        if (!Number.isFinite(id) || id <= 0) return;
+
+        const fechaHora = obtenerFechaHoraInputDesdeIso(datos?.horaIngresoIso);
+        contextoEdicionVehiculoProveedor = {
+            id,
+            dni: String(datos?.dni || ""),
+            nombreCompleto: String(datos?.nombreCompleto || "")
+        };
+
+        cerrarModalEditarVehiculoProveedor();
+        contextoEdicionVehiculoProveedor = {
+            id,
+            dni: String(datos?.dni || ""),
+            nombreCompleto: String(datos?.nombreCompleto || "")
+        };
+
+        const modal = document.createElement("div");
+        modal.id = "modal-editar-vp";
+        modal.style.position = "fixed";
+        modal.style.inset = "0";
+        modal.style.background = "rgba(0,0,0,0.45)";
+        modal.style.zIndex = "2100";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.padding = "12px";
+
+        modal.innerHTML = `
+            <div style="width:min(720px,98vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:14px;box-shadow:0 14px 32px rgba(0,0,0,0.22);">
+                <h3 style="margin:0 0 6px 0;">Editar Vehiculo Proveedor</h3>
+                <p class="muted" style="margin-top:0;">Formulario simple para corregir datos. DNI y Nombre no se editan.</p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label>DNI</label>
+                        <input type="text" id="editVpDni" value="${(datos?.dni || "").replace(/"/g, "&quot;")}" readonly>
+                    </div>
+                    <div>
+                        <label>Nombre</label>
+                        <input type="text" id="editVpNombre" value="${(datos?.nombreCompleto || "").replace(/"/g, "&quot;")}" readonly>
+                    </div>
+                    <div>
+                        <label>Proveedor/Empresa *</label>
+                        <input type="text" id="editVpProveedor" value="${(datos?.proveedor || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Placa *</label>
+                        <input type="text" id="editVpPlaca" value="${(datos?.placa || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Trae *</label>
+                        <input type="text" id="editVpTipo" value="${(datos?.tipo || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Lote *</label>
+                        <input type="text" id="editVpLote" value="${(datos?.lote || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Cantidad *</label>
+                        <input type="text" id="editVpCantidad" value="${(datos?.cantidad || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Procedencia *</label>
+                        <input type="text" id="editVpProcedencia" value="${(datos?.procedencia || "").replace(/"/g, "&quot;")}">
+                    </div>
+                    <div>
+                        <label>Fecha de Ingreso *</label>
+                        <input type="date" id="editVpFechaIngreso" value="${fechaHora.fecha}">
+                    </div>
+                    <div>
+                        <label>Hora de Ingreso *</label>
+                        <input type="time" id="editVpHoraIngreso" value="${fechaHora.hora}">
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label>Observacion</label>
+                        <textarea id="editVpObservacion" rows="3">${(datos?.observacion || "").replace(/</g, "&lt;")}</textarea>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                    <button type="button" class="btn-secondary btn-small" onclick="cerrarModalEditarVehiculoProveedor()">Cancelar</button>
+                    <button type="button" class="btn-success btn-small" onclick="guardarEdicionVehiculoProveedor()">Guardar cambios</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById("editVpProveedor")?.focus();
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+async function guardarEdicionVehiculoProveedor() {
+    const mensaje = document.getElementById("mensaje");
+    const id = Number(contextoEdicionVehiculoProveedor?.id || 0);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    const proveedor = (document.getElementById("editVpProveedor")?.value || "").trim();
+    const placa = (document.getElementById("editVpPlaca")?.value || "").trim();
+    const tipo = (document.getElementById("editVpTipo")?.value || "").trim();
+    const lote = (document.getElementById("editVpLote")?.value || "").trim();
+    const cantidad = (document.getElementById("editVpCantidad")?.value || "").trim();
+    const procedencia = (document.getElementById("editVpProcedencia")?.value || "").trim();
+    const fechaIngreso = (document.getElementById("editVpFechaIngreso")?.value || "").trim();
+    const horaIngreso = (document.getElementById("editVpHoraIngreso")?.value || "").trim();
+    const observacion = (document.getElementById("editVpObservacion")?.value || "").trim();
+
+    if (!proveedor || !placa || !tipo || !lote || !cantidad || !procedencia || !fechaIngreso || !horaIngreso) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "Complete todos los campos obligatorios de edición.";
+        }
+        return;
+    }
+
+    try {
+        const response = await fetchAuth(`${API_BASE}/vehiculos-proveedores/${id}/ingreso`, {
+            method: "PUT",
+            body: JSON.stringify({
+                proveedor,
+                placa,
+                tipo,
+                lote,
+                cantidad,
+                procedencia,
+                observacion: observacion || null,
+                horaIngreso: combinarFechaHoraLocal(fechaIngreso, horaIngreso)
+            })
+        });
+
+        if (!response.ok) {
+            const error = await readApiError(response);
+            throw new Error(error || "No se pudo actualizar el registro");
+        }
+
+        cerrarModalEditarVehiculoProveedor();
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Registro actualizado correctamente.";
+        }
+        setTimeout(cargarActivos, 250);
+    } catch (error) {
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+function prellenarDesdeOcurrenciasEspecial() {
+    const params = new URLSearchParams(window.location.search);
+    const salidaOcurrenciaId = params.get("salidaOcurrenciaId");
+    if (!salidaOcurrenciaId) return false;
+
+    const mensaje = document.getElementById("mensaje");
+    const dniInput = document.getElementById("dni");
+    const nombreInput = document.getElementById("nombreCompleto");
+    const placaInput = document.getElementById("placa");
+    const procedenciaInput = document.getElementById("procedencia");
+    const proveedorInput = document.getElementById("proveedor");
+    const observacionInput = document.getElementById("observacion");
+    const botonRegistrar = document.getElementById("btnRegistrarEntrada");
+
+    const dni = (params.get("dni") || "").trim();
+    const nombre = (params.get("nombre") || "").trim();
+    const placa = (params.get("placa") || "").trim();
+    const proveedor = (params.get("proveedor") || "").trim();
+    const procedencia = (params.get("procedencia") || "").trim();
+    const observacion = (params.get("observacion") || "").trim();
+
+    dniInput.dataset.salidaOcurrenciaId = salidaOcurrenciaId;
+
+    dniInput.value = dni;
+    if (nombre) {
+        nombreInput.value = nombre;
+        personaEncontrada = { nombre };
+        const personaInfo = document.getElementById("persona-info");
+        const personaNombre = document.getElementById("persona-nombre");
+        if (personaInfo) personaInfo.style.display = "block";
+        if (personaNombre) personaNombre.textContent = nombre;
+        nombreInput.disabled = true;
+    }
+
+    placaInput.value = placa;
+    if (procedencia && !procedenciaInput.value.trim()) procedenciaInput.value = procedencia;
+    if (proveedor && !proveedorInput.value.trim()) proveedorInput.value = proveedor;
+    if (observacion && !observacionInput.value.trim()) observacionInput.value = observacion;
+
+    dniInput.readOnly = true;
+
+    if (botonRegistrar) {
+        botonRegistrar.innerHTML = '<img src="/images/check-circle.svg" class="icon-white"> Registrar INGRESO ESPECIAL';
+    }
+
+    if (mensaje) {
+        mensaje.className = "success";
+        mensaje.innerText = "Modo especial desde Ocurrencias: al guardar se cerrara el ingreso en Ocurrencias y se guardara historial informativo en Vehiculos Proveedores.";
+    }
+
+    return true;
+}
 
 async function inicializarDesdeVehiculoEmpresaEspecial() {
+    if (prellenarDesdeOcurrenciasEspecial()) return;
+
     const params = new URLSearchParams(window.location.search);
     const salidaEmpresaId = params.get("salidaEmpresaId");
     if (!salidaEmpresaId) return;
@@ -157,7 +393,10 @@ async function registrarEntrada() {
     const observacion = document.getElementById("observacion").value.trim();
     const mensaje = document.getElementById("mensaje");
     const salidaEmpresaId = document.getElementById("dni")?.dataset?.salidaEmpresaId || "";
-    const esModoEspecial = Boolean(salidaEmpresaId);
+    const salidaOcurrenciaId = document.getElementById("dni")?.dataset?.salidaOcurrenciaId || "";
+    const esModoEspecialEmpresa = Boolean(salidaEmpresaId);
+    const esModoEspecialOcurrencias = Boolean(salidaOcurrenciaId);
+    const esModoEspecial = esModoEspecialEmpresa || esModoEspecialOcurrencias;
 
     mensaje.innerText = "";
     mensaje.className = "";
@@ -200,13 +439,21 @@ async function registrarEntrada() {
             body.horaIngreso = ahoraLocalDateTime();
         }
 
+        if (esModoEspecialOcurrencias) {
+            body.horaEvento = horaIngresoInput
+                ? combinarFechaHoraLocal(fechaIngresoInput, horaIngresoInput)
+                : ahoraLocalDateTime();
+        }
+
         if (!personaEncontrada) {
             body.nombreApellidos = nombreCompleto;
         }
 
-        const endpoint = esModoEspecial
+        const endpoint = esModoEspecialEmpresa
             ? `${API_BASE}/vehiculos-proveedores/desde-vehiculo-empresa/${salidaEmpresaId}`
-            : `${API_BASE}/vehiculos-proveedores`;
+            : (esModoEspecialOcurrencias
+                ? `${API_BASE}/vehiculos-proveedores/evento-desde-ocurrencias/${salidaOcurrenciaId}`
+                : `${API_BASE}/vehiculos-proveedores`);
 
         const response = await fetchAuth(endpoint, {
             method: "POST",
@@ -233,10 +480,18 @@ async function registrarEntrada() {
 
         const nombreCompletoRegistro = personaEncontrada ? personaEncontrada.nombre : nombreCompleto;
         mensaje.className = "success";
-        if (esModoEspecial) {
+        if (esModoEspecialEmpresa) {
             mensaje.innerText = `CRUCE especial registrado para ${nombreCompletoRegistro} - Placa: ${placa}.`;
             setTimeout(() => {
                 window.location.href = "../../VehiculoEmpresa/html/vehiculo_empresa.html?refresh=1";
+            }, 700);
+            return;
+        }
+
+        if (esModoEspecialOcurrencias) {
+            mensaje.innerText = `Registro especial guardado para ${nombreCompletoRegistro} - Placa: ${placa}.`;
+            setTimeout(() => {
+                window.location.href = "../../Ocurrencias/html/ocurrencias.html?refresh=1";
             }, 700);
             return;
         }
@@ -354,7 +609,8 @@ async function cargarActivos() {
             .filter(s => {
                 const horaIngresoValue = s.horaIngreso || s.datos?.horaIngreso;
                 const horaSalidaValue = s.horaSalida || s.datos?.horaSalida;
-                return tieneValor(horaIngresoValue) && !tieneValor(horaSalidaValue);
+                const esInformativo = s?.datos?.modoInformativoDesdeOcurrencias === true || s?.datos?.cierreAdministrativo === true;
+                return tieneValor(horaIngresoValue) && !tieneValor(horaSalidaValue) && !esInformativo;
             })
             .sort((a, b) => {
                 const timeA = new Date(a.horaIngreso || a.datos?.horaIngreso || a.fechaCreacion || 0).getTime();
@@ -416,6 +672,19 @@ async function cargarActivos() {
                 horaIngreso,
                 guardiaIngreso
             }));
+            const payloadEdicion = encodeURIComponent(JSON.stringify({
+                id: s.id,
+                dni,
+                nombreCompleto,
+                proveedor,
+                placa,
+                tipo,
+                lote,
+                cantidad,
+                procedencia,
+                observacion,
+                horaIngresoIso: horaIngresoValue
+            }));
 
             html += '<tr>';
             html += `<td>${dni}</td>`;
@@ -428,6 +697,7 @@ async function cargarActivos() {
             html += `<td>${procedencia}</td>`;
             html += `<td>${construirFechaHoraCelda(fechaIngreso, horaIngreso)}</td>`;
             html += '<td>';
+            html += `<button type="button" class="btn-warning btn-small" onclick="abrirModalEditarVehiculoProveedorDesdePayload('${payloadEdicion}')">Editar</button> `;
             html += `<button class="btn-danger btn-small" onclick="irASalidaDesdePayload('${payloadSalida}')">Salida</button> `;
             html += `<button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroVehiculosProveedores(${s.id}, { dni: '${dni.replace(/'/g, "\\'")}', nombre: '${nombreCompleto.replace(/'/g, "\\'")}', placa: '${placa.replace(/'/g, "\\'")}' })">Ver imagenes</button>`;
             html += '</td>';
