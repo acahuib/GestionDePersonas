@@ -1,4 +1,4 @@
-﻿// Script frontend para dispositivo.
+// Script frontend para dispositivo.
 
 async function registrarAutomatico() {
 
@@ -29,7 +29,7 @@ async function registrarAutomatico() {
 
     if (response.ok) {
         mensaje.className = "success";
-        mensaje.innerText = "Movimiento automático registrado";
+        mensaje.innerText = "Movimiento automatico registrado";
         document.getElementById("dni").value = "";
         document.getElementById("dni").focus();
     } else {

@@ -1,4 +1,4 @@
-﻿// Script frontend para torre.
+// Script frontend para torre.
 
 const TORRE_TIPOS_OPERACION = {
     Proveedor: "Proveedores",
@@ -81,7 +81,7 @@ function torreFormatearFecha(valor) {
     if (!valor) return "-";
     const fecha = new Date(valor);
     if (Number.isNaN(fecha.getTime())) return "-";
-    return fecha.toLocaleDateString("es-PE");
+    return fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function torreFormatearHora(valor) {

@@ -51,12 +51,15 @@ namespace WebApplication1.Controllers
 
             var motivo = string.IsNullOrWhiteSpace(dto?.Motivo) ? "Cierre administrativo" : dto!.Motivo!.Trim();
             var observaciones = string.IsNullOrWhiteSpace(dto?.Observaciones) ? null : dto!.Observaciones!.Trim();
+            var motivoNormalizado = motivo.Trim().ToLowerInvariant();
+            var esSalidaDiasLibres = motivoNormalizado.Contains("dias libre");
 
             datosNode["cierreAdministrativo"] = true;
             datosNode["motivoCierreAdministrativo"] = motivo;
             datosNode["observacionesCierreAdministrativo"] = observaciones;
             datosNode["fechaCierreAdministrativo"] = DateTime.Now;
             datosNode["guardiaCierreAdministrativo"] = guardiaNombre;
+            datosNode["tipoCierreAdministrativo"] = esSalidaDiasLibres ? "SalidaDiasLibres" : "CierreAdministrativo";
 
             registro.DatosJSON = datosNode.ToJsonString(new JsonSerializerOptions
             {
@@ -70,7 +73,8 @@ namespace WebApplication1.Controllers
                 mensaje = "Registro cerrado.",
                 id = registro.Id,
                 motivo,
-                guardia = guardiaNombre
+                guardia = guardiaNombre,
+                tipoCierre = esSalidaDiasLibres ? "SalidaDiasLibres" : "CierreAdministrativo"
             });
         }
 

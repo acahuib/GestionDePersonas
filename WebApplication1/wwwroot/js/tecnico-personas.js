@@ -1,4 +1,4 @@
-﻿// Script frontend para tecnico-personas.
+// Script frontend para tecnico-personas.
 
 (function () {
     const ENDPOINT = `${API_BASE}/tecnico/personas`;

@@ -778,10 +778,8 @@ namespace WebApplication1.Controllers
 
             if (ultimoMovimientoGarita == null)
             {
-                if (_salidaTemporalPolicy.PermitirSalidaSinEntradaTemporal())
-                    return;
-
-                throw new InvalidOperationException($"No se puede registrar salida para DNI {dni}: la persona no tiene ingreso previo en garita");
+                // Permitir primer registro cuando no existe historial previo para el DNI.
+                return;
             }
 
             if (ultimoMovimientoGarita.TipoMovimiento != "Entrada" && ultimoMovimientoGarita.TipoMovimiento != "Ingreso")

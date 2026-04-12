@@ -1,4 +1,4 @@
-﻿// Script frontend para vehiculo_empresa.
+// Script frontend para vehiculo_empresa.
 
 let personaEncontrada = null;
 let acompanantesPendientesVehiculo = [];
@@ -88,7 +88,7 @@ function abrirModalEditarInicialVehiculoEmpresaDesdePayload(payloadCodificado) {
                         <label>Tipo *</label>
                         <select id="editVeTipoRegistro">
                             <option value="Normal" ${tipoRegistro === "Normal" ? "selected" : ""}>Normal</option>
-                            <option value="Almacen" ${tipoRegistro === "Almacen" ? "selected" : ""}>Ruta a Almacén</option>
+                            <option value="Almacen" ${tipoRegistro === "Almacen" ? "selected" : ""}>Ruta a Almac�n</option>
                         </select>
                     </div>
                     <div>
@@ -151,7 +151,7 @@ async function guardarEdicionInicialVehiculoEmpresa() {
     if (!placa || !fechaInicial || !horaInicial || !origenInicial || !destinoInicial) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete los campos obligatorios de edición.";
+            mensaje.innerText = "Complete los campos obligatorios de edicion.";
         }
         return;
     }
@@ -162,7 +162,7 @@ async function guardarEdicionInicialVehiculoEmpresa() {
         if (Number.isNaN(kmNumero) || kmNumero < 0) {
             if (mensaje) {
                 mensaje.className = "error";
-                mensaje.innerText = "Kilometraje inicial inválido.";
+                mensaje.innerText = "Kilometraje inicial invalido.";
             }
             return;
         }
@@ -353,18 +353,6 @@ function quitarAcompanantePendienteVehiculo(index) {
     renderAcompanantesPendientesVehiculo();
 }
 
-async function buscarNombrePorDniVehiculo(dni) {
-    if (!dni || dni.length !== 8 || isNaN(dni)) return "";
-    try {
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        if (!response || !response.ok) return "";
-        const persona = await response.json();
-        return persona?.nombre || "";
-    } catch {
-        return "";
-    }
-}
-
 async function agregarAcompanantePendienteVehiculo() {
     const inputDni = document.getElementById("acompananteDniVehiculoInput");
     const inputNombre = document.getElementById("acompananteNombreVehiculoInput");
@@ -390,7 +378,14 @@ async function agregarAcompanantePendienteVehiculo() {
         return;
     }
 
-    let nombre = await buscarNombrePorDniVehiculo(dni);
+    let nombre = "";
+    try {
+        const persona = await buscarPersonaPorDniUniversal(dni);
+        nombre = persona?.nombre || "";
+    } catch {
+        nombre = "";
+    }
+
     if (!nombre) {
         nombre = nombreManual;
     }
@@ -420,29 +415,20 @@ function inicializarAcompanantesPendientesVehiculo() {
         habilitarAutocompletePersona({
             dniId: "acompananteDniVehiculoInput",
             nombreId: "acompananteNombreVehiculoInput",
-            minChars: 2
+            minChars: 2,
+            onDniResolved: (persona) => {
+                if (persona?.nombre && inputNombre instanceof HTMLInputElement) {
+                    inputNombre.value = persona.nombre;
+                }
+            }
         });
     }
 
-    const autocompletarNombreDesdeDniAcompananteVehiculo = async () => {
-        if (!(inputDni instanceof HTMLInputElement) || !(inputNombre instanceof HTMLInputElement)) return;
-        const dni = inputDni.value.trim();
-        if (!dni || dni.length !== 8 || isNaN(dni)) return;
-
-        const nombre = await buscarNombrePorDniVehiculo(dni);
-        if (nombre) {
-            inputNombre.value = nombre;
-        }
-    };
-
     if (inputDni instanceof HTMLInputElement) {
-        inputDni.addEventListener("blur", autocompletarNombreDesdeDniAcompananteVehiculo);
         inputDni.addEventListener("keypress", (e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            autocompletarNombreDesdeDniAcompananteVehiculo().finally(() => {
-                agregarAcompanantePendienteVehiculo();
-            });
+            agregarAcompanantePendienteVehiculo();
         });
     }
 }
@@ -477,8 +463,7 @@ async function registrarAcompanantesPendientesVehiculo(salidaReferenciaId, movim
     return { registrados, errores };
 }
 
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+function manejarResultadoPersonaVehiculoEmpresa(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const conductorInput = document.getElementById("conductor");
@@ -491,42 +476,21 @@ async function buscarPersonaPorDni() {
         return;
     }
 
-    try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        console.log(`📡 Response status: ${response.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
-            
-            personaNombre.textContent = personaEncontrada.nombre;
-            personaInfo.style.display = "block";
-            
-            conductorInput.value = "";
-            conductorInput.disabled = true;
-            conductorInput.placeholder = "(Ya registrado)";
-            
-            document.getElementById("placa").focus();
-        } else if (response.status === 404) {
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
-            personaEncontrada = null;
-            personaInfo.style.display = "none";
-            conductorInput.disabled = false;
-            conductorInput.placeholder = "Nombre completo del conductor";
-            conductorInput.focus();
-        } else {
-            const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
-            throw new Error(error);
-        }
-    } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
+    if (persona) {
+        personaEncontrada = persona;
+        personaNombre.textContent = personaEncontrada.nombre;
+        personaInfo.style.display = "block";
+
+        conductorInput.value = personaEncontrada.nombre || "";
+        conductorInput.disabled = true;
+        conductorInput.placeholder = "(Ya registrado)";
+        document.getElementById("placa").focus();
+    } else {
         personaEncontrada = null;
         personaInfo.style.display = "none";
         conductorInput.disabled = false;
         conductorInput.placeholder = "Nombre completo del conductor";
+        conductorInput.focus();
     }
 }
 
@@ -558,7 +522,7 @@ async function registrarMovimientoInicial() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -570,7 +534,7 @@ async function registrarMovimientoInicial() {
 
     if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un número válido";
+        mensaje.innerText = "El kilometraje debe ser un numero v�lido";
         return;
     }
 
@@ -718,14 +682,14 @@ function irAOcurrenciaEspecialPie(salidaEmpresaId, modoPie) {
 async function registrarAcompananteRapidoDesdeVehiculoEmpresa(salidaEmpresaId) {
     if (!salidaEmpresaId) return;
     const mensaje = document.getElementById("mensaje");
-    const dni = window.prompt("Escanee o ingrese DNI del acompañante (8 dígitos):", "");
+    const dni = window.prompt("Escanee o ingrese DNI del acompanante (8 digitos):", "");
     if (dni === null) return;
 
     const dniLimpio = String(dni).trim();
     if (dniLimpio.length !== 8 || isNaN(dniLimpio)) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "DNI de acompañante inválido.";
+            mensaje.innerText = "DNI de acompanante invalido.";
         }
         return;
     }
@@ -737,14 +701,14 @@ async function registrarAcompananteRapidoDesdeVehiculoEmpresa(salidaEmpresaId) {
         });
 
         if (!response || !response.ok) {
-            const error = response ? await readApiError(response) : "No se pudo registrar acompañante";
+            const error = response ? await readApiError(response) : "No se pudo registrar acompanante";
             throw new Error(error);
         }
 
         const data = await response.json();
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = `Acompañante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
+            mensaje.innerText = `Acompa�ante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
         }
     } catch (error) {
         if (mensaje) {
@@ -762,13 +726,13 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehículos activos");
+            throw new Error(error || "Error al cargar vehiculos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehiculos pendientes en este momento</p>';
             return;
         }
 
@@ -789,7 +753,7 @@ async function cargarActivos() {
         });
 
         if (pendientes.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos pendientes en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehiculos pendientes en este momento</p>';
             return;
         }
 
@@ -811,7 +775,7 @@ async function cargarActivos() {
         html += '<th>Origen</th>';
         html += '<th>Destino</th>';
         html += '<th>Fecha / Hora</th>';
-        html += '<th>Acción</th>';
+        html += '<th>Accion</th>';
         html += '</tr></thead><tbody>';
 
         pendientes.forEach(s => {
@@ -842,8 +806,8 @@ async function cargarActivos() {
                 ? (horaSalidaValue ? new Date(horaSalidaValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : "N/A")
                 : (horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : "N/A");
             const fecha = tieneSalida
-                ? (fechaSalidaValue ? new Date(fechaSalidaValue).toLocaleDateString('es-PE') : "N/A")
-                : (fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A");
+                ? (fechaSalidaValue ? new Date(fechaSalidaValue).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "N/A")
+                : (fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "N/A");
             const payloadEdicion = encodeURIComponent(JSON.stringify({
                 id: s.id,
                 dni,

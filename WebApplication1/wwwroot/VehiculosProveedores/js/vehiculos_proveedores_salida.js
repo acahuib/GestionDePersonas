@@ -1,4 +1,4 @@
-﻿// Script frontend para vehiculos_proveedores_salida.
+// Script frontend para vehiculos_proveedores_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -69,7 +69,7 @@ async function cargarDatosDesdeVehiculoEmpresa(salidaEmpresaId) {
         
         const titulo = document.getElementById("titulo-movimiento");
         if (titulo) {
-            titulo.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA (desde Vehículo Empresa)';
+            titulo.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar SALIDA (desde Vehiculo Empresa)';
         }
         
         mensaje.className = "";
@@ -95,7 +95,7 @@ async function registrarSalida() {
 
     if (!salidaId && !salidaEmpresaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontro el ID del registro de ingreso";
         return;
     }
 
@@ -130,7 +130,7 @@ async function registrarSalida() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA registrada correctamente" + (esEspejo ? " (cierre sincronizado en VehículoEmpresa)" : "");
+        mensaje.innerText = "SALIDA registrada correctamente" + (esEspejo ? " (cierre sincronizado en VehiculoEmpresa)" : "");
 
         setTimeout(() => {
             const redirect = esEspejo ? "../VehiculoEmpresa/html/vehiculo_empresa.html?refresh=1" : "vehiculos_proveedores.html?refresh=1";

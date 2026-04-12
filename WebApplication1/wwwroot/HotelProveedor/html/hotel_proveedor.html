@@ -103,23 +103,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setInterval(cargarPendientesIngreso, 15000);
 
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
+    addEnterListener("dni", () => {
+        if (personaEncontrada) {
+            document.getElementById("ticket")?.focus();
+            return;
         }
+        document.getElementById("nombre")?.focus();
     });
-
     addEnterListener("nombre", () => document.getElementById("ticket").focus());
     addEnterListener("ticket", () => document.getElementById("fecha").focus());
+    addEnterListener("fecha", () => document.getElementById("tipoHabitacion").focus());
     addEnterListener("tipoHabitacion", () => document.getElementById("numeroPersonas").focus());
     addEnterListener("numeroPersonas", registrarSalidaHotel);
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombre"
+        nombreId: "nombre",
+        onDniResolved: manejarResultadoPersonaHotelProveedor
     });
 });
 </script>

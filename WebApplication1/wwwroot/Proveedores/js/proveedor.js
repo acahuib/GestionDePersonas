@@ -1,4 +1,4 @@
-﻿// Script frontend para proveedor.
+// Script frontend para proveedor.
 
 let personaEncontrada = null;
 const DESTINOS_PROVEEDOR = [
@@ -26,8 +26,7 @@ function construirOpcionesDestinoRetorno(destinoSeleccionado) {
         .join("");
 }
 
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+function manejarResultadoPersonaProveedor(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
@@ -37,45 +36,40 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         nombreCompletoInput.disabled = false;
         nombreCompletoInput.value = "";
+        nombreCompletoInput.placeholder = "Nombres y apellidos del proveedor";
         return;
     }
 
+    if (persona) {
+        personaEncontrada = persona;
+
+        personaNombre.textContent = personaEncontrada.nombre;
+        personaInfo.style.display = "block";
+
+        nombreCompletoInput.value = personaEncontrada.nombre || "";
+        nombreCompletoInput.disabled = true;
+        nombreCompletoInput.placeholder = "(Ya registrado)";
+
+        document.getElementById("procedencia").focus();
+        return;
+    }
+
+    personaEncontrada = null;
+    personaInfo.style.display = "none";
+    nombreCompletoInput.disabled = false;
+    nombreCompletoInput.placeholder = "Nombres y apellidos del proveedor";
+    nombreCompletoInput.focus();
+}
+
+async function buscarPersonaPorDni() {
+    const dni = document.getElementById("dni").value.trim();
+
     try {
-        console.log(`Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        console.log(`Response status: ${response.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`Persona encontrada:`, personaEncontrada);
-            
-            personaNombre.textContent = personaEncontrada.nombre;
-            personaInfo.style.display = "block";
-            
-            nombreCompletoInput.value = "";
-            nombreCompletoInput.disabled = true;
-            nombreCompletoInput.placeholder = "(Ya registrado)";
-            
-            document.getElementById("procedencia").focus();
-        } else if (response.status === 404) {
-            console.log(`DNI no encontrado en tabla Personas - permitir registro nuevo`);
-            personaEncontrada = null;
-            personaInfo.style.display = "none";
-            nombreCompletoInput.disabled = false;
-            nombreCompletoInput.placeholder = "Nombres y apellidos del proveedor";
-            nombreCompletoInput.focus();
-        } else {
-            const error = await readApiError(response);
-            console.error(`Error del servidor: ${error}`);
-            throw new Error(error);
-        }
+        const persona = await buscarPersonaPorDniUniversal(dni);
+        manejarResultadoPersonaProveedor(persona, dni);
     } catch (error) {
         console.error("Error al buscar persona:", error);
-        personaEncontrada = null;
-        personaInfo.style.display = "none";
-        nombreCompletoInput.disabled = false;
-        nombreCompletoInput.placeholder = "Nombres y apellidos del proveedor";
+        manejarResultadoPersonaProveedor(null, dni);
     }
 }
 
@@ -604,7 +598,7 @@ async function cargarActivos() {
                     ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
                     : 'N/A';
                 const fechaIngreso = p.fechaIngreso || datos.fechaIngreso
-                    ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE')
+                    ? new Date(p.fechaIngreso || datos.fechaIngreso).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
                     : 'N/A';
                 
                 const nombreCompleto = p.nombreCompleto || `${datos.nombres || ''} ${datos.apellidos || ''}`.trim() || 'N/A';
@@ -683,7 +677,7 @@ async function cargarActivos() {
                     html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="btn-danger btn-small">Salida (Def./Ret.)</button>`;
                     html += `<button onclick="irAHotelDesdePayload('${payloadHotel}')" class="btn-warning btn-small">Enviar a Hotel</button>`;
                     html += estaEnHabitacion
-                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar Habitacion</button><span class="estado-etiqueta estado-habitacion">Con habitacion</span>`
+                        ? `<button onclick="liberarHabitacionDesdePayload('${payloadLiberarHabitacion}')" class="btn-warning btn-small">Dejar Habitacion</button>`
                         : `<button onclick="irAHabitacionDesdePayload('${payloadHabitacion}')" class="btn-success btn-small">Enviar a Habitacion</button>`;
                 }
                 html += '</div>';

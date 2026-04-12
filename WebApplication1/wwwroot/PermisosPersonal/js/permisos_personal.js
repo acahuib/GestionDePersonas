@@ -1,2 +1,2 @@
-﻿// Script frontend para permisos_personal.
+// Script frontend para permisos_personal.
 

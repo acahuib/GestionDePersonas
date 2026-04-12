@@ -1,12 +1,11 @@
-﻿// Script frontend para control_bienes.
+// Script frontend para control_bienes.
 
 let personaEncontrada = null;
 let contadorBienes = 0;
 let bienesPendientes = [];
 let prefillNombreCompleto = null;
 
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+async function manejarResultadoPersonaControlBienes(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
@@ -17,6 +16,7 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         nombreCompletoInput.disabled = false;
         nombreCompletoInput.value = "";
+        nombreCompletoInput.placeholder = "Nombres y apellidos";
         bienesPendientes = [];
         renderBienesPendientes();
         if (pendingInfo) pendingInfo.style.display = "none";
@@ -24,19 +24,12 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        console.log(`📡 Response status: ${response.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
-            
+        if (persona) {
+            personaEncontrada = persona;
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
-            nombreCompletoInput.value = "";
+            nombreCompletoInput.value = personaEncontrada.nombre || "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
 
@@ -44,8 +37,7 @@ async function buscarPersonaPorDni() {
             
             const primerBien = document.querySelector(".bien-item .bien-descripcion");
             if (primerBien) primerBien.focus();
-        } else if (response.status === 404) {
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+        } else {
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
@@ -58,13 +50,9 @@ async function buscarPersonaPorDni() {
             } else {
                 nombreCompletoInput.focus();
             }
-        } else {
-            const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
-            throw new Error(error);
         }
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
+        console.error("? Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -91,7 +79,13 @@ async function prefillDesdePersonalLocal() {
 
     dniInput.value = dniParam.trim();
     prefillNombreCompleto = nombreParam ? nombreParam.trim() : null;
-    await buscarPersonaPorDni();
+
+    try {
+        const persona = await buscarPersonaPorDniUniversal(dniInput.value);
+        await manejarResultadoPersonaControlBienes(persona, dniInput.value.trim());
+    } catch {
+        await manejarResultadoPersonaControlBienes(null, dniInput.value.trim());
+    }
 }
 
 async function cargarBienesPendientesPorDni(dni) {
@@ -113,7 +107,7 @@ async function cargarBienesPendientesPorDni(dni) {
         if (pendingInfo) {
             pendingInfo.style.display = bienesPendientes.length > 0 ? "block" : "none";
             pendingInfo.innerHTML = bienesPendientes.length > 0
-                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarán automáticamente y no son editables.`
+                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservar�n autom�ticamente y no son editables.`
                 : "";
         }
     } catch {
@@ -136,7 +130,9 @@ function renderBienesPendientes() {
         const cantidad = bien.cantidad || 1;
         const marca = bien.marca ? ` | Marca: ${bien.marca}` : "";
         const serie = bien.serie ? ` | Serie: ${bien.serie}` : "";
-        const fechaIngreso = bien.fechaIngreso ? new Date(bien.fechaIngreso).toLocaleString("es-PE") : "N/A";
+        const fechaIngreso = bien.fechaIngreso
+            ? `${new Date(bien.fechaIngreso).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })} ${new Date(bien.fechaIngreso).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}`
+            : "N/A";
 
         return `<div class="cb-pendiente-item">
             <strong>Pendiente #${index + 1}</strong><br>
@@ -168,7 +164,7 @@ function agregarBien() {
         <h4 style="margin-top: 0; margin-bottom: 6px;">Bien #${bienId}</h4>
         <div class="cb-bien-grid cb-small-input">
             <div>
-                <label class="cb-label-tight">Descripción *</label>
+                <label class="cb-label-tight">Descripci�n *</label>
                 <input type="text" class="bien-descripcion" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
             </div>
             <div>
@@ -241,7 +237,7 @@ async function registrarIngreso() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -313,7 +309,7 @@ async function registrarIngreso() {
         document.getElementById("pendientes-info").style.display = "none";
         contadorBienes = 0;
         bienesPendientes = [];
-        agregarBien(); // Agregar un bien vacío
+        agregarBien(); // Agregar un bien vacio
         personaEncontrada = null;
         document.getElementById("dni").focus();
 
@@ -432,7 +428,7 @@ async function cargarActivos() {
                 ? bienesActivos.map(b => `${b.cantidad || 1}x ${b.descripcion || 'N/A'}`).join(", ")
                 : "N/A";
             const horaIngreso = s.horaIngreso ? new Date(s.horaIngreso).toLocaleTimeString("es-PE") : "N/A";
-            const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE") : "N/A";
+            const fechaIngreso = s.fechaIngreso ? new Date(s.fechaIngreso).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
             const observacion = datos.observacion || "";
             

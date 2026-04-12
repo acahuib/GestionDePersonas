@@ -66,18 +66,19 @@ namespace WebApplication1.Controllers
                         .ThenByDescending(m => m.Id)
                         .FirstOrDefaultAsync();
 
-                    if (ultimoMovimientoGlobal == null)
-                        return BadRequest("No se puede registrar salida: la persona no tiene movimiento previo de entrada.");
-
-                    var ultimoTipo = (ultimoMovimientoGlobal.TipoMovimiento ?? string.Empty).Trim();
-                    var estaDentro =
-                        string.Equals(ultimoTipo, "Entrada", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
-
-                    if (!estaDentro)
+                    // Permitir primer registro cuando no hay historial previo del DNI.
+                    if (ultimoMovimientoGlobal != null)
                     {
-                        var cuadernoOrigen = await _movimientosService.ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimientoGlobal);
-                        return BadRequest($"No se puede registrar salida: la persona ya se encuentra fuera con el DNI {dto.Dni.Trim()}. Último registro de salida: {cuadernoOrigen}. Revise ese cuaderno para completar el ingreso pendiente.");
+                        var ultimoTipo = (ultimoMovimientoGlobal.TipoMovimiento ?? string.Empty).Trim();
+                        var estaDentro =
+                            string.Equals(ultimoTipo, "Entrada", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(ultimoTipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
+
+                        if (!estaDentro)
+                        {
+                            var cuadernoOrigen = await _movimientosService.ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimientoGlobal);
+                            return BadRequest($"No se puede registrar salida: la persona ya se encuentra fuera con el DNI {dto.Dni.Trim()}. Último registro de salida: {cuadernoOrigen}. Revise ese cuaderno para completar el ingreso pendiente.");
+                        }
                     }
                 }
 

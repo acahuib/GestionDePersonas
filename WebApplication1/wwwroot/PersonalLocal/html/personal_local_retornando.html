@@ -29,7 +29,7 @@
 
         <div class="form-card">
             <h3>Registrar Ingreso de Personal Retornando</h3>
-            <p class="muted" style="margin-top: 8px;">Modo escaner: lea DNI y registre. Nombre, fecha y hora se completan automaticamente.</p>
+            <p class="muted" style="margin-top: 8px;">Modo escaner: lea DNI y registre. Tambien puede buscar por nombre para personas ya registradas y ajustar fecha/hora antes de guardar.</p>
             <p class="muted" style="margin-top: 6px;">Fecha/Hora actual: <strong id="fecha-hora-actual"></strong></p>
 
             <form id="form-ingreso-retornando" onsubmit="event.preventDefault(); registrarIngresoRetornando();">
@@ -41,31 +41,29 @@
                             id="dni"
                             maxlength="8"
                             required
-                            placeholder="12345678"
-                            onblur="buscarPersonaPorDni()"
-                            onkeypress="if(event.key==='Enter'){event.preventDefault(); buscarPersonaPorDni();}">
+                            placeholder="12345678">
                         <div id="persona-info" style="display:none; margin-top: 5px; padding: 8px; background: #d4edda; border-radius: 4px; color: #155724;">
                             <img src="/images/check-circle.svg"> Persona registrada: <strong id="persona-nombre"></strong>
                         </div>
                     </div>
 
-                    <div class="form-group" id="grupo-nombre-manual" style="display:none;">
-                        <label for="nombreApellidos">Nombre y Apellidos:</label>
+                    <div class="form-group" id="grupo-nombre-manual">
+                        <label for="nombreApellidos">Nombre y Apellidos (busqueda opcional):</label>
                         <input
                             type="text"
                             id="nombreApellidos"
-                            placeholder="Solo si DNI no esta registrado"
+                            placeholder="Buscar persona por nombre o escribir nombre completo"
                             onkeypress="if(event.key==='Enter'){event.preventDefault(); registrarIngresoRetornando();}">
                     </div>
                 </div>
 
-                <div class="form-group" style="display:none;">
-                    <label for="horaIngreso">Hora de Ingreso:</label>
+                <div class="form-group">
+                    <label for="horaIngreso">Fecha / Hora de Ingreso (editable):</label>
                     <input type="date" id="fechaIngreso" placeholder="Fecha de ingreso">
                     <input
                         type="time"
                         id="horaIngreso"
-                        placeholder="Dejar vacío para usar hora actual">
+                        placeholder="Dejar vacio para usar hora actual">
                 </div>
 
                 <p class="muted" style="margin-top: 8px;">En este cuaderno solo se registra el ingreso de personal retornando.</p>
@@ -112,7 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreApellidos"
+        nombreId: "nombreApellidos",
+        onDniResolved: manejarResultadoPersonaRetornando
     });
 });
 </script>

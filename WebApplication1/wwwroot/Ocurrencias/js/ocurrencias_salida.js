@@ -1,4 +1,4 @@
-﻿// Script frontend para ocurrencias_salida.
+// Script frontend para ocurrencias_salida.
 
 let salidaId = null;
 let ocurrencia = '';
@@ -223,7 +223,7 @@ function construirOcurrenciaDesdeDetalle(detalle) {
 
     const textoPersona = leerTexto('readonly-ocurrencia');
     if (!textoPersona) {
-        throw new Error('La descripción de ocurrencia es obligatoria');
+        throw new Error('La descripcion de ocurrencia es obligatoria');
     }
 
     return textoPersona;
@@ -269,7 +269,7 @@ function cargarDatos() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontr� el ID del registro de ingreso';
         return;
     }
 
@@ -285,7 +285,7 @@ function cargarDatos() {
     if (fechaInicial) {
         const fecha = new Date(fechaInicial);
         if (!isNaN(fecha.getTime())) {
-            document.getElementById('readonly-fecha-ingreso').value = fecha.toLocaleDateString('es-PE');
+            document.getElementById('readonly-fecha-ingreso').value = fecha.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
     }
     
@@ -306,7 +306,7 @@ async function registrarSalida() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontr� el ID del registro de ingreso';
         return;
     }
 
@@ -382,8 +382,8 @@ async function registrarSalida() {
 
         mensaje.className = 'success';
         mensaje.innerText = modoComplemento === 'ingreso'
-            ? `✅ INGRESO registrado correctamente${textoAcompanantes}`
-            : `✅ SALIDA registrada correctamente${textoAcompanantes}`;
+            ? `INGRESO registrado correctamente${textoAcompanantes}`
+            : `SALIDA registrada correctamente${textoAcompanantes}`;
 
         setTimeout(() => {
             window.location.href = 'ocurrencias.html?refresh=1';

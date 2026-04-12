@@ -1,4 +1,4 @@
-﻿// Script frontend para imagenes_complemento.
+// Script frontend para imagenes_complemento.
 
 (function () {
     if (window.imagenesComplemento) return;

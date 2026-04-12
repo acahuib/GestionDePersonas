@@ -729,6 +729,68 @@ namespace WebApplication1.Controllers
             return "Normal";
         }
 
+        private static DateOnly? ExtraerFechaCalendario(JsonElement root, string propiedad)
+        {
+            if (!root.TryGetProperty(propiedad, out var value))
+                return null;
+
+            try
+            {
+                if (value.ValueKind == JsonValueKind.String)
+                {
+                    var texto = value.GetString();
+                    if (string.IsNullOrWhiteSpace(texto))
+                        return null;
+
+                    if (texto.Length >= 10 && DateOnly.TryParseExact(texto[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fechaIso))
+                        return fechaIso;
+
+                    if (DateTime.TryParse(texto, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var fechaTexto))
+                        return DateOnly.FromDateTime(fechaTexto.Date);
+
+                    return null;
+                }
+
+                if (value.ValueKind == JsonValueKind.Number && value.TryGetDateTime(out var fechaNumero))
+                    return DateOnly.FromDateTime(fechaNumero.Date);
+
+                var fecha = value.GetDateTime();
+                return DateOnly.FromDateTime(fecha.Date);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string FormatearFechaCalendario(DateOnly fecha)
+        {
+            return $"{fecha:yyyy-MM-dd}T00:00:00";
+        }
+
+        private static JsonElement NormalizarDatosDiasLibre(JsonElement datosJson)
+        {
+            JsonObject nodo;
+            try
+            {
+                nodo = JsonNode.Parse(datosJson.GetRawText())?.AsObject() ?? new JsonObject();
+            }
+            catch
+            {
+                nodo = new JsonObject();
+            }
+
+            var del = ExtraerFechaCalendario(datosJson, "del");
+            var al = ExtraerFechaCalendario(datosJson, "al");
+            var trabaja = ExtraerFechaCalendario(datosJson, "trabaja");
+
+            if (del.HasValue) nodo["del"] = FormatearFechaCalendario(del.Value);
+            if (al.HasValue) nodo["al"] = FormatearFechaCalendario(al.Value);
+            if (trabaja.HasValue) nodo["trabaja"] = FormatearFechaCalendario(trabaja.Value);
+
+            return JsonSerializer.SerializeToElement(nodo);
+        }
+
         [HttpPost]
         public async Task<IActionResult> RegistrarSalidaGeneral(OperacionDetalleCreateDto dto)
         {
@@ -769,7 +831,9 @@ namespace WebApplication1.Controllers
                 id = salida.Id,
                 movimientoId = salida.MovimientoId,
                 tipoOperacion = salida.TipoOperacion,
-                datos = datosObj,
+                datos = string.Equals(salida.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase)
+                    ? NormalizarDatosDiasLibre(datosObj)
+                    : datosObj,
                 fechaCreacion = salida.FechaCreacion,
                 usuarioId = salida.UsuarioId,
                 dni = salida.Dni,
@@ -847,6 +911,9 @@ namespace WebApplication1.Controllers
             {
                 JsonElement FiltrarDatosPorTipo(string tipo, JsonElement datosJson)
                 {
+                    if (string.Equals(tipo, "DiasLibre", StringComparison.OrdinalIgnoreCase))
+                        return NormalizarDatosDiasLibre(datosJson);
+
                     if (!string.Equals(tipo, "Proveedor", StringComparison.OrdinalIgnoreCase))
                         return datosJson;
 

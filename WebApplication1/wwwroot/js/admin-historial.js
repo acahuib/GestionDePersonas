@@ -1,4 +1,4 @@
-﻿// Script frontend para admin-historial.
+// Script frontend para admin-historial.
 
 const TIPOS_OPERACION = {
     Proveedor: "Proveedores",
@@ -219,7 +219,7 @@ function formatearFecha(valor) {
     if (!valor) return "-";
     const fecha = new Date(valor);
     if (Number.isNaN(fecha.getTime())) return "-";
-    return fecha.toLocaleDateString("es-PE");
+    return fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatearHora(valor) {

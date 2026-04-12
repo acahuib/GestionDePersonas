@@ -1,4 +1,4 @@
-﻿// Script frontend para imagenes_registro.
+// Script frontend para imagenes_registro.
 
 (function () {
     if (window.abrirImagenesRegistroModal) return;

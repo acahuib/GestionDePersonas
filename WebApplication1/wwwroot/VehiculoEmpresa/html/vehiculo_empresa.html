@@ -143,22 +143,12 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, "vehiculo_empresa.html");
     }
 
-    // Detectar ENTER y BLUR en el campo DNI
-    const dniInput = document.getElementById("dni");
     const tipoInicial = document.getElementById("tipoInicial");
     tipoInicial.addEventListener("change", actualizarFormularioPorTipoInicial);
     actualizarFormularioPorTipoInicial();
     inicializarDesdeOcurrenciaEspecial();
     inicializarPreviewImagenesVehiculoEmpresa();
     inicializarAcompanantesPendientesVehiculo();
-
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
-        }
-    });
     
     addEnterListener("conductor", () => document.getElementById("placa").focus());
     addEnterListener("placa", () => document.getElementById("kmMovimiento").focus());
@@ -168,7 +158,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "conductor"
+        nombreId: "conductor",
+        onDniResolved: manejarResultadoPersonaVehiculoEmpresa
     });
 });
 </script>

@@ -1,4 +1,4 @@
-﻿// Script frontend para registro_guardias_turno.
+// Script frontend para registro_guardias_turno.
 
 const CONFIG_TURNOS_GUARDIAS = {
     "7am-7pm": {
@@ -24,12 +24,12 @@ let permiteCambioTurno = false;
 let guardandoGuardias = false;
 
 function obtenerMensajePlanoRGT(error) {
-    if (!error) return "No se pudo completar la operación.";
+    if (!error) return "No se pudo completar la operacion.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operacion.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operacion.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
@@ -208,7 +208,7 @@ async function verificarEstadoGuardiasTurno(mostrarMensajeEstado = true) {
         if (mensaje && mostrarMensajeEstado) {
             mensaje.className = permiteCambioTurno ? "success" : "error";
             mensaje.innerText = permiteCambioTurno
-                ? `Turno dia ya registrado en fecha operativa ${fechaOperativa}. Si hubo relevo, use el botón "Registrar cambio de turno".`
+                ? `Turno dia ya registrado en fecha operativa ${fechaOperativa}. Si hubo relevo, use el boton "Registrar cambio de turno".`
                 : `Ya se registraron guardias para ${turnoTextoRGT(turno)} en fecha operativa ${fechaOperativa}.`;
         }
     } catch {
@@ -382,7 +382,7 @@ async function cargarRegistrosDia() {
                 ? new Date(r.fechaCreacion).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
                 : "-";
 
-            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">— registrado a las ${horaReg}</span></h4>`;
+            html += `<h4 style="margin: 12px 0 6px;">${turnoTextoRGT(turno)} <span class="muted" style="font-weight:normal;font-size:.85em;">Registrado a las ${horaReg}</span></h4>`;
             html += '<div class="table-wrapper"><table class="table"><thead><tr><th>Puesto / Zona</th><th>Guardia</th></tr></thead><tbody>';
 
             if (guardiasGarita.length) {

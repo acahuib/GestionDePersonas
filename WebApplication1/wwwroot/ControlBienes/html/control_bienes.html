@@ -206,16 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, "control_bienes.html");
     }
 
-    // Detectar ENTER en los campos
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
-        }
-    });
-    
+    // Flujo unificado DNI/nombre con helper reusable.
     addEnterListener("nombreCompleto", () => {
         const primerBien = document.querySelector(".bien-item input[placeholder='Ej: Laptop, Termo, etc.']");
         if (primerBien) primerBien.focus();
@@ -230,7 +221,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreCompleto"
+        nombreId: "nombreCompleto",
+        onDniResolved: manejarResultadoPersonaControlBienes
     });
 
     prefillDesdePersonalLocal();

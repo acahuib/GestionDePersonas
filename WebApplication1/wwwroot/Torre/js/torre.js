@@ -69,7 +69,7 @@ function torreFormatearFechaHora(raw) {
     if (Number.isNaN(dt.getTime())) return { fecha: "-", hora: "-", ts: 0 };
 
     return {
-        fecha: dt.toLocaleDateString("es-PE"),
+        fecha: dt.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }),
         hora: dt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
         ts: dt.getTime()
     };
@@ -113,6 +113,9 @@ function torreExtraerGuardia(datos) {
 
 function torreArmarResumen(datos) {
     const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
+    const tipoCierre = String(datos?.tipoCierreAdministrativo || "").trim().toLowerCase();
+    const motivoCierre = String(datos?.motivoCierreAdministrativo || "").trim().toLowerCase();
+    const esSalidaDiasLibres = cierreAdministrativo && (tipoCierre === "salidadiaslibres" || motivoCierre.includes("dias libre"));
     const camposClave = [
         datos.procedencia,
         datos.destino,
@@ -128,7 +131,7 @@ function torreArmarResumen(datos) {
     ].filter((v) => v !== undefined && v !== null && String(v).trim() !== "");
 
     if (cierreAdministrativo && !camposClave.length) {
-        camposClave.push("Cierre administrativo");
+        camposClave.push(esSalidaDiasLibres ? "Salida de dias libres" : "Cierre administrativo");
     }
 
     if (!camposClave.length) return "Sin resumen";
@@ -139,6 +142,9 @@ function torreArmarResumen(datos) {
 
 function torreExtraerDetalles(datos) {
     const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
+    const tipoCierre = String(datos?.tipoCierreAdministrativo || "").trim().toLowerCase();
+    const motivoCierre = String(datos?.motivoCierreAdministrativo || "").trim().toLowerCase();
+    const esSalidaDiasLibres = cierreAdministrativo && (tipoCierre === "salidadiaslibres" || motivoCierre.includes("dias libre"));
 
     const detalleMap = {
         tipoRegistro: "Tipo ruta",
@@ -168,7 +174,7 @@ function torreExtraerDetalles(datos) {
 
     const detalles = [];
     if (cierreAdministrativo) {
-        detalles.push("Estado: Cerrado administrativamente");
+        detalles.push(esSalidaDiasLibres ? "Estado: Salida de dias libres" : "Estado: Cerrado administrativamente");
     }
 
     Object.entries(detalleMap).forEach(([k, lbl]) => {
@@ -181,7 +187,7 @@ function torreExtraerDetalles(datos) {
         const fecha = new Date(datos.fechaCierreAdministrativo);
         const fechaTexto = Number.isNaN(fecha.getTime())
             ? String(datos.fechaCierreAdministrativo)
-            : `${fecha.toLocaleDateString("es-PE")} ${fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`;
+            : `${fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })} ${fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`;
         detalles.push(`Fecha cierre: ${fechaTexto}`);
     }
 

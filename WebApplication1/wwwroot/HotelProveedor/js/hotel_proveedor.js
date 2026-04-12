@@ -1,4 +1,4 @@
-﻿// Script frontend para hotel_proveedor.
+// Script frontend para hotel_proveedor.
 
 let personaEncontrada = null;
 const DESTINOS_PROVEEDOR = [
@@ -53,6 +53,16 @@ function cargarPrefillDesdeProveedor() {
 
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni").value.trim();
+    try {
+        const persona = await buscarPersonaPorDniUniversal(dni);
+        manejarResultadoPersonaHotelProveedor(persona, dni);
+    } catch (error) {
+        console.error("Error al buscar persona:", error);
+        manejarResultadoPersonaHotelProveedor(null, dni);
+    }
+}
+
+function manejarResultadoPersonaHotelProveedor(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreInput = document.getElementById("nombre");
@@ -62,40 +72,26 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         nombreInput.disabled = false;
         nombreInput.value = "";
+        nombreInput.placeholder = "Nombre completo";
         return;
     }
 
-    try {
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            personaNombre.textContent = personaEncontrada.nombre;
-            personaInfo.style.display = "block";
-            nombreInput.value = "";
-            nombreInput.disabled = true;
-            nombreInput.placeholder = "(Ya registrado)";
-            document.getElementById("ticket").focus();
-            return;
-        }
-
-        if (response.status === 404) {
-            personaEncontrada = null;
-            personaInfo.style.display = "none";
-            nombreInput.disabled = false;
-            nombreInput.placeholder = "Nombre completo";
-            nombreInput.focus();
-            return;
-        }
-
-        const error = await readApiError(response);
-        throw new Error(error || "No se pudo consultar persona");
-    } catch (error) {
-        console.error("Error al buscar persona:", error);
-        personaEncontrada = null;
-        personaInfo.style.display = "none";
-        nombreInput.disabled = false;
-        nombreInput.placeholder = "Nombre completo";
+    if (persona) {
+        personaEncontrada = persona;
+        personaNombre.textContent = personaEncontrada.nombre;
+        personaInfo.style.display = "block";
+        nombreInput.value = personaEncontrada.nombre || "";
+        nombreInput.disabled = true;
+        nombreInput.placeholder = "(Ya registrado)";
+        document.getElementById("ticket").focus();
+        return;
     }
+
+    personaEncontrada = null;
+    personaInfo.style.display = "none";
+    nombreInput.disabled = false;
+    nombreInput.placeholder = "Nombre completo";
+    nombreInput.focus();
 }
 
 async function registrarSalidaHotel() {
@@ -121,7 +117,7 @@ async function registrarSalidaHotel() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -188,7 +184,7 @@ async function registrarSalidaHotel() {
 async function registrarIngresoHotel(id) {
     if (!id) return;
 
-    const confirmar = await window.appDialog.confirm("¿Registrar ingreso (retorno) desde hotel para este proveedor?", "Confirmar ingreso");
+    const confirmar = await window.appDialog.confirm("\u00BFRegistrar ingreso (retorno) desde hotel para este proveedor?", "Confirmar ingreso");
     if (!confirmar) return;
 
     try {
@@ -243,7 +239,7 @@ async function cerrarDefinitivoHotel(id) {
         return;
     }
 
-    const confirmar = await window.appDialog.confirm("Este registro se cerrara sin retorno. ¿Desea continuar?", "Confirmar cierre");
+    const confirmar = await window.appDialog.confirm("Este registro se cerrara sin retorno. \u00BFDesea continuar?", "Confirmar cierre");
     if (!confirmar) return;
 
     try {
@@ -291,7 +287,7 @@ async function cargarPendientesIngreso() {
         }
 
         let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
-        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo Habitación</th><th>Número Personas</th><th>Fecha / Hora Salida</th><th>Guardia Salida</th><th>Retorno</th>';
+        html += '<th>DNI</th><th>Nombre</th><th>Ticket</th><th>Tipo Habitacion</th><th>Numero Personas</th><th>Fecha / Hora Salida</th><th>Guardia Salida</th><th>Retorno</th>';
         html += '</tr></thead><tbody>';
 
         pendientes
@@ -302,7 +298,7 @@ async function cargarPendientesIngreso() {
                     ? new Date(item.horaSalida).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
                     : "N/A";
                 const fechaSalida = item.fechaSalida || datos.fechaSalida
-                    ? new Date(item.fechaSalida || datos.fechaSalida).toLocaleDateString("es-PE")
+                    ? new Date(item.fechaSalida || datos.fechaSalida).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })
                     : "N/A";
 
                 html += "<tr>";
@@ -315,7 +311,7 @@ async function cargarPendientesIngreso() {
                 html += `<td>${datos.guardiaSalida || "-"}</td>`;
                 html += '<td style="display:flex; gap:6px; flex-wrap:wrap;">';
                 html += `<select id="hotel-destino-${item.id}" class="retorno-input retorno-input-destino">${construirOpcionesDestinoHotel("EN ESPERA")}</select>`;
-                html += `<input type="text" id="hotel-observacion-${item.id}" class="retorno-input retorno-input-observacion" placeholder="Observación (opcional)">`;
+                html += `<input type="text" id="hotel-observacion-${item.id}" class="retorno-input retorno-input-observacion" placeholder="Observacion (opcional)">`;
                 html += `<button class="btn-success btn-small" onclick="registrarIngresoHotel(${item.id})">Ingreso (retorno)</button>`;
                 html += `<button class="btn-danger btn-small" onclick="cerrarDefinitivoHotel(${item.id})">Cerrar sin retorno</button>`;
                 html += '</td>';

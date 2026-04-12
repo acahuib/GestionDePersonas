@@ -1,4 +1,4 @@
-﻿// Script frontend para historial.
+// Script frontend para historial.
 
 const TIPOS_OPERACION = {
     Proveedor: "Proveedores",
@@ -19,8 +19,7 @@ const TIPOS_OPERACION = {
 const TIPOS_DISPONIBLES = Object.keys(TIPOS_OPERACION);
 
 const COLUMNAS = [
-    { key: "fechaReferencia", label: "Fecha" },
-    { key: "horaReferencia", label: "Hora" },
+    { key: "fechaHora", label: "Fecha/Hora" },
     { key: "tipoLabel", label: "Tipo" },
     { key: "movimiento", label: "Movimiento" },
     { key: "dni", label: "DNI" },
@@ -83,38 +82,99 @@ function obtenerLabelTipoConContexto(tipoOperacion, datos) {
 }
 
 function limpiarTextoDetalle(texto) {
-    return String(texto).replace(/\n/g, "; ").trim();
+    return String(texto)
+        .replace(/\n/g, "; ")
+        .replace(/\s*\|\s*/g, ", ")
+        .trim();
+}
+
+function escaparHtmlHistorial(texto) {
+    return String(texto ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function formatearFechaHora(valor) {
+    if (!valor) return "-";
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return "-";
+    const fechaTxt = fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const horaTxt = fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${fechaTxt} ${horaTxt}`;
 }
 
 function construirDetalle(item) {
-    const partes = [];
+    const partesTexto = [];
+    const partesHtml = [];
+    const formatearValorOcurrenciaHtml = (valor) => {
+        const limpio = limpiarTextoDetalle(valor);
+        if (!limpio || limpio === "-") return "-";
 
-    if (item.proveedor && item.proveedor !== "-") partes.push(`Proveedor: ${limpiarTextoDetalle(item.proveedor)}`);
-    if (item.placa && item.placa !== "-") partes.push(`Placa: ${limpiarTextoDetalle(item.placa)}`);
-    if (item.procedencia && item.procedencia !== "-") partes.push(`Procedencia: ${limpiarTextoDetalle(item.procedencia)}`);
-    if (item.destino && item.destino !== "-") partes.push(`Destino: ${limpiarTextoDetalle(item.destino)}`);
-    if (item.origen && item.origen !== "-") partes.push(`Origen: ${limpiarTextoDetalle(item.origen)}`);
-    if (item.destinoSalida && item.destinoSalida !== "-") partes.push(`Destino salida: ${limpiarTextoDetalle(item.destinoSalida)}`);
-    if (item.cuarto && item.cuarto !== "-") partes.push(`Cuarto: ${limpiarTextoDetalle(item.cuarto)}`);
-    if (item.bienes && item.bienes !== "-") partes.push(`Bienes: ${limpiarTextoDetalle(item.bienes)}`);
-    if (item.objetos && item.objetos !== "-") partes.push(`Objetos: ${limpiarTextoDetalle(item.objetos)}`);
-    if (item.ocurrencia && item.ocurrencia !== "-") partes.push(`Ocurrencia: ${limpiarTextoDetalle(item.ocurrencia)}`);
-    if (item.categoria && item.categoria !== "-") partes.push(`Categoria: ${limpiarTextoDetalle(item.categoria)}`);
-    if (item.ticket && item.ticket !== "-") partes.push(`Ticket: ${limpiarTextoDetalle(item.ticket)}`);
-    if (item.tipoHabitacion && item.tipoHabitacion !== "-") partes.push(`Tipo habitacion: ${limpiarTextoDetalle(item.tipoHabitacion)}`);
-    if (item.numeroPersonas && item.numeroPersonas !== "-") partes.push(`Personas: ${limpiarTextoDetalle(item.numeroPersonas)}`);
-    if (item.equipoA && item.equipoA !== "-") partes.push(`Equipo A: ${limpiarTextoDetalle(item.equipoA)}`);
-    if (item.equipoB && item.equipoB !== "-") partes.push(`Equipo B: ${limpiarTextoDetalle(item.equipoB)}`);
-    if (item.estado && item.estado !== "-") partes.push(`Estado: ${limpiarTextoDetalle(item.estado)}`);
-    if (item.observacionCierre && item.observacionCierre !== "-") {
-        partes.push(`Observacion cierre: ${limpiarTextoDetalle(item.observacionCierre)}`);
-    }
-    if (item.observacion && item.observacion.trim()) partes.push(`Obs: ${limpiarTextoDetalle(item.observacion)}`);
+        const piezas = limpio
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean);
+
+        if (!piezas.length) return escaparHtmlHistorial(limpio);
+
+        return piezas.map((pieza) => {
+            const tipoMatch = pieza.match(/^\[TIPO:\s*([^\]]+)\]$/i);
+            if (tipoMatch) {
+                return `<strong>TIPO:</strong> ${escaparHtmlHistorial(tipoMatch[1])}`;
+            }
+
+            const idx = pieza.indexOf(":");
+            if (idx <= 0) {
+                return escaparHtmlHistorial(pieza);
+            }
+
+            const clave = pieza.slice(0, idx).trim();
+            const contenido = pieza.slice(idx + 1).trim();
+            return `<strong>${escaparHtmlHistorial(clave)}:</strong> ${escaparHtmlHistorial(contenido)}`;
+        }).join(", ");
+    };
+
+    const agregar = (label, valor, formateadorHtml = null) => {
+        if (valor === undefined || valor === null) return;
+        const limpio = limpiarTextoDetalle(valor);
+        if (!limpio || limpio === "-") return;
+        partesTexto.push(`${label}: ${limpio}`);
+        const valorHtml = typeof formateadorHtml === "function"
+            ? formateadorHtml(valor)
+            : escaparHtmlHistorial(limpio);
+        partesHtml.push(`<strong>${escaparHtmlHistorial(label)}:</strong> ${valorHtml}`);
+    };
+
+    agregar("Proveedor", item.proveedor);
+    agregar("Placa", item.placa);
+    agregar("Procedencia", item.procedencia);
+    agregar("Destino", item.destino);
+    agregar("Origen", item.origen);
+    agregar("Destino salida", item.destinoSalida);
+    agregar("Cuarto", item.cuarto);
+    agregar("Bienes", item.bienes);
+    agregar("Objetos", item.objetos);
+    agregar("Ocurrencia", item.ocurrencia, formatearValorOcurrenciaHtml);
+    agregar("Categoria", item.categoria);
+    agregar("Ticket", item.ticket);
+    agregar("Tipo habitacion", item.tipoHabitacion);
+    agregar("Personas", item.numeroPersonas);
+    agregar("Equipo A", item.equipoA);
+    agregar("Equipo B", item.equipoB);
+    agregar("Estado", item.estado);
+    agregar("Observacion cierre", item.observacionCierre);
+    if (item.observacion && item.observacion.trim()) agregar("Obs", item.observacion);
     if (item.observaciones && item.observaciones.trim() && item.observaciones !== item.observacion) {
-        partes.push(`Obs: ${limpiarTextoDetalle(item.observaciones)}`);
+        agregar("Obs", item.observaciones);
     }
 
-    return partes.length ? partes.join(" | ") : "-";
+    return {
+        texto: partesTexto.length ? partesTexto.join(", ") : "-",
+        html: partesHtml.length ? partesHtml.join(", ") : "-"
+    };
 }
 
 function normalizarDatos(item) {
@@ -209,17 +269,34 @@ function normalizarDatos(item) {
     };
 
     const movimiento = obtenerMovimiento(base);
-    const horaReferencia = base.horaIngreso !== "-"
-        ? base.horaIngreso
-        : base.horaSalida !== "-"
-            ? base.horaSalida
-            : base.horaRegistro || "-";
+    const ingresoFechaHora = horaIngreso ? formatearFechaHora(horaIngreso) : "-";
+    const salidaFechaHora = horaSalida ? formatearFechaHora(horaSalida) : "-";
+    const partesFechaHora = [];
+    const partesFechaHoraHtml = [];
+
+    if (ingresoFechaHora !== "-") {
+        partesFechaHora.push(`Ingreso: ${ingresoFechaHora}`);
+        partesFechaHoraHtml.push(`<div><strong>Ingreso:</strong> ${escaparHtmlHistorial(ingresoFechaHora)}</div>`);
+    }
+    if (salidaFechaHora !== "-") {
+        partesFechaHora.push(`Salida: ${salidaFechaHora}`);
+        partesFechaHoraHtml.push(`<div><strong>Salida:</strong> ${escaparHtmlHistorial(salidaFechaHora)}</div>`);
+    }
+    if (!partesFechaHora.length) {
+        const registroFechaHora = formatearFechaHora(item.fechaCreacion);
+        partesFechaHora.push(`Registro: ${registroFechaHora}`);
+        partesFechaHoraHtml.push(`<div><strong>Registro:</strong> ${escaparHtmlHistorial(registroFechaHora)}</div>`);
+    }
+
+    const detalleConstruido = construirDetalle(base);
 
     return {
         ...base,
         movimiento,
-        horaReferencia,
-        detalle: construirDetalle(base)
+        fechaHora: partesFechaHora.join(", "),
+        fechaHoraHtml: partesFechaHoraHtml.join(""),
+        detalle: detalleConstruido.texto,
+        detalleHtml: detalleConstruido.html
     };
 }
 
@@ -241,14 +318,14 @@ function formatearFecha(valor) {
     if (!valor) return "-";
     const fecha = new Date(valor);
     if (Number.isNaN(fecha.getTime())) return "-";
-    return fecha.toLocaleDateString("es-PE");
+    return fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatearHora(valor) {
     if (!valor) return "-";
     const fecha = new Date(valor);
     if (Number.isNaN(fecha.getTime())) return "-";
-    return fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+    return fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 async function cargarHistorial() {
@@ -340,7 +417,13 @@ function renderizarTabla() {
             .map(item => {
                 const cells = COLUMNAS
                     .map(col => {
-                        const value = item[col.key] ?? "-";
+                        let value = item[col.key] ?? "-";
+                        if (col.key === "fechaHora") {
+                            value = item.fechaHoraHtml || value;
+                        }
+                        if (col.key === "detalle") {
+                            value = item.detalleHtml || value;
+                        }
                         const display = String(value).replace(/\n/g, "<br>");
                         return `<td>${display}</td>`;
                     })

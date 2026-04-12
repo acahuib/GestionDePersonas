@@ -1,9 +1,39 @@
-﻿// Script frontend para cancha.
+// Script frontend para cancha.
 
 let personaEncontrada = null;
 
 const AUTOCOMPLETE_DELAY = 300;
 const AUTOCOMPLETE_MIN = 2;
+
+function manejarResultadoPersonaCancha(persona, dni) {
+    const personaInfo = document.getElementById("persona-info");
+    const personaNombre = document.getElementById("persona-nombre");
+    const nombreInput = document.getElementById("nombrePersona");
+    const mensaje = document.getElementById("mensaje");
+
+    if (mensaje) {
+        mensaje.className = "";
+        mensaje.innerText = "";
+    }
+
+    if (!persona) {
+        personaEncontrada = null;
+        personaInfo.style.display = "none";
+        nombreInput.value = "";
+
+        if (dni && dni.length === 8 && !isNaN(dni) && mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = "DNI no registrado. Debe existir en la base de datos.";
+        }
+
+        return;
+    }
+
+    personaEncontrada = persona;
+    personaNombre.textContent = persona.nombre || "-";
+    personaInfo.style.display = "block";
+    nombreInput.value = persona.nombre || "";
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     verificarAutenticacion();
@@ -19,58 +49,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     cargarRegistrosActivos();
 
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
-        }
+    habilitarAutocompletePersona({
+        dniId: "dni",
+        nombreId: "nombrePersona",
+        enableDniToNombre: true,
+        onDniResolved: manejarResultadoPersonaCancha
     });
 });
-
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
-    const personaInfo = document.getElementById("persona-info");
-    const personaNombre = document.getElementById("persona-nombre");
-    const nombreInput = document.getElementById("nombrePersona");
-    const mensaje = document.getElementById("mensaje");
-
-    mensaje.className = "";
-    mensaje.innerText = "";
-
-    if (dni.length !== 8 || isNaN(dni)) {
-        personaInfo.style.display = "none";
-        personaEncontrada = null;
-        nombreInput.value = "";
-        return;
-    }
-
-    try {
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            personaNombre.textContent = personaEncontrada.nombre || "-";
-            personaInfo.style.display = "block";
-            nombreInput.value = personaEncontrada.nombre || "";
-        } else if (response.status === 404) {
-            personaEncontrada = null;
-            personaInfo.style.display = "none";
-            nombreInput.value = "";
-            mensaje.className = "error";
-            mensaje.innerText = "DNI no registrado. Debe existir en la base de datos.";
-        } else {
-            const error = await readApiError(response);
-            throw new Error(error || "No se pudo validar el DNI");
-        }
-    } catch (error) {
-        personaEncontrada = null;
-        personaInfo.style.display = "none";
-        nombreInput.value = "";
-        mensaje.className = "error";
-        mensaje.innerText = `${getPlainErrorMessage(error)}`;
-    }
-}
 
 function agregarIntegrante(equipo) {
     const container = document.getElementById(`equipo${equipo}-container`);
@@ -247,7 +232,7 @@ async function cargarRegistrosActivos() {
 
         registrosActivos.forEach((r) => {
             const datos = r.datos || {};
-            const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE") : "-";
+            const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
             const hora = datos.hora || "-";
             const estado = datos.estado || "Reservado";
             const observacion = datos.observacionCierre || "";

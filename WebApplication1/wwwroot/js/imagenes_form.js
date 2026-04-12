@@ -1,4 +1,4 @@
-﻿// Script frontend para imagenes_form.
+// Script frontend para imagenes_form.
 
 (function () {
     if (window.imagenesForm) return;

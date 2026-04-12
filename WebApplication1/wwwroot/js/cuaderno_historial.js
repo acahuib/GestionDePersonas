@@ -1,4 +1,4 @@
-﻿// Script frontend para cuaderno_historial.
+// Script frontend para cuaderno_historial.
 
 async function initCuadernoHistorial() {
     const container = document.querySelector("[data-cuaderno-historial]");
@@ -71,7 +71,19 @@ async function initCuadernoHistorial() {
         if (!valor) return "-";
         const fecha = new Date(valor);
         if (Number.isNaN(fecha.getTime())) return "-";
-        return fecha.toLocaleDateString("es-PE");
+        return fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    };
+
+    const calcularDiasIncluidos = (delValor, alValor) => {
+        const del = new Date(delValor || "");
+        const al = new Date(alValor || "");
+        if (Number.isNaN(del.getTime()) || Number.isNaN(al.getTime())) return "-";
+
+        const inicio = new Date(del.getFullYear(), del.getMonth(), del.getDate());
+        const fin = new Date(al.getFullYear(), al.getMonth(), al.getDate());
+        const diferencia = Math.floor((fin.getTime() - inicio.getTime()) / 86400000) + 1;
+        if (diferencia < 1) return "-";
+        return String(diferencia);
     };
 
     const escaparHtml = (texto) => {
@@ -102,7 +114,7 @@ async function initCuadernoHistorial() {
         if (!valor) return "-";
         const fecha = new Date(valor);
         if (Number.isNaN(fecha.getTime())) return "-";
-        const fechaTxt = fecha.toLocaleDateString("es-PE");
+        const fechaTxt = fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
         const horaTxt = fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
         return `${fechaTxt} ${horaTxt}`;
     };
@@ -110,6 +122,9 @@ async function initCuadernoHistorial() {
     const construirDetalle = (datos) => {
         const partes = [];
         const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
+        const tipoCierre = String(datos?.tipoCierreAdministrativo || "").trim().toLowerCase();
+        const motivoCierre = String(datos?.motivoCierreAdministrativo || "").trim().toLowerCase();
+        const esSalidaDiasLibres = cierreAdministrativo && (tipoCierre === "salidadiaslibres" || motivoCierre.includes("dias libre"));
         const pushIf = (label, valor) => {
             if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
                 partes.push({
@@ -120,7 +135,7 @@ async function initCuadernoHistorial() {
         };
 
         if (cierreAdministrativo) {
-            pushIf("Estado cierre", "Cerrado administrativamente");
+            pushIf("Estado cierre", esSalidaDiasLibres ? "Salida de dias libres" : "Cerrado administrativamente");
         }
 
         pushIf("Proveedor", datos.proveedor);
@@ -256,11 +271,11 @@ async function initCuadernoHistorial() {
         };
 
         const lowerRaw = raw.toLowerCase();
-        if (lowerRaw.startsWith("acompañando a") && raw.includes(";") && raw.includes("[TIPO:")) {
+        if (lowerRaw.startsWith("acompanando a") && raw.includes(";") && raw.includes("[TIPO:")) {
             const idxSep = raw.indexOf(";");
             const cabecera = raw.substring(0, idxSep).trim();
             const detalleTipado = raw.substring(idxSep + 1).trim();
-            const acomp = cabecera.replace(/^acompañando a\s*/i, "").trim();
+            const acomp = cabecera.replace(/^acompanando a\s*/i, "").trim();
 
             const detalleInterno = parsearDetalleOcurrencia(detalleTipado);
             return {
@@ -309,7 +324,7 @@ async function initCuadernoHistorial() {
             partes.push(`<div class="detalle-item"><strong>${escaparHtml(label)}:</strong> ${escaparHtml(texto)}</div>`);
         };
 
-        pushIf("Acompañando a", detalle?.acompanandoA);
+        pushIf("Acompanando a", detalle?.acompanandoA);
 
         const parsearCamposDesdeTexto = (textoRaw) => {
             const texto = String(textoRaw || "").trim();
@@ -381,6 +396,24 @@ async function initCuadernoHistorial() {
         if (!thead) return;
 
         if (vistaHistorial === "entradas-salidas") {
+            if (tipoOperacion === "DiasLibre") {
+                thead.innerHTML = `
+                    <tr>
+                        <th>DNI</th>
+                        <th>Nombre</th>
+                        <th>Del</th>
+                        <th>Al</th>
+                        <th>Trabaja</th>
+                        <th>Dias libres</th>
+                        <th>Hora registro</th>
+                        <th>Guardia</th>
+                        <th>Detalle</th>
+                        <th>Imagenes</th>
+                    </tr>
+                `;
+                return;
+            }
+
             if (tipoOperacion === "Ocurrencias") {
                 thead.innerHTML = `
                     <tr>
@@ -494,6 +527,10 @@ async function initCuadernoHistorial() {
             horaReferencia: formatearHora(horaIngreso || horaSalida || item.fechaCreacion),
             movimiento: obtenerMovimiento(item, datos),
             guardia,
+            delDiasLibre: formatearFecha(datos.del),
+            alDiasLibre: formatearFecha(datos.al),
+            trabajaDiasLibre: formatearFecha(datos.trabaja),
+            diasLibres: calcularDiasIncluidos(datos.del, datos.al),
             detalle: detalle.html,
             ocurrenciaDetalle,
             kmSalida: (datos.kmSalida ?? "-").toString(),
@@ -566,7 +603,7 @@ async function initCuadernoHistorial() {
         paginacion.innerHTML = `
             <span class="muted">Mostrando ${desde}-${hasta} de ${totalRegistros}</span>
             <button type="button" class="btn-inline btn-small" data-historial-prev ${paginaActual === 1 ? "disabled" : ""}>Anterior</button>
-            <span class="muted">Página ${paginaActual}/${totalPaginas}</span>
+            <span class="muted">Pagina ${paginaActual}/${totalPaginas}</span>
             <button type="button" class="btn-inline btn-small" data-historial-next ${paginaActual === totalPaginas ? "disabled" : ""}>Siguiente</button>
         `;
 
@@ -594,7 +631,7 @@ async function initCuadernoHistorial() {
         if (!tbody) return;
 
         const totalColumnas = vistaHistorial === "entradas-salidas"
-            ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7))
+            ? (tipoOperacion === "DiasLibre" ? 10 : (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7)))
             : 6;
 
         if (!items.length) {
@@ -617,6 +654,23 @@ async function initCuadernoHistorial() {
         const rows = visibles
             .map((item) => {
                 if (vistaHistorial === "entradas-salidas") {
+                    if (tipoOperacion === "DiasLibre") {
+                        return `
+                            <tr>
+                                <td>${item.dni}</td>
+                                <td>${item.nombre}</td>
+                                <td>${item.delDiasLibre}</td>
+                                <td>${item.alDiasLibre}</td>
+                                <td>${item.trabajaDiasLibre}</td>
+                                <td>${item.diasLibres}</td>
+                                <td>${item.horaSalida || "-"}</td>
+                                <td>${item.guardiaSalida || item.guardia || "-"}</td>
+                                <td>${item.detalle}</td>
+                                <td><button type="button" class="btn-inline btn-small" onclick="abrirImagenesRegistroModal(${item.id})">Ver imagenes</button></td>
+                            </tr>
+                        `;
+                    }
+
                     if (tipoOperacion === "Ocurrencias") {
                         const detalle = item.ocurrenciaDetalle || {};
                         const detalleTipoHtml = construirDetalleTipoOcurrenciaHtml(detalle);
@@ -680,7 +734,7 @@ async function initCuadernoHistorial() {
             .join("");
 
         tbody.innerHTML = rows;
-        if (resumen) resumen.textContent = `${items.length} registros | Página ${paginaActual}/${totalPaginas}`;
+        if (resumen) resumen.textContent = `${items.length} registros | Pagina ${paginaActual}/${totalPaginas}`;
         renderPaginacion(items.length, totalPaginas);
     };
 
@@ -724,7 +778,7 @@ async function initCuadernoHistorial() {
             if (resumen) resumen.textContent = mensaje;
             if (tbody) {
                 const totalColumnas = vistaHistorial === "entradas-salidas"
-                    ? (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7))
+                    ? (tipoOperacion === "DiasLibre" ? 10 : (tipoOperacion === "Ocurrencias" ? 9 : (tipoOperacion === "Proveedor" ? 8 : tipoOperacion === "VehiculoEmpresa" ? 9 : tipoOperacion === "VehiculosProveedores" ? 8 : 7)))
                     : 6;
                 tbody.innerHTML = `<tr><td colspan="${totalColumnas}">Sin registros.</td></tr>`;
             }

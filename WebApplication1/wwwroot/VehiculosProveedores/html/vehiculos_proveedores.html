@@ -119,16 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, "vehiculos_proveedores.html");
     }
 
-    // Detectar ENTER y BLUR en el campo DNI
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
-        }
-    });
-    
+    // Flujo unificado DNI/nombre con helper reusable.
     addEnterListener("placa", () => document.getElementById("nombreCompleto").focus());
     addEnterListener("nombreCompleto", () => document.getElementById("tipo").focus());
     addEnterListener("tipo", () => document.getElementById("cantidad").focus());
@@ -146,7 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreCompleto"
+        nombreId: "nombreCompleto",
+        onDniResolved: manejarResultadoPersonaVehiculosProveedores
     });
 
     inicializarDesdeVehiculoEmpresaEspecial();

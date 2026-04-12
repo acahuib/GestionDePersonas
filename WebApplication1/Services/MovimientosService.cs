@@ -121,12 +121,30 @@ namespace WebApplication1.Services
             return FormatearPuntoControl(movimiento.PuntoControlId);
         }
 
-        private async Task ValidarEntradaDuplicada(string dni, int puntoControlId, string tipoMovimiento)
+        private static bool EsTipoDentro(string? tipoMovimiento)
+        {
+            var tipo = (tipoMovimiento ?? string.Empty).Trim();
+            return string.Equals(tipo, "Entrada", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(tipo, "Ingreso", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EsTipoFuera(string? tipoMovimiento)
+        {
+            var tipo = (tipoMovimiento ?? string.Empty).Trim();
+            return string.Equals(tipo, "Salida", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool EsTipoOperativoGarita(string? tipoMovimiento)
+        {
+            return EsTipoDentro(tipoMovimiento) || EsTipoFuera(tipoMovimiento);
+        }
+
+        private async Task ValidarSecuenciaMovimientoGarita(string dni, int puntoControlId, string tipoMovimiento)
         {
             if (puntoControlId != GARITA_ID)
                 return;
 
-            if (tipoMovimiento != "Entrada" && tipoMovimiento != "Ingreso")
+            if (!EsTipoOperativoGarita(tipoMovimiento))
                 return;
 
             var movimientosRecientes = await _context.Movimientos
@@ -154,20 +172,32 @@ namespace WebApplication1.Services
                 .FirstOrDefault(m => !movimientosInformativosSet.Contains(m.Id));
 
             if (ultimoMovimiento == null)
-                return; // Solo tiene registros informativos, permitir entrada
+                return; // Sin historial operativo previo: permitir primer registro.
 
-            if (ultimoMovimiento.TipoMovimiento == "Entrada" || ultimoMovimiento.TipoMovimiento == "Ingreso")
+            var ultimoEsDentro = EsTipoDentro(ultimoMovimiento.TipoMovimiento);
+            var ultimoEsFuera = EsTipoFuera(ultimoMovimiento.TipoMovimiento);
+            var nuevoEsDentro = EsTipoDentro(tipoMovimiento);
+            var nuevoEsFuera = EsTipoFuera(tipoMovimiento);
+
+            if (ultimoEsDentro && nuevoEsDentro)
             {
                 var cuadernoOrigen = await ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimiento);
                 throw new InvalidOperationException(
                     $"Esta persona ya está adentro con el DNI {dni}. Último registro de entrada: {cuadernoOrigen}. Revise ese cuaderno para regularizar la salida.");
+            }
+
+            if (ultimoEsFuera && nuevoEsFuera)
+            {
+                var cuadernoOrigen = await ObtenerOrigenRegistroPorMovimientoAsync(ultimoMovimiento);
+                throw new InvalidOperationException(
+                    $"Esta persona ya se encuentra fuera con el DNI {dni}. Último registro de salida: {cuadernoOrigen}. Revise ese cuaderno para completar el ingreso pendiente.");
             }
         }
 
 
         public async Task<Movimiento> RegistrarMovimientoEnBD(string dni, int puntoControlId, string tipoMovimiento, int? usuarioId)
         {
-            await ValidarEntradaDuplicada(dni, puntoControlId, tipoMovimiento);
+            await ValidarSecuenciaMovimientoGarita(dni, puntoControlId, tipoMovimiento);
 
             var movimiento = new Movimiento
             {

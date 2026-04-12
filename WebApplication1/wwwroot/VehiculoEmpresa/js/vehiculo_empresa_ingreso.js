@@ -1,9 +1,15 @@
-﻿// Script frontend para vehiculo_empresa_ingreso.
+// Script frontend para vehiculo_empresa_ingreso.
 
 function setElementValueIfExists(id, value) {
     const element = document.getElementById(id);
     if (!element) return;
     element.value = value ?? "";
+}
+
+function setDisplayIfExists(id, visible) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.style.display = visible ? "block" : "none";
 }
 
 let acompanantesVinculadosVehiculo = [];
@@ -95,9 +101,11 @@ function configurarVistaPorModo(modo) {
 
 async function cargarDetalleOperacion(salidaId) {
     const mensaje = document.getElementById("mensaje");
+    const modo = (document.getElementById("dni")?.dataset?.modo || "ingreso").toLowerCase();
+    const esIngreso = modo === "ingreso";
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro";
+        mensaje.innerText = "No se encontr� el ID del registro";
         return;
     }
 
@@ -129,6 +137,29 @@ async function cargarDetalleOperacion(salidaId) {
         setElementValueIfExists("origenIngresoRegistrado", datos.origenIngreso || datos.origen || "");
         setElementValueIfExists("destinoIngresoRegistrado", datos.destinoIngreso || datos.destino || "");
 
+        const kmInicial = esIngreso ? (datos.kmSalida ?? "") : (datos.kmIngreso ?? "");
+        const origenInicial = esIngreso
+            ? (datos.origenSalida || datos.origen || "")
+            : (datos.origenIngreso || datos.origen || "");
+        const destinoInicial = esIngreso
+            ? (datos.destinoSalida || datos.destino || "")
+            : (datos.destinoIngreso || datos.destino || "");
+
+        setElementValueIfExists("kmInicialMostrado", kmInicial);
+        setElementValueIfExists("origenInicialMostrado", origenInicial);
+        setElementValueIfExists("destinoInicialMostrado", destinoInicial);
+
+        const labelKm = document.getElementById("labelKmInicialResumen");
+        const labelOrigen = document.getElementById("labelOrigenInicialResumen");
+        const labelDestino = document.getElementById("labelDestinoInicialResumen");
+        if (labelKm) labelKm.textContent = esIngreso ? "Kilometraje de salida (inicial)" : "Kilometraje de ingreso (inicial)";
+        if (labelOrigen) labelOrigen.textContent = esIngreso ? "Origen de salida (inicial)" : "Origen de ingreso (inicial)";
+        if (labelDestino) labelDestino.textContent = esIngreso ? "Destino de salida (inicial)" : "Destino de ingreso (inicial)";
+
+        setDisplayIfExists("grupoKmInicialResumen", String(kmInicial).trim() !== "");
+        setDisplayIfExists("grupoOrigenInicialResumen", String(origenInicial).trim() !== "");
+        setDisplayIfExists("grupoDestinoInicialResumen", String(destinoInicial).trim() !== "");
+
         setElementValueIfExists("observacion", datos.observacion || "");
 
     } catch (error) {
@@ -153,7 +184,7 @@ async function registrarMovimientoComplementario() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro";
+        mensaje.innerText = "No se encontr� el ID del registro";
         return;
     }
 
@@ -181,7 +212,7 @@ async function registrarMovimientoComplementario() {
 
     if (km && (isNaN(km) || parseInt(km, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un número válido";
+        mensaje.innerText = "El kilometraje debe ser un numero v�lido";
         return;
     }
 
@@ -195,7 +226,7 @@ async function registrarMovimientoComplementario() {
         const confirmarSinKm = window.confirm(
             "Este registro quedara sin kilometraje inicial ni final.\n" +
             "Si desea, puede ingresar ahora el kilometraje final.\n\n" +
-            "¿Desea continuar sin kilometraje?"
+            "�Desea continuar sin kilometraje?"
         );
 
         if (!confirmarSinKm) {
@@ -281,8 +312,8 @@ async function registrarMovimientoComplementario() {
 
         mensaje.className = "success";
         mensaje.innerText = esIngreso
-            ? `✅ INGRESO registrado correctamente${textoAcompanantes}`
-            : `✅ SALIDA registrada correctamente${textoAcompanantes}`;
+            ? `INGRESO registrado correctamente${textoAcompanantes}`
+            : `SALIDA registrada correctamente${textoAcompanantes}`;
 
         setTimeout(() => {
             window.location.href = "vehiculo_empresa.html?refresh=1";

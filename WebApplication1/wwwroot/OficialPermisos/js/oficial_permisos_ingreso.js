@@ -1,4 +1,4 @@
-﻿// Script frontend para oficial_permisos_ingreso.
+// Script frontend para oficial_permisos_ingreso.
 
 let salidaId = null;
 
@@ -18,7 +18,7 @@ function cargarDatosDesdeUrl() {
 
     if (!salidaId) {
         document.getElementById("mensaje").className = "error";
-        document.getElementById("mensaje").innerText = "No se recibió ID de salida";
+        document.getElementById("mensaje").innerText = "No se recibio ID de salida";
         return;
     }
 
@@ -65,7 +65,7 @@ async function registrarIngreso() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ INGRESO registrado exitosamente";
+        mensaje.innerText = "INGRESO registrado exitosamente";
 
         setTimeout(() => {
             window.location.href = "oficial_permisos.html?refresh=1";

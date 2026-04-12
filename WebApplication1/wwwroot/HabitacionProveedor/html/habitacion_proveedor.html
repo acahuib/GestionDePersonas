@@ -152,16 +152,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // Auto-actualizar lista cada 15 segundos
     setInterval(cargarActivos, 15000);
 
-    // Detectar ENTER en los campos
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
+    // Flujo unificado DNI/nombre con helper reusable.
+    addEnterListener("dni", () => {
+        const nombre = document.getElementById("nombreApellidos");
+        if (nombre && !nombre.disabled) {
+            nombre.focus();
+            return;
         }
+        document.getElementById("origen")?.focus();
     });
-    
     addEnterListener("nombreApellidos", () => document.getElementById("origen").focus());
     addEnterListener("origen", () => document.getElementById("cuarto").focus());
     addEnterListener("cuarto", () => document.getElementById("frazadas").focus());
@@ -170,7 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreApellidos"
+        nombreId: "nombreApellidos",
+        onDniResolved: manejarResultadoPersonaHabitacion
     });
 
     const fechaIngreso = document.getElementById("fechaIngreso");

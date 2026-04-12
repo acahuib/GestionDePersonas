@@ -1,4 +1,4 @@
-﻿// Script frontend para personal_local_salida.
+// Script frontend para personal_local_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -51,7 +51,7 @@ async function registrarSalida() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontro el ID del registro de ingreso";
         return;
     }
 
@@ -110,8 +110,8 @@ async function registrarSalida() {
 
         mensaje.className = "success";
         mensaje.innerText = registrarSalidaVehiculoMp
-            ? "✅ SALIDA registrada correctamente (incluye salida MP informativa)"
-            : "✅ SALIDA registrada correctamente";
+            ? "SALIDA registrada correctamente (incluye salida MP informativa)"
+            : "SALIDA registrada correctamente";
 
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";

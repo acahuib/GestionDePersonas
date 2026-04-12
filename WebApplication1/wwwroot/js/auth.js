@@ -1,4 +1,4 @@
-﻿// Script frontend para auth.
+// Script frontend para auth.
 
 function verificarAutenticacion() {
     const token = localStorage.getItem("token");
@@ -34,7 +34,7 @@ function verificarAutenticacion() {
 }
 
 function cerrarSesion() {
-    if (confirm("¿Está seguro de cerrar sesión?")) {
+    if (confirm("Esta seguro de cerrar sesion?")) {
         localStorage.clear();
         window.location.href = "/login.html";
     }

@@ -1,4 +1,4 @@
-﻿// Script frontend para habitacion_proveedor_salida.
+// Script frontend para habitacion_proveedor_salida.
 
 let salidaId = null;
 
@@ -15,7 +15,7 @@ function cargarDatos() {
     const fechaIngreso = params.get("fechaIngreso");
     const horaIngreso = params.get("horaIngreso");
     
-    document.getElementById("fechaIngreso").value = fechaIngreso ? new Date(fechaIngreso).toLocaleDateString('es-PE') : "";
+    document.getElementById("fechaIngreso").value = fechaIngreso ? new Date(fechaIngreso).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "";
     document.getElementById("horaIngreso").value = horaIngreso ? new Date(horaIngreso).toLocaleTimeString('es-PE') : "";
     document.getElementById("guardiaIngreso").value = params.get("guardiaIngreso") || "S/N";
 }
@@ -51,7 +51,7 @@ async function registrarSalida() {
 
         const data = await response.json();
         mensaje.className = "success";
-        mensaje.innerText = `✅ ${data.mensaje}`;
+        mensaje.innerText = `${data.mensaje}`;
 
         setTimeout(() => {
             window.location.href = "habitacion_proveedor.html?refresh=1";

@@ -1,4 +1,4 @@
-﻿// Script frontend para personal_local_almuerzo_salida.
+// Script frontend para personal_local_almuerzo_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -28,7 +28,7 @@ async function registrarSalidaAlmuerzo() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontro el ID del registro de ingreso";
         return;
     }
 
@@ -52,7 +52,7 @@ async function registrarSalidaAlmuerzo() {
         }
 
         mensaje.className = "success";
-        mensaje.innerText = "✅ SALIDA A ALMUERZO registrada correctamente";
+        mensaje.innerText = "SALIDA A ALMUERZO registrada correctamente";
 
         setTimeout(() => {
             window.location.href = "personal_local.html?refresh=1";

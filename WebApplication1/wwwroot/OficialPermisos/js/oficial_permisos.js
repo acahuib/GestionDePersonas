@@ -1,9 +1,8 @@
-﻿// Script frontend para oficial_permisos.
+// Script frontend para oficial_permisos.
 
 let personaEncontrada = null;
 
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+function manejarResultadoPersonaOficialPermisos(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
@@ -13,45 +12,40 @@ async function buscarPersonaPorDni() {
         personaEncontrada = null;
         nombreCompletoInput.disabled = false;
         nombreCompletoInput.value = "";
+        nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
         return;
     }
 
+    if (persona) {
+        personaEncontrada = persona;
+
+        personaNombre.textContent = personaEncontrada.nombre;
+        personaInfo.style.display = "block";
+
+        nombreCompletoInput.value = personaEncontrada.nombre || "";
+        nombreCompletoInput.disabled = true;
+        nombreCompletoInput.placeholder = "(Ya registrado)";
+
+        document.getElementById("deDonde").focus();
+        return;
+    }
+
+    personaEncontrada = null;
+    personaInfo.style.display = "none";
+    nombreCompletoInput.disabled = false;
+    nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
+    nombreCompletoInput.focus();
+}
+
+async function buscarPersonaPorDni() {
+    const dni = document.getElementById("dni").value.trim();
+
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas: '${dni}'`);
-        const response = await fetchAuth(`${API_BASE}/personas/${dni}`);
-        
-        console.log(`📡 Response status: ${response.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
-            
-            personaNombre.textContent = personaEncontrada.nombre;
-            personaInfo.style.display = "block";
-            
-            nombreCompletoInput.value = "";
-            nombreCompletoInput.disabled = true;
-            nombreCompletoInput.placeholder = "(Ya registrado)";
-            
-            document.getElementById("deDonde").focus();
-        } else if (response.status === 404) {
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
-            personaEncontrada = null;
-            personaInfo.style.display = "none";
-            nombreCompletoInput.disabled = false;
-            nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
-            nombreCompletoInput.focus();
-        } else {
-            const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
-            throw new Error(error);
-        }
+        const persona = await buscarPersonaPorDniUniversal(dni);
+        manejarResultadoPersonaOficialPermisos(persona, dni);
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
-        personaEncontrada = null;
-        personaInfo.style.display = "none";
-        nombreCompletoInput.disabled = false;
-        nombreCompletoInput.placeholder = "Nombres y apellidos del personal";
+        console.error("? Error al buscar persona:", error);
+        manejarResultadoPersonaOficialPermisos(null, dni);
     }
 }
 
@@ -71,13 +65,13 @@ async function registrarSalida() {
 
     if (!dni || !deDonde || !tipo || !quienAutoriza) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, De Dónde, Tipo y Quién Autoriza";
+        mensaje.innerText = "Complete DNI, De D�nde, Tipo y Qui�n Autoriza";
         return;
     }
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -141,7 +135,7 @@ async function registrarSalida() {
 }
 
 function irAIngreso(salidaId, dni, nombreCompleto, deDonde, tipo, quienAutoriza, observacion, fechaSalidaParam, horaSalidaParam, guardiaSalida) {
-    const fechaSalida = fechaSalidaParam ? new Date(fechaSalidaParam).toLocaleDateString("es-PE") : "N/A";
+    const fechaSalida = fechaSalidaParam ? new Date(fechaSalidaParam).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A";
     const horaSalida = horaSalidaParam ? new Date(horaSalidaParam).toLocaleTimeString("es-PE") : "N/A";
     
     const params = new URLSearchParams({
@@ -243,7 +237,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>De Dónde</th>';
+        html += '<th>De D�nde</th>';
         html += '<th>Tipo</th>';
         html += '<th>Autorizado por</th>';
         html += '<th>Fecha / Hora Salida</th>';
@@ -257,7 +251,7 @@ async function cargarActivos() {
             const tipo = datos.tipo || "N/A";
             const quienAutoriza = datos.quienAutoriza || "N/A";
             const horaSalida = s.horaSalida ? new Date(s.horaSalida).toLocaleTimeString("es-PE") : "N/A";
-            const fechaSalida = s.fechaSalida ? new Date(s.fechaSalida).toLocaleDateString("es-PE") : "N/A";
+            const fechaSalida = s.fechaSalida ? new Date(s.fechaSalida).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A";
             const guardiaSalida = datos.guardiaSalida || "N/A";
             const observacion = datos.observacion || "";
             

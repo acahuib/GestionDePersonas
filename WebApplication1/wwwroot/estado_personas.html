@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estado de Personas - Control de Accesos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <div>
+                    <h2>Estado de Personas</h2>
+                    <p class="muted">Consulta rapida para saber si una persona esta dentro o fuera de la mina.</p>
+                </div>
+                <div class="header-actions">
+                    <a href="index.html">
+                        <button class="btn-inline btn-secondary"><img src="/images/arrow-left.svg" class="icon-white"> Volver al Menu</button>
+                    </a>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="form-card" style="margin-bottom:12px;">
+                <div class="form-row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                    <div class="form-group" style="flex:2;min-width:260px;">
+                        <label for="estadoPersonasTexto">Buscar por DNI o nombre</label>
+                        <input type="text" id="estadoPersonasTexto" placeholder="Ejemplo: 12345678 o Juan Perez">
+                    </div>
+                    <div class="form-group" style="min-width:200px;">
+                        <label for="estadoPersonasFiltro">Estado</label>
+                        <select id="estadoPersonasFiltro">
+                            <option value="">Todos</option>
+                            <option value="Dentro">Dentro</option>
+                            <option value="Fuera">Fuera</option>
+                            <option value="SinMovimientos">Sin movimientos</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" id="btnEstadoPersonasBuscar" class="btn-inline">Buscar</button>
+                        <button type="button" id="btnEstadoPersonasLimpiar" class="btn-inline btn-muted">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div>
+                    <strong>Resultados</strong>
+                    <span id="estadoPersonasResumen" class="muted">0 registros</span>
+                </div>
+                <div class="toolbar-actions">
+                    <button id="btnEstadoPersonasRecargar" class="btn-inline">Recargar</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>DNI</th>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Ultimo movimiento</th>
+                            <th>Fecha / Hora</th>
+                            <th>Cuaderno</th>
+                        </tr>
+                    </thead>
+                    <tbody id="estadoPersonasBody">
+                        <tr><td colspan="6" class="text-center muted">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/sidebar.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/estado_personas.js"></script>
+</body>
+</html>

@@ -101,16 +101,14 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, "oficial_permisos.html");
     }
 
-    // Detectar ENTER en los campos
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
+    // Flujo unificado DNI/nombre con helper reusable.
+    addEnterListener("dni", () => {
+        if (personaEncontrada) {
+            document.getElementById("deDonde")?.focus();
+            return;
         }
+        document.getElementById("nombreCompleto")?.focus();
     });
-    
     addEnterListener("nombreCompleto", () => document.getElementById("deDonde").focus());
     addEnterListener("deDonde", () => document.getElementById("tipo").focus());
     addEnterListener("quienAutoriza", () => document.getElementById("horaSalida").focus());
@@ -118,7 +116,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreCompleto"
+        nombreId: "nombreCompleto",
+        onDniResolved: manejarResultadoPersonaOficialPermisos
     });
 });
 </script>

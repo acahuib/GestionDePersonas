@@ -1,4 +1,4 @@
-﻿// Script frontend para sidebar.
+// Script frontend para sidebar.
 
 function crearSidebar() {
     const path = window.location.pathname;
@@ -8,34 +8,43 @@ function crearSidebar() {
     const sidebar = `
         <div class="sidebar">
             <div class="sidebar-header">
-                <h3>🏢 Control Accesos</h3>
+                <h3>Control de Accesos</h3>
             </div>
             
             <ul class="sidebar-menu">
                 <li>
-                    <a href="${basePath}index.html">
-                        🏠 Home
+                    <a href="${basePath}index.html" style="display:flex; align-items:center; gap:8px;">
+                        <span aria-hidden="true">&#127968;</span>
+                        <span>Home</span>
                     </a>
                 </li>
                 <li>
-                    <a href="${basePath}historial.html?tipo=Proveedor">
-                        🗂️ Historiales
+                    <a href="${basePath}historial.html?tipo=Proveedor" style="display:flex; align-items:center; gap:8px;">
+                        <span aria-hidden="true">&#128218;</span>
+                        <span>Historiales</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="${basePath}estado_personas.html" style="display:flex; align-items:center; gap:8px;">
+                        <span aria-hidden="true">&#129517;</span>
+                        <span>Estado de Personas</span>
                     </a>
                 </li>
                 
                 <li class="sidebar-submenu">
-                    <a href="#">
-                        📚 Cuadernos
-                        <span>▼</span>
+                    <a href="#" style="display:flex; align-items:center; gap:8px;">
+                        <span aria-hidden="true">&#128194;</span>
+                        <span>Cuadernos</span>
+                        <span style="margin-left:auto;">v</span>
                     </a>
                     <ul class="sidebar-submenu-items">
                         <li><a href="${basePath}Proveedores/html/proveedor.html">Proveedores</a></li>
                         <li><a href="${basePath}Cancha/html/cancha.html">Cancha</a></li>
-                        <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">Vehículos Empresa</a></li>
-                        <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehículos Proveedores</a></li>
+                        <li><a href="${basePath}VehiculoEmpresa/html/vehiculo_empresa.html">Vehiculos Empresa</a></li>
+                        <li><a href="${basePath}VehiculosProveedores/html/vehiculos_proveedores.html">Vehiculos Proveedores</a></li>
                         <li><a href="${basePath}PersonalLocal/html/personal_local.html">Cuaderno de Asistencia Personal de Mina</a></li>
-                        <li><a href="${basePath}DiasLibre/html/dias_libre.html">Días Libre</a></li>
-                        <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">Habitación Proveedor</a></li>
+                        <li><a href="${basePath}DiasLibre/html/dias_libre.html">Dias Libres</a></li>
+                        <li><a href="${basePath}HabitacionProveedor/html/habitacion_proveedor.html">Habitacion Proveedor</a></li>
                         <li><a href="${basePath}HotelProveedor/html/hotel_proveedor.html">Hotel Proveedor</a></li>
                         <li><a href="${basePath}OficialPermisos/html/oficial_permisos.html">Permisos Personal</a></li>
                         <li><a href="${basePath}Ocurrencias/html/ocurrencias.html">Ocurrencias</a></li>
@@ -49,7 +58,7 @@ function crearSidebar() {
                 <div style="text-align: center; margin-bottom: 10px; color: #ecf0f1; font-size: 0.9rem;">
                     <span id="sidebar-usuario-info">Cargando...</span>
                 </div>
-                <button onclick="cerrarSesion()"><img src="/images/door-open-fill.svg" class="icon-brown"> Cerrar Sesión</button>
+                <button onclick="cerrarSesion()"><img src="/images/door-open-fill.svg" class="icon-brown"> Cerrar Sesion</button>
             </div>
         </div>
     `;

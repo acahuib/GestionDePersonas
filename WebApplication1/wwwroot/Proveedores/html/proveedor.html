@@ -116,16 +116,14 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.replaceState({}, document.title, "proveedor.html");
     }
 
-    // Detectar ENTER en los campos
-    const dniInput = document.getElementById("dni");
-    dniInput.addEventListener("blur", buscarPersonaPorDni);
-    dniInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPersonaPorDni();
+    // Flujo unificado DNI/nombre con helper reusable.
+    addEnterListener("dni", () => {
+        if (personaEncontrada) {
+            document.getElementById("procedencia")?.focus();
+            return;
         }
+        document.getElementById("nombreCompleto")?.focus();
     });
-    
     addEnterListener("nombreCompleto", () => document.getElementById("procedencia").focus());
     addEnterListener("procedencia", () => document.getElementById("destino").focus());
     addEnterListener("destino", registrarEntrada);
@@ -139,7 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     habilitarAutocompletePersona({
         dniId: "dni",
-        nombreId: "nombreCompleto"
+        nombreId: "nombreCompleto",
+        onDniResolved: manejarResultadoPersonaProveedor
     });
 });
 </script>

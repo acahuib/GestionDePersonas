@@ -1,4 +1,4 @@
-﻿// Script frontend para registro_enseres_turno.
+// Script frontend para registro_enseres_turno.
 
 const TIPO_OPERACION_ENSERES = "RegistroInformativoEnseresTurno";
 const CONFIG_GUARDIAS_POR_TURNO = {
@@ -39,12 +39,12 @@ const PLANTILLA_ENSERES_BASE = [
 let enseresItems = [];
 
 function obtenerMensajePlano(error) {
-    if (!error) return "No se pudo completar la operación.";
+    if (!error) return "No se pudo completar la operacion.";
     const base = String(error?.message || error || "").trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operacion.";
     try {
         const json = JSON.parse(base);
-        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operación.");
+        return String(json?.mensaje || json?.error || json?.detail || json?.title || "No se pudo completar la operacion.");
     } catch {
         return base.replace(/^error\s*:\s*/i, "").replace(/^"|"$/g, "");
     }
@@ -203,8 +203,8 @@ async function cargarInfoGuardiasTurno() {
         }
 
         const fechaTexto = registro?.datos?.fecha
-            ? new Date(registro.datos.fecha).toLocaleDateString("es-PE")
-            : new Date().toLocaleDateString("es-PE");
+            ? new Date(registro.datos.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })
+            : new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 
         _renderPanelGuardias(container, registro.datos || {}, turnoObjetivo, fechaTexto);
 
@@ -451,7 +451,7 @@ async function cargarUltimoRegistroEnseres() {
             cargarPlantillaBaseEnseres();
             if (mensaje) {
                 mensaje.className = "";
-                mensaje.innerText = "No hay registro previo con enseres. Se cargó la plantilla base.";
+                mensaje.innerText = "No hay registro previo con enseres. Se carg� la plantilla base.";
             }
             return;
         }
@@ -573,7 +573,7 @@ async function registrarEnseres() {
 
     if (objetos.length === 0) {
         mensaje.className = "error";
-        mensaje.innerText = "Debe registrar al menos un ítem";
+        mensaje.innerText = "Debe registrar al menos un �tem";
         return;
     }
 
@@ -583,7 +583,7 @@ async function registrarEnseres() {
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "Revise los ítems: nombre obligatorio y cantidad no negativa";
+        mensaje.innerText = "Revise los �tems: nombre obligatorio y cantidad no negativa";
         return;
     }
 
@@ -664,7 +664,7 @@ async function cargarRegistrosDelDia() {
                 : "Zonas: -";
             const resumenGuardias = `${resumenGuardiasGarita}<br>${resumenGuardiasZonas}`;
 
-            const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE") : "-";
+            const fecha = datos.fecha ? new Date(datos.fecha).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-";
             const horaRegistro = r.fechaCreacion
                 ? new Date(r.fechaCreacion).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })
                 : "N/A";

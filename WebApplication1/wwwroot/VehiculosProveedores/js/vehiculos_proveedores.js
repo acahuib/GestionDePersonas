@@ -1,4 +1,4 @@
-﻿// Script frontend para vehiculos_proveedores.
+// Script frontend para vehiculos_proveedores.
 
 let personaEncontrada = null;
 let contextoEdicionVehiculoProveedor = null;
@@ -144,7 +144,7 @@ async function guardarEdicionVehiculoProveedor() {
     if (!proveedor || !placa || !tipo || !lote || !cantidad || !procedencia || !fechaIngreso || !horaIngreso) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete todos los campos obligatorios de edición.";
+            mensaje.innerText = "Complete todos los campos obligatorios de edicion.";
         }
         return;
     }
@@ -309,8 +309,7 @@ async function inicializarDesdeVehiculoEmpresaEspecial() {
     }
 }
 
-async function buscarPersonaPorDni() {
-    const dni = document.getElementById("dni").value.trim();
+async function manejarResultadoPersonaVehiculosProveedores(persona, dni) {
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
     const nombreCompletoInput = document.getElementById("nombreCompleto");
@@ -324,40 +323,26 @@ async function buscarPersonaPorDni() {
     }
 
     try {
-        console.log(`🔍 Buscando DNI en tabla Personas y último registro: '${dni}'`);
-
-        const [response, ultimoResponse] = await Promise.all([
-            fetchAuth(`${API_BASE}/personas/${dni}`),
-            fetchAuth(`${API_BASE}/vehiculos-proveedores/ultimo/${dni}`)
-        ]);
-        
-        console.log(`📡 Persona status: ${response.status} | Ultimo status: ${ultimoResponse.status}`);
-        
-        if (response.ok) {
-            personaEncontrada = await response.json();
-            console.log(`✅ Persona encontrada:`, personaEncontrada);
-            
+        if (persona) {
+            personaEncontrada = persona;
             personaNombre.textContent = personaEncontrada.nombre;
             personaInfo.style.display = "block";
             
             nombreCompletoInput.value = "";
             nombreCompletoInput.disabled = true;
             nombreCompletoInput.placeholder = "(Ya registrado)";
-        } else if (response.status === 404) {
-            console.log(`ℹ️ DNI no encontrado en tabla Personas - permitir registro nuevo`);
+        } else {
             personaEncontrada = null;
             personaInfo.style.display = "none";
             nombreCompletoInput.disabled = false;
             nombreCompletoInput.placeholder = "Nombre completo del conductor";
-        } else {
-            const error = await readApiError(response);
-            console.error(`❌ Error del servidor: ${error}`);
-            throw new Error(error);
         }
+
+        const ultimoResponse = await fetchAuth(`${API_BASE}/vehiculos-proveedores/ultimo/${dni}`);
 
         if (ultimoResponse.ok) {
             const ultimo = await ultimoResponse.json();
-            console.log(`📋 Precargando datos del último registro:`, ultimo);
+            console.log(`?? Precargando datos del ultimo registro:`, ultimo);
             if (ultimo.placa)       document.getElementById("placa").value = ultimo.placa;
             if (ultimo.tipo)        document.getElementById("tipo").value = ultimo.tipo;
             if (ultimo.lote)        document.getElementById("lote").value = ultimo.lote;
@@ -370,7 +355,7 @@ async function buscarPersonaPorDni() {
         document.getElementById("placa").focus();
 
     } catch (error) {
-        console.error("❌ Error al buscar persona:", error);
+        console.error("? Error al buscar persona:", error);
         personaEncontrada = null;
         personaInfo.style.display = "none";
         nombreCompletoInput.disabled = false;
@@ -409,7 +394,7 @@ async function registrarEntrada() {
 
     if (dni.length !== 8 || isNaN(dni)) {
         mensaje.className = "error";
-        mensaje.innerText = "DNI debe tener 8 dígitos";
+        mensaje.innerText = "DNI debe tener 8 digitos";
         return;
     }
 
@@ -593,13 +578,13 @@ async function cargarActivos() {
 
         if (!response.ok) {
             const error = await readApiError(response);
-            throw new Error(error || "Error al cargar vehículos activos");
+            throw new Error(error || "Error al cargar vehiculos activos");
         }
 
         const salidas = await response.json();
 
         if (!salidas || salidas.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehiculos activos en este momento</p>';
             return;
         }
 
@@ -619,7 +604,7 @@ async function cargarActivos() {
             });
 
         if (activos.length === 0) {
-            container.innerHTML = '<p class="text-center muted">No hay vehículos activos en este momento</p>';
+            container.innerHTML = '<p class="text-center muted">No hay vehiculos activos en este momento</p>';
             return;
         }
 
@@ -655,7 +640,7 @@ async function cargarActivos() {
             const horaIngreso = horaIngresoValue
                 ? new Date(horaIngresoValue).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
                 : "N/A";
-            const fechaIngreso = fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE') : "N/A";
+            const fechaIngreso = fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "N/A";
             const guardiaIngreso = datos.guardiaIngreso || "N/A";
             const payloadSalida = encodeURIComponent(JSON.stringify({
                 salidaId: s.id,

@@ -1,4 +1,4 @@
-﻿// Script frontend para habitacion_proveedor.
+// Script frontend para habitacion_proveedor.
 
 let personaEncontrada = null;
 
@@ -173,7 +173,7 @@ async function cargarPrefillDesdeProveedor() {
                 origen = origen || proveedor?.procedencia || proveedor?.destino || "";
             }
         } catch {
-            // Si falla la recuperación, se mantiene lo recibido por query string.
+            // Si falla la recuperacion, se mantiene lo recibido por query string.
         }
     }
 
@@ -184,21 +184,18 @@ async function cargarPrefillDesdeProveedor() {
 
     if (!nombreCompleto && dni) {
         try {
-            const responsePersona = await fetchAuth(`${API_BASE}/personas/dni/${encodeURIComponent(dni)}`);
-            if (responsePersona.ok) {
-                const persona = await responsePersona.json();
-                const nombrePersona = persona?.nombresApellidos || persona?.nombre || "";
-                const nombreInput = document.getElementById("nombreApellidos");
-                if (nombreInput && nombrePersona) {
-                    nombreInput.value = nombrePersona;
-                    nombreInput.disabled = true;
-                }
-                if (nombrePersona) {
-                    personaEncontrada = { nombresApellidos: nombrePersona };
-                }
+            const persona = await buscarPersonaPorDniUniversal(dni);
+            const nombrePersona = persona?.nombresApellidos || persona?.nombre || "";
+            const nombreInput = document.getElementById("nombreApellidos");
+            if (nombreInput && nombrePersona) {
+                nombreInput.value = nombrePersona;
+                nombreInput.disabled = true;
+            }
+            if (nombrePersona) {
+                personaEncontrada = { nombresApellidos: nombrePersona };
             }
         } catch {
-            // Si falla la consulta de persona, se deja continuar con validación de backend.
+            // Si falla la consulta de persona, se deja continuar con validacion de backend.
         }
     }
 
@@ -217,6 +214,15 @@ async function cargarPrefillDesdeProveedor() {
 
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni")?.value?.trim() || "";
+    try {
+        const persona = await buscarPersonaPorDniUniversal(dni);
+        manejarResultadoPersonaHabitacion(persona, dni);
+    } catch {
+        manejarResultadoPersonaHabitacion(null, dni);
+    }
+}
+
+function manejarResultadoPersonaHabitacion(persona, dni) {
     const nombreInput = document.getElementById("nombreApellidos");
     const personaInfo = document.getElementById("persona-info");
     const personaNombre = document.getElementById("persona-nombre");
@@ -232,38 +238,28 @@ async function buscarPersonaPorDni() {
         return;
     }
 
-    try {
-        const response = await fetchAuth(`${API_BASE}/personas/dni/${encodeURIComponent(dni)}`);
-        if (!response.ok) {
-            personaEncontrada = null;
-            if (personaInfo) personaInfo.style.display = "none";
-            if (nombreInput) {
-                nombreInput.disabled = false;
-                nombreInput.placeholder = "Solo si DNI no registrado";
-            }
-            return;
-        }
-
-        const persona = await response.json();
-        personaEncontrada = persona;
-
-        if (nombreInput) {
-            nombreInput.value = persona.nombresApellidos || "";
-            nombreInput.disabled = true;
-            nombreInput.placeholder = "Autocompletado desde Personas";
-        }
-
-        if (personaInfo && personaNombre) {
-            personaNombre.innerText = persona.nombresApellidos || "";
-            personaInfo.style.display = "block";
-        }
-    } catch {
+    if (!persona) {
         personaEncontrada = null;
         if (personaInfo) personaInfo.style.display = "none";
         if (nombreInput) {
             nombreInput.disabled = false;
             nombreInput.placeholder = "Solo si DNI no registrado";
         }
+        return;
+    }
+
+    personaEncontrada = persona;
+    const nombrePersona = persona?.nombresApellidos || persona?.nombre || "";
+
+    if (nombreInput) {
+        nombreInput.value = nombrePersona;
+        nombreInput.disabled = true;
+        nombreInput.placeholder = "Autocompletado desde Personas";
+    }
+
+    if (personaInfo && personaNombre) {
+        personaNombre.innerText = nombrePersona;
+        personaInfo.style.display = "block";
     }
 }
 
@@ -622,7 +618,7 @@ async function cargarActivos() {
                     guardiaIngreso: datos.guardiaIngreso || "S/N",
                     fechaIngresoParam: fechaIngresoValue || "",
                     horaIngresoParam: horaIngresoValue || "",
-                    fechaIngreso: fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString("es-PE") : "N/A",
+                    fechaIngreso: fechaIngresoValue ? new Date(fechaIngresoValue).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A",
                     horaIngreso: horaIngresoValue ? new Date(horaIngresoValue).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false }) : "N/A"
                 });
             });

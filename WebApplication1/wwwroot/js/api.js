@@ -1,6 +1,68 @@
-﻿// Script frontend para api.
+// Script frontend para api.
 
 const API_BASE = "/api";
+
+(function () {
+    const path = String(window.location.pathname || "").toLowerCase();
+    const esLogin = path.endsWith("/login.html");
+    if (esLogin) return;
+
+    const bloquearEvento = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    function esCampoEditable(target) {
+        if (!(target instanceof HTMLElement)) return false;
+        const campo = target.closest("input, textarea, select, [contenteditable='true']");
+        if (!campo) return false;
+
+        if (campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement || campo instanceof HTMLSelectElement) {
+            return !campo.disabled && !campo.readOnly;
+        }
+
+        return true;
+    }
+
+    document.addEventListener("keydown", (e) => {
+        const key = String(e.key || "");
+        const keyCode = Number(e.keyCode || e.which || 0);
+
+        // Evita retrocesos accidentales por teclas especiales/atajos de navegador
+        const esTeclaBackEspecial = key === "BrowserBack" || key === "GoBack" || key === "XF86Back" || keyCode === 166;
+        const esAtajoBack = (e.altKey && key === "ArrowLeft") || (e.metaKey && key === "[");
+        const esRetrocesoNavegador = esTeclaBackEspecial || esAtajoBack;
+        if (esRetrocesoNavegador) {
+            bloquearEvento(e);
+            return;
+        }
+
+        if (key === "Backspace" && !esCampoEditable(e.target)) {
+            bloquearEvento(e);
+        }
+    }, true);
+
+    // Algunos equipos disparan navegacion atras en keyup en lugar de keydown.
+    document.addEventListener("keyup", (e) => {
+        const key = String(e.key || "");
+        const keyCode = Number(e.keyCode || e.which || 0);
+        const esTeclaBackEspecial = key === "BrowserBack" || key === "GoBack" || key === "XF86Back" || keyCode === 166;
+        const esAtajoBack = (e.altKey && key === "ArrowLeft") || (e.metaKey && key === "[");
+        if (esTeclaBackEspecial || esAtajoBack) {
+            bloquearEvento(e);
+        }
+    }, true);
+
+    // Evita navegacion atras por botones laterales del mouse.
+    const bloquearMouseBack = (e) => {
+        if (e.button === 3 || e.button === 4) {
+            bloquearEvento(e);
+        }
+    };
+    window.addEventListener("mousedown", bloquearMouseBack, true);
+    window.addEventListener("auxclick", bloquearMouseBack, true);
+
+})();
 
 (function () {
     if (window.appDialog) return;
@@ -118,7 +180,7 @@ const API_BASE = "/api";
             document.body.appendChild(overlay);
         },
 
-        confirm(message, title = "Confirmación") {
+        confirm(message, title = "Confirmacion") {
             return new Promise((resolve) => {
                 const { overlay, actions } = crearDialogoBase(title, String(message || ""));
 
@@ -226,7 +288,7 @@ const API_BASE = "/api";
     let historyTrapInstalled = false;
     let allowingHistoryBack = false;
 
-    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. ¿Deseas continuar?";
+    const DEFAULT_MESSAGE = "Hay datos sin guardar. Si sales ahora, se perderan los cambios realizados. Deseas continuar?";
     const BEFORE_UNLOAD_MESSAGE = "Los cambios que realizaste podrian no guardarse.";
 
     const now = () => Date.now();
@@ -443,7 +505,8 @@ async function fetchAuth(url, options = {}) {
     });
 
     if (response.status === 401 || response.status === 403) {
-        alert("Sesión expirada o no autorizada");
+        alert("Sesion expirada o no autorizada");
+
         localStorage.clear();
         window.location.href = "/login.html";
         return;
@@ -587,7 +650,7 @@ async function readApiError(response) {
 
 function getPlainErrorMessage(error) {
     const base = (error?.message || error || "").toString().trim();
-    if (!base) return "No se pudo completar la operación.";
+    if (!base) return "No se pudo completar la operacion.";
 
     try {
         const parsed = JSON.parse(base);
@@ -597,11 +660,11 @@ function getPlainErrorMessage(error) {
             parsed?.error ||
             parsed?.detail ||
             parsed?.title ||
-            "No se pudo completar la operación."
+            "No se pudo completar la operacion."
         );
     } catch {
         return base
-            .replace(/^❌\s*/u, "")
+            .replace(/^\s*/u, "")
             .replace(/^error\s*:\s*/i, "")
             .replace(/^"|"$/g, "");
     }
@@ -888,12 +951,12 @@ function esMensajeEstadoOperativo(texto) {
     if (!valor) return false;
 
     return (
-        valor.includes("ya está adentro") ||
+        valor.includes("ya esta adentro") ||
         valor.includes("ya esta adentro") ||
         valor.includes("ya se encuentra fuera") ||
-        valor.includes("último registro de entrada") ||
         valor.includes("ultimo registro de entrada") ||
-        valor.includes("último registro de salida") ||
+        valor.includes("ultimo registro de entrada") ||
+        valor.includes("ultimo registro de salida") ||
         valor.includes("ultimo registro de salida") ||
         valor.includes("completar el ingreso pendiente") ||
         valor.includes("regularizar la salida")

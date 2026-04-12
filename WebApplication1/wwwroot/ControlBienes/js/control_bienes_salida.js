@@ -1,4 +1,4 @@
-﻿// Script frontend para control_bienes_salida.
+// Script frontend para control_bienes_salida.
 
 let salidaId = null;
 let dni = null;
@@ -58,7 +58,9 @@ function renderBienesActivos() {
         const desc = bien.descripcion || "N/A";
         const marca = bien.marca ? ` | Marca: ${bien.marca}` : "";
         const serie = bien.serie ? ` | Serie: ${bien.serie}` : "";
-        const fechaIngreso = bien.fechaIngreso ? new Date(bien.fechaIngreso).toLocaleString("es-PE") : "N/A";
+        const fechaIngreso = bien.fechaIngreso
+            ? `${new Date(bien.fechaIngreso).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })} ${new Date(bien.fechaIngreso).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false })}`
+            : "N/A";
 
         return `<label class="bien-salida-item" data-bien-item>
             <div class="bien-salida-top">
@@ -135,7 +137,7 @@ async function registrarSalida() {
         const result = await response.json();
         const estado = result?.estado || "Salida registrada";
         mensaje.className = "success";
-        mensaje.innerText = `✅ ${estado} para ${nombreCompleto || dni}`;
+        mensaje.innerText = `${estado} para ${nombreCompleto || dni}`;
 
         setTimeout(() => {
             window.location.href = "control_bienes.html";

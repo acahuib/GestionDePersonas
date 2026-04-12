@@ -1,4 +1,4 @@
-﻿// Script frontend para proveedor_salida.
+// Script frontend para proveedor_salida.
 
 function cargarDatosDesdeUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -30,7 +30,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontró el ID del registro de ingreso";
+        mensaje.innerText = "No se encontr� el ID del registro de ingreso";
         return;
     }
 
@@ -67,11 +67,11 @@ async function registrarSalida(endpoint, mensajeOk) {
 }
 
 async function registrarSalidaTemporal() {
-    await registrarSalida("salida-temporal", "✅ SALIDA CON RETORNO registrada correctamente");
+    await registrarSalida("salida-temporal", "SALIDA CON RETORNO registrada correctamente");
 }
 
 async function registrarSalidaDefinitiva() {
-    await registrarSalida("salida", "✅ SALIDA DEFINITIVA registrada correctamente");
+    await registrarSalida("salida", "SALIDA DEFINITIVA registrada correctamente");
 }
 
 function volver() {
@@ -88,7 +88,7 @@ function obtenerFechaLocalISO() {
 
 function obtenerMensajeUsuario(error) {
     const mensajeBase = (error?.message || error || "").toString().trim();
-    if (!mensajeBase) return "No se pudo completar la operación.";
+    if (!mensajeBase) return "No se pudo completar la operacion.";
 
     try {
         const json = JSON.parse(mensajeBase);

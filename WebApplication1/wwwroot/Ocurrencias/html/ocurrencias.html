@@ -227,7 +227,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    addEnterListener("nombre", () => document.getElementById("ocurrencia").focus());
+    addEnterListener("nombre", () => document.getElementById("ocurrencia")?.focus());
+    addEnterListener("vehiculoDni", () => document.getElementById("vehiculoPlaca")?.focus());
+    addEnterListener("vehiculoPlaca", () => document.getElementById("vehiculoChofer")?.focus());
+    addEnterListener("vehiculoChofer", () => document.getElementById("vehiculoEmpresa")?.focus());
+    addEnterListener("vehiculoEmpresa", () => document.getElementById("vehiculoProcedencia")?.focus());
+    addEnterListener("vehiculoProcedencia", () => document.getElementById("vehiculoDestino")?.focus());
+    addEnterListener("vehiculoDestino", () => document.getElementById("vehiculoObservacion")?.focus());
+    addEnterListener("vehiculoObservacion", () => registrarIngresoVehicular());
+
+    addEnterListener("encapsuladoDni", () => document.getElementById("encapsuladoTractoPlaca")?.focus());
+    addEnterListener("encapsuladoTractoPlaca", () => document.getElementById("encapsuladoPlataformaPlaca")?.focus());
+    addEnterListener("encapsuladoPlataformaPlaca", () => document.getElementById("encapsuladoChofer")?.focus());
+    addEnterListener("encapsuladoChofer", () => document.getElementById("encapsuladoEmpresa")?.focus());
+    addEnterListener("encapsuladoEmpresa", () => document.getElementById("encapsuladoProcedencia")?.focus());
+    addEnterListener("encapsuladoProcedencia", () => document.getElementById("encapsuladoDestino")?.focus());
+    addEnterListener("encapsuladoDestino", () => document.getElementById("encapsuladoObservacion")?.focus());
+    addEnterListener("encapsuladoObservacion", () => registrarIngresoEncapsulado());
+
+    addEnterListener("cosasDni", () => document.getElementById("cosasNombre")?.focus());
+    addEnterListener("cosasNombre", () => document.getElementById("cosasEmpresa")?.focus());
+    addEnterListener("cosasEmpresa", () => document.getElementById("cosasQueEncarga")?.focus());
+    addEnterListener("cosasQueEncarga", () => document.getElementById("cosasAQuien")?.focus());
+    addEnterListener("cosasAQuien", () => registrarIngresoCosas());
 
     inicializarAutocompleteNombreDniOcurrencias();
     inicializarAutocompletadoDniOcurrencias();

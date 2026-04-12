@@ -1,4 +1,4 @@
-﻿// Script frontend para login.
+// Script frontend para login.
 
 async function login() {
 
