@@ -133,33 +133,35 @@ namespace WebApplication1.Controllers
                 .AsNoTracking()
                 .Where(m => dnis.Contains(m.Dni) && m.PuntoControlId == 1)
                 .OrderByDescending(m => m.FechaHora)
-                .Select(m => new { m.Dni, m.TipoMovimiento, m.FechaHora })
+                .Select(m => new { m.Id, m.Dni, m.TipoMovimiento, m.FechaHora, m.PuntoControlId })
                 .ToListAsync();
 
             var ultimoMovimientoPorDni = movimientos
                 .GroupBy(m => m.Dni)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var operaciones = await _context.OperacionDetalle
+            var idsUltimoMovimiento = ultimoMovimientoPorDni.Values
+                .Select(m => m.Id)
+                .Distinct()
+                .ToList();
+
+            var operacionesUltimoMovimiento = await _context.OperacionDetalle
                 .AsNoTracking()
-                .Where(o => dnis.Contains(o.Dni ?? ""))
+                .Where(o => idsUltimoMovimiento.Contains(o.MovimientoId))
                 .Select(o => new
                 {
-                    Dni = o.Dni,
+                    o.MovimientoId,
                     o.TipoOperacion,
-                    o.HoraIngreso,
-                    o.HoraSalida,
                     o.FechaCreacion
                 })
                 .ToListAsync();
 
-            var operacionPorDni = operaciones
-                .Where(o => !string.IsNullOrWhiteSpace(o.Dni))
-                .GroupBy(o => o.Dni!)
+            var operacionPorMovimientoId = operacionesUltimoMovimiento
+                .GroupBy(o => o.MovimientoId)
                 .ToDictionary(
                     g => g.Key,
                     g => g
-                        .OrderByDescending(x => (x.HoraSalida ?? x.HoraIngreso ?? x.FechaCreacion))
+                        .OrderByDescending(x => x.FechaCreacion)
                         .First()
                 );
 
@@ -178,13 +180,40 @@ namespace WebApplication1.Controllers
                 return "SinMovimientos";
             }
 
+            string ObtenerCuadernoUltimoMovimiento(int? movimientoId, int? puntoControlId)
+            {
+                if (!movimientoId.HasValue) return "-";
+
+                if (operacionPorMovimientoId.TryGetValue(movimientoId.Value, out var operacion)
+                    && !string.IsNullOrWhiteSpace(operacion.TipoOperacion))
+                {
+                    return operacion.TipoOperacion! switch
+                    {
+                        "PersonalLocal" => "Personal Local",
+                        "OficialPermisos" => "Oficial Permisos",
+                        "VehiculoEmpresa" => "Vehiculo Empresa",
+                        "VehiculosProveedores" => "Vehiculos Proveedores",
+                        "ControlBienes" => "Control de Bienes",
+                        "DiasLibre" => "Dias Libres",
+                        "HabitacionProveedor" => "Habitacion Proveedor",
+                        "Proveedor" => "Proveedores",
+                        "Ocurrencias" => "Ocurrencias",
+                        "Cancha" => "Cancha",
+                        _ => operacion.TipoOperacion!
+                    };
+                }
+
+                if (!puntoControlId.HasValue) return "Registro no identificado";
+                return puntoControlId.Value == 1 ? "Garita" : $"Punto de control {puntoControlId.Value}";
+            }
+
             var resultado = personas.Select(p =>
             {
                 ultimoMovimientoPorDni.TryGetValue(p.Dni, out var mov);
-                operacionPorDni.TryGetValue(p.Dni, out var op);
 
                 var tipoMovimiento = NormalizarTipoMovimiento(mov?.TipoMovimiento);
                 var estadoActual = ObtenerEstadoActual(tipoMovimiento);
+                var cuadernoUltimoMovimiento = ObtenerCuadernoUltimoMovimiento(mov?.Id, mov?.PuntoControlId);
 
                 return new
                 {
@@ -193,7 +222,7 @@ namespace WebApplication1.Controllers
                     estadoActual,
                     ultimoMovimiento = tipoMovimiento,
                     fechaHoraUltimoMovimiento = mov?.FechaHora,
-                    cuadernoUltimoMovimiento = op?.TipoOperacion ?? "-"
+                    cuadernoUltimoMovimiento
                 };
             });
 

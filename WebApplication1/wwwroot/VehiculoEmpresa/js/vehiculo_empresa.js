@@ -832,7 +832,7 @@ async function cargarActivos() {
             html += `<td>${destino}</td>`;
             html += `<td>${construirFechaHoraCelda(fecha, hora)}</td>`;
             const botonCruceEspecial = tieneSalida
-                ? `<button class="btn-warning btn-small" onclick="irAIngresoVehiculoProveedorEspecial(${s.id})">Ingreso por Veh. Proveedor</button>`
+                ? `<button class="btn-success-soft btn-small" onclick="irAIngresoVehiculoProveedorEspecial(${s.id})">Ingreso con Mineral</button>`
                 : "";
             const modoPie = tieneSalida ? "ingreso" : "salida";
             const textoPie = tieneSalida ? "Ingreso a pie" : "Salida a pie";

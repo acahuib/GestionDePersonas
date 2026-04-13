@@ -342,6 +342,15 @@ button:hover {
     background-color: #1e7e34;
 }
 
+.btn-success-soft {
+    background-color: #66b980;
+    color: #ffffff;
+}
+
+.btn-success-soft:hover {
+    background-color: #4ea36a;
+}
+
 .btn-danger {
     background-color: #dc3545;
 }

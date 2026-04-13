@@ -44,15 +44,9 @@ function establecerRangoFechasDefault() {
     const inputFin = document.getElementById("fechaFin");
     if (!inputInicio || !inputFin) return;
 
-    const hoy = new Date();
-    const haceSiete = new Date(hoy);
-    haceSiete.setDate(haceSiete.getDate() - 7);
-
-    const manana = new Date(hoy);
-    manana.setDate(manana.getDate() + 1);
-
-    inputInicio.value = fechaIsoLocalHistorial(haceSiete);
-    inputFin.value = fechaIsoLocalHistorial(manana);
+    // Set both date fields empty by default to show all records
+    inputInicio.value = "";
+    inputFin.value = "";
 }
 
 function cargarFiltroTipo() {
