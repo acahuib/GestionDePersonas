@@ -46,15 +46,6 @@
                 Cuaderno
                 <select id="filtroTipo"></select>
             </label>
-            <label>
-                Movimiento
-                <select id="filtroMovimiento">
-                    <option value="">Todos</option>
-                    <option value="Entrada">Entrada</option>
-                    <option value="Salida">Salida</option>
-                    <option value="Info">Info</option>
-                </select>
-            </label>
             <label id="wrapFiltroTipoRegistro" class="tc-hidden">
                 Tipo ruta almacen
                 <select id="filtroTipoRegistro">
@@ -91,7 +82,15 @@
             </div>
         </section>
 
-        <section class="tc-table-wrap">
+        <section class="tc-section">
+            <div class="tc-section-head">
+                <h2>Cuadernos</h2>
+                <p class="tc-muted">Visualiza cada cuaderno por separado.</p>
+            </div>
+            <div id="tabsCuadernos" class="tc-tabs"></div>
+        </section>
+
+        <section class="tc-results">
             <div class="tc-table-head">
                 <p id="resumenResultados">0 registros</p>
                 <div class="tc-pagination-inline">
@@ -100,24 +99,13 @@
                     <button id="btnNext" type="button" class="tc-btn tc-btn-soft">Siguiente</button>
                 </div>
             </div>
-            <div class="tc-table-scroller">
-                <table class="tc-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha/Hora</th>
-                            <th>Cuaderno</th>
-                            <th>Movimiento</th>
-                            <th>DNI</th>
-                            <th>Nombre</th>
-                            <th>Guardia</th>
-                            <th>Resumen</th>
-                            <th>Imagenes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="torreBody">
-                        <tr><td colspan="8">Cargando registros...</td></tr>
-                    </tbody>
-                </table>
+            <div id="listaRegistros" class="registro-grid">
+                <article class="registro-card loading-card">Cargando registros...</article>
+            </div>
+            <div class="tc-pagination-footer">
+                <button id="btnPrevBottom" type="button" class="tc-btn tc-btn-soft">Anterior</button>
+                <span id="infoPaginaBottom">Pagina 0 de 0</span>
+                <button id="btnNextBottom" type="button" class="tc-btn tc-btn-soft">Siguiente</button>
             </div>
         </section>
     </div>

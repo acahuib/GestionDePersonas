@@ -45,6 +45,7 @@
             <label>Tipo de Ocurrencia *</label>
             <select id="tipoOcurrencia" onchange="cambiarTipoOcurrencia()">
                 <option value="Persona">Persona</option>
+                <option value="Eventos">Eventos</option>
                 <option value="Vehicular">Vehicular</option>
                 <option value="Encapsulado">Encapsulado</option>
                 <option value="CosasEncargadas">Cosas encargadas</option>
@@ -71,6 +72,18 @@
 
                 <label>Descripción de Ocurrencia *</label>
                 <textarea id="ocurrencia" placeholder="Describa lo que está sucediendo..." rows="4"></textarea>
+            </div>
+
+            <div id="bloqueEventos" style="display:none;">
+                <label>DNI <span class="muted">(Opcional - Si no tiene, dejarlo vacío)</span></label>
+                <input type="text" id="eventoDni" placeholder="DNI si lo proporciona" maxlength="8">
+
+                <div id="evento-persona-info" class="info-box" style="display: none; margin: 10px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3;">
+                    <strong><img src="/images/info-circle.svg"> Persona encontrada:</strong> <span id="evento-persona-nombre"></span>
+                </div>
+
+                <label>Nombre <span class="muted">(Si no tiene DNI, escribir nombre)</span></label>
+                <input type="text" id="eventoNombre" placeholder="Nombre o descripcion">
             </div>
 
             <div id="bloqueVehicular" style="display:none;">
@@ -149,7 +162,7 @@
             <p id="imagenes-preview-resumen" class="muted" style="margin-top:6px;">No hay imagenes seleccionadas.</p>
             <div id="imagenes-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px 0;"></div>
 
-            <div class="form-card" style="margin-top:10px;">
+            <div id="bloqueAcompanantesOcurrencia" class="form-card" style="margin-top:10px;">
                 <h3 style="margin-bottom:6px;">Acompanantes (opcional)</h3>
                 <p class="muted" style="margin-top:0;">Escanee DNI y agregue acompanantes antes de registrar el titular.</p>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">

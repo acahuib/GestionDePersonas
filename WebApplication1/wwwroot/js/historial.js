@@ -19,9 +19,9 @@ const TIPOS_OPERACION = {
 const TIPOS_DISPONIBLES = Object.keys(TIPOS_OPERACION);
 
 const COLUMNAS = [
-    { key: "fechaHora", label: "Fecha/Hora" },
     { key: "tipoLabel", label: "Tipo" },
-    { key: "movimiento", label: "Movimiento" },
+    { key: "ingreso", label: "Ingreso" },
+    { key: "salida", label: "Salida" },
     { key: "dni", label: "DNI" },
     { key: "nombre", label: "Nombre" },
     { key: "detalle", label: "Detalle" }
@@ -262,7 +262,6 @@ function normalizarDatos(item) {
         tipoLabel
     };
 
-    const movimiento = obtenerMovimiento(base);
     const ingresoFechaHora = horaIngreso ? formatearFechaHora(horaIngreso) : "-";
     const salidaFechaHora = horaSalida ? formatearFechaHora(horaSalida) : "-";
     const partesFechaHora = [];
@@ -286,26 +285,13 @@ function normalizarDatos(item) {
 
     return {
         ...base,
-        movimiento,
+        ingreso: ingresoFechaHora,
+        salida: salidaFechaHora,
         fechaHora: partesFechaHora.join(", "),
         fechaHoraHtml: partesFechaHoraHtml.join(""),
         detalle: detalleConstruido.texto,
         detalleHtml: detalleConstruido.html
     };
-}
-
-function obtenerMovimiento(item) {
-    if (item.tipoOperacion === "RegistroInformativoEnseresTurno" || item.tipoOperacion === "Cancha") {
-        return "Info";
-    }
-
-    const tieneIngreso = item.horaIngreso && item.horaIngreso !== "-";
-    const tieneSalida = item.horaSalida && item.horaSalida !== "-";
-
-    if (tieneIngreso && !tieneSalida) return "Entrada";
-    if (!tieneIngreso && tieneSalida) return "Salida";
-    if (tieneIngreso && tieneSalida) return "Entrada";
-    return "";
 }
 
 function formatearFecha(valor) {
@@ -350,15 +336,9 @@ function aplicarFiltros() {
     const texto = document.getElementById("busquedaTexto").value.trim().toLowerCase();
     const fechaInicio = document.getElementById("fechaInicio").value;
     const fechaFin = document.getElementById("fechaFin").value;
-    const filtroMovimiento = document.getElementById("filtroMovimiento").value;
     const filtroTipo = document.getElementById("filtroTipo")?.value || "";
 
     registrosFiltrados = registros.filter(item => {
-        const movimiento = item.movimiento;
-        if (filtroMovimiento && movimiento !== filtroMovimiento) {
-            return false;
-        }
-
         if (filtroTipo && item.tipoOperacion !== filtroTipo) {
             return false;
         }
@@ -412,9 +392,6 @@ function renderizarTabla() {
                 const cells = COLUMNAS
                     .map(col => {
                         let value = item[col.key] ?? "-";
-                        if (col.key === "fechaHora") {
-                            value = item.fechaHoraHtml || value;
-                        }
                         if (col.key === "detalle") {
                             value = item.detalleHtml || value;
                         }
@@ -437,7 +414,6 @@ function configurarEventos() {
     document.getElementById("btnBuscar").addEventListener("click", aplicarFiltros);
     document.getElementById("btnLimpiar").addEventListener("click", () => {
         document.getElementById("busquedaTexto").value = "";
-        document.getElementById("filtroMovimiento").value = "";
         const filtroTipo = document.getElementById("filtroTipo");
         if (filtroTipo) filtroTipo.value = "";
         establecerRangoFechasDefault();

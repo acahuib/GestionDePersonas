@@ -42,7 +42,12 @@
                     </label>
                     <label>
                         Rol
-                        <input id="crearRol" list="rolesSugeridos" placeholder="Ej: Guardia, Admin, Tecnico" required>
+                        <select id="crearRol" required>
+                            <option value="Guardia">Guardia</option>
+                            <option value="Torre">Torre</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Tecnico">Tecnico</option>
+                        </select>
                     </label>
                     <label>
                         Password
@@ -102,7 +107,12 @@
             </label>
             <label>
                 Rol
-                <input id="editarRol" list="rolesSugeridos" placeholder="Rol" required>
+                <select id="editarRol" required>
+                    <option value="Guardia">Guardia</option>
+                    <option value="Torre">Torre</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Tecnico">Tecnico</option>
+                </select>
             </label>
             <label>
                 Nueva password (opcional)
@@ -115,9 +125,6 @@
             </div>
         </form>
     </dialog>
-
-    <datalist id="rolesSugeridos"></datalist>
-
     <script src="js/api.js?v=20260408-techfix"></script>
     <script src="js/auth.js?v=20260408-techfix"></script>
     <script src="js/tecnico-usuarios.js?v=20260408-techfix"></script>

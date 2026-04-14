@@ -13,6 +13,23 @@ namespace WebApplication1.Controllers
     [Authorize(Roles = "Admin,Guardia,Tecnico")]
     public class PersonasController : ControllerBase
     {
+        private sealed class MovimientoEstadoInfo
+        {
+            public int Id { get; init; }
+            public string Dni { get; init; } = string.Empty;
+            public string? TipoMovimiento { get; init; }
+            public DateTime FechaHora { get; init; }
+            public int? PuntoControlId { get; init; }
+        }
+
+        private sealed class OperacionMovimientoInfo
+        {
+            public int MovimientoId { get; init; }
+            public string? TipoOperacion { get; init; }
+            public DateTime FechaCreacion { get; init; }
+            public string? DatosJSON { get; init; }
+        }
+
         private readonly AppDbContext _context;
 
         public PersonasController(AppDbContext context)
@@ -133,30 +150,38 @@ namespace WebApplication1.Controllers
                 .AsNoTracking()
                 .Where(m => dnis.Contains(m.Dni) && m.PuntoControlId == 1)
                 .OrderByDescending(m => m.FechaHora)
-                .Select(m => new { m.Id, m.Dni, m.TipoMovimiento, m.FechaHora, m.PuntoControlId })
+                .Select(m => new MovimientoEstadoInfo
+                {
+                    Id = m.Id,
+                    Dni = m.Dni,
+                    TipoMovimiento = m.TipoMovimiento,
+                    FechaHora = m.FechaHora,
+                    PuntoControlId = m.PuntoControlId
+                })
                 .ToListAsync();
 
             var ultimoMovimientoPorDni = movimientos
                 .GroupBy(m => m.Dni)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var idsUltimoMovimiento = ultimoMovimientoPorDni.Values
+            var movimientoIds = movimientos
                 .Select(m => m.Id)
                 .Distinct()
                 .ToList();
 
-            var operacionesUltimoMovimiento = await _context.OperacionDetalle
+            var operacionesMovimiento = await _context.OperacionDetalle
                 .AsNoTracking()
-                .Where(o => idsUltimoMovimiento.Contains(o.MovimientoId))
-                .Select(o => new
+                .Where(o => movimientoIds.Contains(o.MovimientoId))
+                .Select(o => new OperacionMovimientoInfo
                 {
-                    o.MovimientoId,
-                    o.TipoOperacion,
-                    o.FechaCreacion
+                    MovimientoId = o.MovimientoId,
+                    TipoOperacion = o.TipoOperacion,
+                    FechaCreacion = o.FechaCreacion,
+                    DatosJSON = o.DatosJSON
                 })
                 .ToListAsync();
 
-            var operacionPorMovimientoId = operacionesUltimoMovimiento
+            var operacionPorMovimientoId = operacionesMovimiento
                 .GroupBy(o => o.MovimientoId)
                 .ToDictionary(
                     g => g.Key,
@@ -173,6 +198,26 @@ namespace WebApplication1.Controllers
                 return "SinMovimientos";
             }
 
+            bool EsOperacionInformativa(OperacionMovimientoInfo? operacion)
+            {
+                if (operacion == null) return false;
+
+                var tipo = operacion.TipoOperacion;
+                if (string.IsNullOrWhiteSpace(tipo)) return false;
+
+                if (string.Equals(tipo, "ControlBienes", StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(tipo, "RegistroInformativoEnseresTurno", StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(tipo, "HabitacionProveedor", StringComparison.OrdinalIgnoreCase)) return true;
+
+                if (string.Equals(tipo, "Ocurrencias", StringComparison.OrdinalIgnoreCase))
+                {
+                    return !string.IsNullOrWhiteSpace(operacion.DatosJSON)
+                        && operacion.DatosJSON.Contains("[TIPO: COSAS ENCARGADAS]", StringComparison.OrdinalIgnoreCase);
+                }
+
+                return false;
+            }
+
             string ObtenerEstadoActual(string tipoMovimiento)
             {
                 if (tipoMovimiento == "Entrada") return "Dentro";
@@ -180,40 +225,93 @@ namespace WebApplication1.Controllers
                 return "SinMovimientos";
             }
 
-            string ObtenerCuadernoUltimoMovimiento(int? movimientoId, int? puntoControlId)
+            string MapearCuaderno(string tipoOperacion)
+            {
+                return tipoOperacion switch
+                {
+                    "PersonalLocal" => "Personal Local",
+                    "OficialPermisos" => "Oficial Permisos",
+                    "VehiculoEmpresa" => "Vehiculo Empresa",
+                    "VehiculosProveedores" => "Vehiculos Proveedores",
+                    "ControlBienes" => "Control de Bienes",
+                    "RegistroInformativoEnseresTurno" => "Enseres por Turno",
+                    "DiasLibre" => "Dias Libres",
+                    "HabitacionProveedor" => "Habitacion Proveedor",
+                    "Proveedor" => "Proveedores",
+                    "Ocurrencias" => "Ocurrencias",
+                    "Cancha" => "Cancha",
+                    _ => tipoOperacion
+                };
+            }
+
+            string ObtenerCuadernoUltimoMovimiento(string dni, int? movimientoId, int? puntoControlId)
             {
                 if (!movimientoId.HasValue) return "-";
+
+                var movimientosDni = movimientos
+                    .Where(m => m.Dni == dni)
+                    .OrderByDescending(m => m.FechaHora)
+                    .ToList();
 
                 if (operacionPorMovimientoId.TryGetValue(movimientoId.Value, out var operacion)
                     && !string.IsNullOrWhiteSpace(operacion.TipoOperacion))
                 {
-                    return operacion.TipoOperacion! switch
+                    if (EsOperacionInformativa(operacion))
                     {
-                        "PersonalLocal" => "Personal Local",
-                        "OficialPermisos" => "Oficial Permisos",
-                        "VehiculoEmpresa" => "Vehiculo Empresa",
-                        "VehiculosProveedores" => "Vehiculos Proveedores",
-                        "ControlBienes" => "Control de Bienes",
-                        "DiasLibre" => "Dias Libres",
-                        "HabitacionProveedor" => "Habitacion Proveedor",
-                        "Proveedor" => "Proveedores",
-                        "Ocurrencias" => "Ocurrencias",
-                        "Cancha" => "Cancha",
-                        _ => operacion.TipoOperacion!
-                    };
+                        var alternativo = movimientosDni.FirstOrDefault(m =>
+                            operacionPorMovimientoId.TryGetValue(m.Id, out var op)
+                            && !string.IsNullOrWhiteSpace(op.TipoOperacion)
+                            && !EsOperacionInformativa(op));
+
+                        if (alternativo != null
+                            && operacionPorMovimientoId.TryGetValue(alternativo.Id, out var opAlt)
+                            && !string.IsNullOrWhiteSpace(opAlt.TipoOperacion))
+                        {
+                            return MapearCuaderno(opAlt.TipoOperacion!);
+                        }
+                    }
+
+                    return MapearCuaderno(operacion.TipoOperacion!);
                 }
 
                 if (!puntoControlId.HasValue) return "Registro no identificado";
-                return puntoControlId.Value == 1 ? "Garita" : $"Punto de control {puntoControlId.Value}";
+                return puntoControlId.Value == 1 ? "Registro sin cuaderno" : $"Punto de control {puntoControlId.Value}";
+            }
+
+            MovimientoEstadoInfo? ObtenerMovimientoPreferido(string dni, MovimientoEstadoInfo? movimientoActual)
+            {
+                if (movimientoActual == null) return null;
+
+                var movimientosDni = movimientos
+                    .Where(m => m.Dni == dni)
+                    .OrderByDescending(m => m.FechaHora)
+                    .ToList();
+
+                var preferido = movimientosDni.FirstOrDefault(m =>
+                {
+                    var tipoMov = NormalizarTipoMovimiento(m.TipoMovimiento);
+                    if (tipoMov != "Entrada" && tipoMov != "Salida") return false;
+
+                    if (operacionPorMovimientoId.TryGetValue(m.Id, out var op)
+                        && !string.IsNullOrWhiteSpace(op.TipoOperacion))
+                    {
+                        return !EsOperacionInformativa(op);
+                    }
+
+                    return true;
+                });
+
+                return preferido ?? movimientoActual;
             }
 
             var resultado = personas.Select(p =>
             {
                 ultimoMovimientoPorDni.TryGetValue(p.Dni, out var mov);
+                var movPreferido = ObtenerMovimientoPreferido(p.Dni, mov);
 
-                var tipoMovimiento = NormalizarTipoMovimiento(mov?.TipoMovimiento);
+                var tipoMovimiento = NormalizarTipoMovimiento(movPreferido?.TipoMovimiento);
                 var estadoActual = ObtenerEstadoActual(tipoMovimiento);
-                var cuadernoUltimoMovimiento = ObtenerCuadernoUltimoMovimiento(mov?.Id, mov?.PuntoControlId);
+                var cuadernoUltimoMovimiento = ObtenerCuadernoUltimoMovimiento(p.Dni, movPreferido?.Id, movPreferido?.PuntoControlId);
 
                 return new
                 {
@@ -221,7 +319,7 @@ namespace WebApplication1.Controllers
                     nombre = p.Nombre,
                     estadoActual,
                     ultimoMovimiento = tipoMovimiento,
-                    fechaHoraUltimoMovimiento = mov?.FechaHora,
+                    fechaHoraUltimoMovimiento = movPreferido?.FechaHora,
                     cuadernoUltimoMovimiento
                 };
             });

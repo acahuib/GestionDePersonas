@@ -107,7 +107,7 @@ async function cargarBienesPendientesPorDni(dni) {
         if (pendingInfo) {
             pendingInfo.style.display = bienesPendientes.length > 0 ? "block" : "none";
             pendingInfo.innerHTML = bienesPendientes.length > 0
-                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservar�n autom�ticamente y no son editables.`
+                ? `<strong>Bienes pendientes detectados:</strong> ${bienesPendientes.length} bien(es) activo(s). Se conservarán automáticamente y no son editables.`
                 : "";
         }
     } catch {
@@ -164,7 +164,7 @@ function agregarBien() {
         <h4 style="margin-top: 0; margin-bottom: 6px;">Bien #${bienId}</h4>
         <div class="cb-bien-grid cb-small-input">
             <div>
-                <label class="cb-label-tight">Descripci�n *</label>
+                <label class="cb-label-tight">Descripción *</label>
                 <input type="text" class="bien-descripcion" id="desc-${bienId}" placeholder="Ej: Laptop, Termo, etc." data-bien-id="${bienId}">
             </div>
             <div>
@@ -229,9 +229,12 @@ async function registrarIngreso() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete el DNI";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 

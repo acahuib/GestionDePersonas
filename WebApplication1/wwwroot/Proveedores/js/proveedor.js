@@ -84,9 +84,14 @@ async function registrarEntrada() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni || !procedencia || !destino) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Procedencia", value: procedencia },
+        { label: "Destino", value: destino }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, Procedencia y Destino";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 

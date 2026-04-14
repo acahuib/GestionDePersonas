@@ -88,7 +88,7 @@ function abrirModalEditarInicialVehiculoEmpresaDesdePayload(payloadCodificado) {
                         <label>Tipo *</label>
                         <select id="editVeTipoRegistro">
                             <option value="Normal" ${tipoRegistro === "Normal" ? "selected" : ""}>Normal</option>
-                            <option value="Almacen" ${tipoRegistro === "Almacen" ? "selected" : ""}>Ruta a Almac�n</option>
+                            <option value="Almacen" ${tipoRegistro === "Almacen" ? "selected" : ""}>Ruta a Almacén</option>
                         </select>
                     </div>
                     <div>
@@ -148,10 +148,17 @@ async function guardarEdicionInicialVehiculoEmpresa() {
     const destinoInicial = (document.getElementById("editVeDestinoInicial")?.value || "").trim();
     const observacion = (document.getElementById("editVeObservacion")?.value || "").trim();
 
-    if (!placa || !fechaInicial || !horaInicial || !origenInicial || !destinoInicial) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "Placa", value: placa },
+        { label: "Fecha inicial", value: fechaInicial },
+        { label: "Hora inicial", value: horaInicial },
+        { label: "Origen inicial", value: origenInicial },
+        { label: "Destino inicial", value: destinoInicial }
+    ]);
+    if (faltantes.length) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete los campos obligatorios de edicion.";
+            mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         }
         return;
     }
@@ -514,9 +521,15 @@ async function registrarMovimientoInicial() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni || !placa || !origenMovimiento || !destinoMovimiento) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Placa", value: placa },
+        { label: "Origen", value: origenMovimiento },
+        { label: "Destino", value: destinoMovimiento }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete todos los campos obligatorios (*)";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 
@@ -534,7 +547,7 @@ async function registrarMovimientoInicial() {
 
     if (kmMovimiento && (isNaN(kmMovimiento) || parseInt(kmMovimiento, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un numero v�lido";
+        mensaje.innerText = "El kilometraje debe ser un numero válido";
         return;
     }
 
@@ -708,7 +721,7 @@ async function registrarAcompananteRapidoDesdeVehiculoEmpresa(salidaEmpresaId) {
         const data = await response.json();
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = `Acompa�ante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
+            mensaje.innerText = `Acompañante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
         }
     } catch (error) {
         if (mensaje) {

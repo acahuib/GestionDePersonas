@@ -113,6 +113,7 @@ if (app.Environment.IsDevelopment())
 }
 
 
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var configuredUploadsRoot = builder.Configuration["Uploads:RootPath"];

@@ -17,10 +17,9 @@ const TIPOS_OPERACION = {
 const TIPOS_DISPONIBLES = Object.keys(TIPOS_OPERACION);
 
 const COLUMNAS = [
-    { key: "fechaReferencia", label: "Fecha" },
-    { key: "horaReferencia", label: "Hora" },
     { key: "tipoLabel", label: "Tipo" },
-    { key: "movimiento", label: "Movimiento" },
+    { key: "ingreso", label: "Ingreso" },
+    { key: "salida", label: "Salida" },
     { key: "dni", label: "DNI" },
     { key: "nombre", label: "Nombre" },
     { key: "detalle", label: "Detalle" }
@@ -31,6 +30,36 @@ let paginaActual = 1;
 let registros = [];
 let registrosFiltrados = [];
 let debounceBusqueda = null;
+
+function fechaIsoLocalAdmin(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function parseFechaLocalAdmin(valor) {
+    if (!valor) return null;
+    if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : valor;
+
+    const texto = String(valor).trim();
+    if (!texto) return null;
+
+    const isoIntento = new Date(texto);
+    if (!Number.isNaN(isoIntento.getTime())) return isoIntento;
+
+    const match = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+    if (!match) return null;
+
+    const dia = Number(match[1]);
+    const mes = Number(match[2]);
+    const anio = Number(match[3]);
+    const hora = match[4] ? Number(match[4]) : 0;
+    const minuto = match[5] ? Number(match[5]) : 0;
+    const fecha = new Date(anio, mes - 1, dia, hora, minuto, 0, 0);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
 
 function verificarAdmin() {
     const token = localStorage.getItem("token");
@@ -156,7 +185,7 @@ function normalizarDatos(item) {
         fechaReferencia: formatearFecha(fechaIngreso || fechaSalida || item.fechaCreacion),
         fechaRegistro: datos.fecha ? formatearFecha(datos.fecha) : formatearFecha(item.fechaCreacion),
         horaRegistro: item.fechaCreacion ? formatearHora(item.fechaCreacion) : "-",
-        fechaFiltro: fechaBase ? new Date(fechaBase) : null,
+        fechaFiltro: parseFechaLocalAdmin(fechaBase) || parseFechaLocalAdmin(item.fechaCreacion),
         ordenFecha,
         turno: datos.turno || "-",
         agenteNombre: datos.agenteNombre || item.nombreCompleto || "-",
@@ -172,7 +201,6 @@ function normalizarDatos(item) {
         tipoLabel
     };
 
-    const movimiento = obtenerMovimiento(base);
     const horaReferencia = base.horaIngreso !== "-"
         ? base.horaIngreso
         : base.horaSalida !== "-"
@@ -181,38 +209,11 @@ function normalizarDatos(item) {
 
     return {
         ...base,
-        movimiento,
+        ingreso: base.fechaIngreso !== "-" ? `${base.fechaIngreso} ${base.horaIngreso}`.trim() : "-",
+        salida: base.fechaSalida !== "-" ? `${base.fechaSalida} ${base.horaSalida}`.trim() : "-",
         horaReferencia,
         detalle: construirDetalle(base)
     };
-}
-
-function obtenerMovimiento(item) {
-    if (item.tipoOperacion === "RegistroInformativoEnseresTurno") {
-        return "Info";
-    }
-
-    const tieneIngreso = item.horaIngreso && item.horaIngreso !== "-";
-    const tieneSalida = item.horaSalida && item.horaSalida !== "-";
-
-    if (tieneIngreso && tieneSalida) {
-        const ingreso = item.fechaIngreso && item.fechaIngreso !== "-"
-            ? new Date(`${item.fechaIngreso} ${item.horaIngreso}`)
-            : null;
-        const salida = item.fechaSalida && item.fechaSalida !== "-"
-            ? new Date(`${item.fechaSalida} ${item.horaSalida}`)
-            : null;
-
-        if (salida && ingreso && !Number.isNaN(salida.getTime()) && !Number.isNaN(ingreso.getTime())) {
-            return salida >= ingreso ? "Salida" : "Entrada";
-        }
-
-        return "Salida";
-    }
-
-    if (tieneIngreso && !tieneSalida) return "Entrada";
-    if (!tieneIngreso && tieneSalida) return "Salida";
-    return "";
 }
 
 function formatearFecha(valor) {
@@ -257,15 +258,9 @@ function aplicarFiltros() {
     const texto = document.getElementById("busquedaTexto").value.trim().toLowerCase();
     const fechaInicio = document.getElementById("fechaInicio").value;
     const fechaFin = document.getElementById("fechaFin").value;
-    const filtroMovimiento = document.getElementById("filtroMovimiento").value;
     const filtroTipo = document.getElementById("filtroTipo")?.value || "";
 
     registrosFiltrados = registros.filter(item => {
-        const movimiento = item.movimiento;
-        if (filtroMovimiento && movimiento !== filtroMovimiento) {
-            return false;
-        }
-
         if (filtroTipo && item.tipoOperacion !== filtroTipo) {
             return false;
         }
@@ -277,14 +272,12 @@ function aplicarFiltros() {
             }
         }
 
-        if ((fechaInicio || fechaFin) && item.fechaFiltro instanceof Date && !Number.isNaN(item.fechaFiltro.getTime())) {
-            const base = item.fechaFiltro;
-            if (fechaInicio && base < new Date(fechaInicio)) return false;
-            if (fechaFin) {
-                const fin = new Date(fechaFin);
-                fin.setHours(23, 59, 59, 999);
-                if (base > fin) return false;
-            }
+        if (fechaInicio || fechaFin) {
+            if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
+            const baseIso = fechaIsoLocalAdmin(item.fechaFiltro);
+            if (!baseIso) return false;
+            if (fechaInicio && baseIso < fechaInicio) return false;
+            if (fechaFin && baseIso > fechaFin) return false;
         }
 
         return true;
@@ -350,14 +343,12 @@ async function exportarExcelPaginaActual() {
     const texto = document.getElementById("busquedaTexto").value.trim();
     const fechaInicio = document.getElementById("fechaInicio").value;
     const fechaFin = document.getElementById("fechaFin").value;
-    const filtroMovimiento = document.getElementById("filtroMovimiento").value;
     const filtroTipo = document.getElementById("filtroTipo")?.value || "";
 
     const params = new URLSearchParams();
     params.set("page", String(paginaActual));
     params.set("pageSize", String(registrosPorPagina));
     if (filtroTipo) params.set("tipoOperacion", filtroTipo);
-    if (filtroMovimiento) params.set("tipoMovimiento", filtroMovimiento);
     if (texto) params.set("texto", texto);
     if (fechaInicio) params.set("fechaInicio", fechaInicio);
     if (fechaFin) params.set("fechaFin", fechaFin);
@@ -399,10 +390,6 @@ function configurarEventos() {
     if (filtroTipo) {
         filtroTipo.addEventListener("change", aplicarFiltros);
     }
-    const filtroMovimiento = document.getElementById("filtroMovimiento");
-    if (filtroMovimiento) {
-        filtroMovimiento.addEventListener("change", aplicarFiltros);
-    }
     const fechaInicio = document.getElementById("fechaInicio");
     if (fechaInicio) {
         fechaInicio.addEventListener("change", aplicarFiltros);
@@ -413,7 +400,6 @@ function configurarEventos() {
     }
     document.getElementById("btnLimpiar").addEventListener("click", () => {
         document.getElementById("busquedaTexto").value = "";
-        document.getElementById("filtroMovimiento").value = "";
         const filtroTipo = document.getElementById("filtroTipo");
         if (filtroTipo) filtroTipo.value = "";
         document.getElementById("fechaInicio").value = "";

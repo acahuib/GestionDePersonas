@@ -235,12 +235,19 @@ async function registrarDiasLibre(e) {
     const fechaRegistroInput = document.getElementById('fechaRegistro')?.value || obtenerFechaLocalISO();
     const observaciones = document.getElementById('observaciones').value.trim();
 
-    if (!numeroBoleta || !dni || !del || !al) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "Numero boleta", value: numeroBoleta },
+        { label: "DNI", value: dni },
+        { label: "Del", value: del },
+        { label: "Al", value: al }
+    ]);
+    if (faltantes.length) {
+        const texto = `Falta completar: ${faltantes.join(", ")}`;
         if (mensaje) {
             mensaje.className = 'error';
-            mensaje.innerText = 'Por favor complete todos los campos obligatorios';
+            mensaje.innerText = texto;
         } else {
-            alert('Por favor complete todos los campos obligatorios');
+            alert(texto);
         }
         return;
     }

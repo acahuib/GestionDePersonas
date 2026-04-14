@@ -91,25 +91,6 @@ function torreFormatearHora(valor) {
     return fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function torreObtenerMovimiento(item) {
-    if (item.tipoOperacion === "RegistroInformativoEnseresTurno") return "Info";
-
-    const tieneIngreso = item.horaIngreso && item.horaIngreso !== "-";
-    const tieneSalida = item.horaSalida && item.horaSalida !== "-";
-
-    if (tieneIngreso && !tieneSalida) return "Entrada";
-    if (!tieneIngreso && tieneSalida) return "Salida";
-    if (tieneIngreso && tieneSalida) return "Salida";
-    return "";
-}
-
-function torreMovimientoClass(movimiento) {
-    const key = (movimiento || "").toLowerCase();
-    if (key === "entrada") return "badge-mov-entrada";
-    if (key === "salida") return "badge-mov-salida";
-    if (key === "info") return "badge-mov-info";
-    return "badge-mov-vacio";
-}
 
 function torreParseDatos(datos) {
     if (!datos) return {};
@@ -161,7 +142,6 @@ function torreNormalizarRegistro(item, tipoPorDefecto) {
         ordenFecha: fechaRefRaw ? new Date(fechaRefRaw).getTime() : 0
     };
 
-    registro.movimiento = torreObtenerMovimiento(registro);
 
     const detalleMap = {
         proveedor: "Proveedor",
@@ -242,14 +222,11 @@ async function torreCargarHistorial() {
 
 function torreAplicarFiltros() {
     const texto = (document.getElementById("busquedaTexto")?.value || "").trim().toLowerCase();
-    const movimiento = document.getElementById("filtroMovimiento")?.value || "";
     const fechaInicio = document.getElementById("fechaInicio")?.value || "";
     const fechaFin = document.getElementById("fechaFin")?.value || "";
 
     torreRegistrosFiltrados = torreRegistros.filter((item) => {
         if (torreTipoActivo && item.tipoOperacion !== torreTipoActivo) return false;
-        if (movimiento && item.movimiento !== movimiento) return false;
-
         if (texto) {
             const blob = `${item.dni} ${item.nombre} ${item.tipoLabel} ${JSON.stringify(item.datos || {})}`.toLowerCase();
             if (!blob.includes(texto)) return false;
@@ -309,13 +286,13 @@ function torreRenderizar() {
                 <article class="registro-card">
                     <div class="registro-head">
                         <span class="badge badge-tipo">${torreEscapeHtml(item.tipoLabel)}</span>
-                        <span class="badge ${torreMovimientoClass(item.movimiento)}">${torreEscapeHtml(item.movimiento || "Sin movimiento")}</span>
                         <span class="registro-fecha">${torreEscapeHtml(item.fechaRef)} ${torreEscapeHtml(item.horaRef)}</span>
                     </div>
                     <div class="registro-core">
                         <div class="campo"><span class="k">DNI:</span><span class="v">${torreEscapeHtml(item.dni)}</span></div>
                         <div class="campo"><span class="k">Nombre:</span><span class="v">${torreEscapeHtml(item.nombre)}</span></div>
-                        <div class="campo"><span class="k">Ingreso/Salida:</span><span class="v">${torreEscapeHtml(item.fechaIngreso)} ${torreEscapeHtml(item.horaIngreso)} | ${torreEscapeHtml(item.fechaSalida)} ${torreEscapeHtml(item.horaSalida)}</span></div>
+                        <div class="campo"><span class="k">Ingreso:</span><span class="v">${torreEscapeHtml(item.fechaIngreso)} ${torreEscapeHtml(item.horaIngreso)}</span></div>
+                        <div class="campo"><span class="k">Salida:</span><span class="v">${torreEscapeHtml(item.fechaSalida)} ${torreEscapeHtml(item.horaSalida)}</span></div>
                     </div>
                     <div class="detalle-item"><button type="button" class="btn btn-soft" data-ver-imagenes="${item.id}">Ver imagenes</button></div>
                     <div class="detalle-grid">${detalleHtml}</div>
@@ -380,7 +357,6 @@ function torreConfigurarEventos() {
 
     if (btnLimpiar) {
         btnLimpiar.addEventListener("click", () => {
-            document.getElementById("filtroMovimiento").value = "";
             document.getElementById("busquedaTexto").value = "";
             document.getElementById("fechaInicio").value = "";
             document.getElementById("fechaFin").value = "";
@@ -388,7 +364,7 @@ function torreConfigurarEventos() {
         });
     }
 
-    ["filtroMovimiento", "fechaInicio", "fechaFin"].forEach((id) => {
+    ["fechaInicio", "fechaFin"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("change", torreAplicarFiltros);
     });

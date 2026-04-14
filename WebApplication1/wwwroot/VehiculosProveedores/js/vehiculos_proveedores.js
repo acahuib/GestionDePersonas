@@ -141,10 +141,20 @@ async function guardarEdicionVehiculoProveedor() {
     const horaIngreso = (document.getElementById("editVpHoraIngreso")?.value || "").trim();
     const observacion = (document.getElementById("editVpObservacion")?.value || "").trim();
 
-    if (!proveedor || !placa || !tipo || !lote || !cantidad || !procedencia || !fechaIngreso || !horaIngreso) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "Proveedor", value: proveedor },
+        { label: "Placa", value: placa },
+        { label: "Tipo", value: tipo },
+        { label: "Lote", value: lote },
+        { label: "Cantidad", value: cantidad },
+        { label: "Procedencia", value: procedencia },
+        { label: "Fecha ingreso", value: fechaIngreso },
+        { label: "Hora ingreso", value: horaIngreso }
+    ]);
+    if (faltantes.length) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete todos los campos obligatorios de edicion.";
+            mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         }
         return;
     }
@@ -386,9 +396,18 @@ async function registrarEntrada() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni || !proveedor || !placa || !tipo || !lote || !cantidad || !procedencia) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Proveedor", value: proveedor },
+        { label: "Placa", value: placa },
+        { label: "Tipo", value: tipo },
+        { label: "Lote", value: lote },
+        { label: "Cantidad", value: cantidad },
+        { label: "Procedencia", value: procedencia }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete todos los campos obligatorios (*)";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 

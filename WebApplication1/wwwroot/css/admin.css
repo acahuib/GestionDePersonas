@@ -167,6 +167,13 @@ body {
     gap: 15px;
 }
 
+.section-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .section-header h2 {
     font-size: 1.5rem;
     color: #2c3e50;
@@ -193,6 +200,14 @@ body {
     border-radius: 6px;
     font-size: 0.9rem;
     cursor: pointer;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 240px;
 }
 
 /* ===============================
@@ -416,6 +431,14 @@ body {
     .section-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .section-actions {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 100%;
     }
     
     .data-table {

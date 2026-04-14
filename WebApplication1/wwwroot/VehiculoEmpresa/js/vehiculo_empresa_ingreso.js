@@ -105,7 +105,7 @@ async function cargarDetalleOperacion(salidaId) {
     const esIngreso = modo === "ingreso";
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontr� el ID del registro";
+        mensaje.innerText = "No se encontró el ID del registro";
         return;
     }
 
@@ -184,7 +184,7 @@ async function registrarMovimientoComplementario() {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontr� el ID del registro";
+        mensaje.innerText = "No se encontró el ID del registro";
         return;
     }
 
@@ -204,15 +204,19 @@ async function registrarMovimientoComplementario() {
         ? (document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO())
         : (document.getElementById("fechaSalida")?.value || obtenerFechaLocalISO());
 
-    if (!origen || !destino) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "Origen", value: origen },
+        { label: "Destino", value: destino }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete origen y destino obligatorios";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 
     if (km && (isNaN(km) || parseInt(km, 10) < 0)) {
         mensaje.className = "error";
-        mensaje.innerText = "El kilometraje debe ser un numero v�lido";
+        mensaje.innerText = "El kilometraje debe ser un numero válido";
         return;
     }
 
@@ -226,7 +230,7 @@ async function registrarMovimientoComplementario() {
         const confirmarSinKm = window.confirm(
             "Este registro quedara sin kilometraje inicial ni final.\n" +
             "Si desea, puede ingresar ahora el kilometraje final.\n\n" +
-            "�Desea continuar sin kilometraje?"
+            "¿Desea continuar sin kilometraje?"
         );
 
         if (!confirmarSinKm) {

@@ -741,7 +741,6 @@ async function initCuadernoHistorial() {
     const aplicarFiltros = () => {
         const texto = (inputTexto?.value || "").trim().toLowerCase();
         const fecha = inputFecha?.value || "";
-        const rangoSemana = obtenerRangoSemanaActual();
         const tipoRegistroFiltro = (selectTipoRegistro?.value || "").trim();
         const tipoPersonaLocalFiltro = (selectTipoPersonaLocal?.value || "").trim();
 
@@ -757,10 +756,6 @@ async function initCuadernoHistorial() {
                 if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
                 const fechaItem = fechaIsoLocal(item.fechaFiltro);
                 if (fechaItem !== fecha) return false;
-            } else {
-                if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
-                const fechaItem = fechaIsoLocal(item.fechaFiltro);
-                if (fechaItem < rangoSemana.inicioIso || fechaItem > rangoSemana.finIso) return false;
             }
             return true;
         });

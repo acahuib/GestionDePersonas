@@ -160,9 +160,15 @@ async function registrarCancha() {
         return;
     }
 
-    if (!dni || !fecha || !hora || !categoria) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Fecha", value: fecha },
+        { label: "Hora", value: hora },
+        { label: "Categoria", value: categoria }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, fecha, hora y categoria.";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 

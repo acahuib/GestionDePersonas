@@ -280,10 +280,15 @@ async function registrarIngreso() {
     const proveedorSalidaId = document.getElementById("dni")?.dataset?.proveedorSalidaId || "";
     const vieneDesdeProveedor = !!proveedorSalidaId;
 
-    if (!dni || !origen || !cuarto) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Origen", value: origen },
+        { label: "Cuarto", value: cuarto }
+    ]);
+    if (faltantes.length) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete los campos obligatorios (DNI, Origen y Cuarto).";
+            mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         }
         return;
     }

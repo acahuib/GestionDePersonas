@@ -66,8 +66,18 @@
             <section class="data-section">
                 <div class="section-header">
                     <h2>🏢 Personas Actualmente Dentro</h2>
+                    <div class="section-actions">
+                        <input
+                            type="text"
+                            id="buscadorPersonasDentro"
+                            class="search-input"
+                            placeholder="Buscar por DNI o nombre..."
+                            oninput="filtrarPersonasDentro()"
+                            autocomplete="off"
+                        />
+                        <button onclick="actualizarDashboard()" class="btn-refresh"><img src="images/arrow-clockwise.svg" class="icon-white" alt="Actualizar">Actualizar</button>
+                    </div>
                 </div>
-                <button onclick="actualizarDashboard()" class="btn-refresh"><img src="images/arrow-clockwise.svg" class="icon-white" alt="Actualizar">Actualizar</button>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -97,12 +107,22 @@
             <section class="data-section">
                 <div class="section-header">
                     <h2>📋 Últimos Movimientos del Día</h2>
-                    <div class="filter-controls">
-                        <select id="filtroTipo" onchange="actualizarDashboard()">
-                            <option value="">Todos los tipos</option>
-                            <option value="Entrada">Entrada</option>
-                            <option value="Salida">Salida</option>
-                        </select>
+                    <div class="section-actions">
+                        <input
+                            type="text"
+                            id="buscadorMovimientos"
+                            class="search-input"
+                            placeholder="Buscar por DNI o nombre..."
+                            oninput="filtrarUltimosMovimientos()"
+                            autocomplete="off"
+                        />
+                        <div class="filter-controls">
+                            <select id="filtroTipo" onchange="actualizarDashboard()">
+                                <option value="">Todos los tipos</option>
+                                <option value="Entrada">Entrada</option>
+                                <option value="Salida">Salida</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="table-container">
@@ -124,7 +144,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
+                <div class="pagination" id="paginacionMovimientos">
                     <button onclick="cambiarPagina(-1)" id="btnAnterior" class="btn-page">← Anterior</button>
                     <span id="paginaActual">Página 1</span>
                     <button onclick="cambiarPagina(1)" id="btnSiguiente" class="btn-page">Siguiente →</button>
@@ -156,7 +176,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="pagination">
+                <div class="pagination" id="paginacionEnseres">
                     <button onclick="irAPaginaEnseres(1)" id="btnEnseresPrimera" class="btn-page">Primera</button>
                     <button onclick="cambiarPaginaEnseres(-1)" id="btnEnseresAnterior" class="btn-page">← Anterior</button>
                     <span id="paginaEnseresActual">Página 1 de 1</span>

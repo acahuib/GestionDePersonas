@@ -273,6 +273,20 @@ const API_BASE = "/api";
     };
 })();
 
+window.obtenerCamposFaltantes = function (campos) {
+    if (!Array.isArray(campos)) return [];
+
+    return campos
+        .filter((campo) => campo && typeof campo.label === "string")
+        .filter((campo) => {
+            const valor = campo.value;
+            if (typeof valor === "string") return !valor.trim();
+            return valor === null || valor === undefined || valor === "";
+        })
+        .map((campo) => campo.label.trim())
+        .filter(Boolean);
+};
+
 (function () {
     if (window.unsavedChangesGuard) return;
 

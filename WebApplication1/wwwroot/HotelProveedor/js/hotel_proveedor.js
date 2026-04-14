@@ -109,9 +109,16 @@ async function registrarSalidaHotel() {
     mensaje.className = "";
     mensaje.innerText = "";
 
-    if (!dni || !ticket || !fecha || !tipoHabitacion || !numeroPersonas) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "Ticket", value: ticket },
+        { label: "Fecha", value: fecha },
+        { label: "Tipo habitacion", value: tipoHabitacion },
+        { label: "Numero de personas", value: numeroPersonas ? String(numeroPersonas) : "" }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete todos los campos obligatorios";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 

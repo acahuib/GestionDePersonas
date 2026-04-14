@@ -30,7 +30,7 @@ async function registrarSalida(endpoint, mensajeOk) {
 
     if (!salidaId) {
         mensaje.className = "error";
-        mensaje.innerText = "No se encontr� el ID del registro de ingreso";
+        mensaje.innerText = "No se encontró el ID del registro de ingreso";
         return;
     }
 

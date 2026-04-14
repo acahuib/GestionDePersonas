@@ -63,9 +63,15 @@ async function registrarSalida() {
     mensaje.innerText = "";
     mensaje.className = "";
 
-    if (!dni || !deDonde || !tipo || !quienAutoriza) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "DNI", value: dni },
+        { label: "De donde", value: deDonde },
+        { label: "Tipo", value: tipo },
+        { label: "Quien autoriza", value: quienAutoriza }
+    ]);
+    if (faltantes.length) {
         mensaje.className = "error";
-        mensaje.innerText = "Complete DNI, De D�nde, Tipo y Qui�n Autoriza";
+        mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         return;
     }
 
@@ -237,7 +243,7 @@ async function cargarActivos() {
         html += '<thead><tr>';
         html += '<th>DNI</th>';
         html += '<th>Nombre</th>';
-        html += '<th>De D�nde</th>';
+        html += '<th>De Dónde</th>';
         html += '<th>Tipo</th>';
         html += '<th>Autorizado por</th>';
         html += '<th>Fecha / Hora Salida</th>';

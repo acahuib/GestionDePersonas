@@ -1,6 +1,7 @@
 // Script frontend para ocurrencias.
 
 let personaEncontrada = null;
+let eventoPersonaEncontrada = null;
 let salidaVehiculoEmpresaEspecialId = null;
 let acompanantesPendientesOcurrencia = [];
 let contextoEdicionInicialOcurrencia = null;
@@ -64,6 +65,16 @@ function renderCamposEdicionTipoOcurrencia(tipo, detalle) {
                 <div><label>Empresa/Proveedor *</label><input type="text" id="editOcuEmpresa" value="${escaparAtributoHtml(detalle.empresa || "")}"></div>
                 <div><label>A quien deja encargado *</label><input type="text" id="editOcuAQuien" value="${escaparAtributoHtml(detalle.aQuienDeja || "")}"></div>
                 <div style="grid-column:1 / -1;"><label>Que encarga *</label><textarea id="editOcuQueEncarga" rows="3">${escaparAtributoHtml(detalle.queEncarga || "")}</textarea></div>
+            </div>
+        `;
+        return;
+    }
+
+    if (tipo === "Eventos") {
+        contenedor.innerHTML = `
+            <div>
+                <label>Observacion</label>
+                <textarea id="editOcuObservacion" rows="3">${escaparAtributoHtml(detalle.observacion || "")}</textarea>
             </div>
         `;
         return;
@@ -146,6 +157,16 @@ function construirOcurrenciaTextoDesdeEdicion() {
         ].join(" | ");
     }
 
+    if (tipo === "Eventos") {
+        const observacion = (document.getElementById("editOcuObservacion")?.value || "").trim();
+        return [
+            "[TIPO: EVENTOS]",
+            `DNI: ${dni}`,
+            `Nombre: ${nombre}`,
+            `Observacion: ${observacion}`
+        ].join(" | ");
+    }
+
     const detalle = (document.getElementById("editOcuPersonaDetalle")?.value || "").trim();
     return detalle || null;
 }
@@ -190,6 +211,7 @@ function abrirModalEditarInicialOcurrenciaDesdePayload(payloadCodificado) {
                     <div><label>Tipo</label>
                         <select id="editOcuTipo">
                             <option value="Persona" ${tipo === "Persona" ? "selected" : ""}>Persona</option>
+                            <option value="Eventos" ${tipo === "Eventos" ? "selected" : ""}>Eventos</option>
                             <option value="Vehicular" ${tipo === "Vehicular" ? "selected" : ""}>Vehicular</option>
                             <option value="Encapsulado" ${tipo === "Encapsulado" ? "selected" : ""}>Encapsulado</option>
                             <option value="CosasEncargadas" ${tipo === "CosasEncargadas" ? "selected" : ""}>Cosas encargadas</option>
@@ -235,10 +257,15 @@ async function guardarEdicionInicialOcurrencia() {
     const hora = (document.getElementById("editOcuHoraInicial")?.value || "").trim();
     const ocurrencia = construirOcurrenciaTextoDesdeEdicion();
 
-    if (!fecha || !hora || !ocurrencia) {
+    const faltantes = window.obtenerCamposFaltantes([
+        { label: "Fecha", value: fecha },
+        { label: "Hora", value: hora },
+        { label: "Ocurrencia", value: ocurrencia }
+    ]);
+    if (faltantes.length) {
         if (mensaje) {
             mensaje.className = "error";
-            mensaje.innerText = "Complete los datos obligatorios para editar.";
+            mensaje.innerText = `Falta completar: ${faltantes.join(", ")}`;
         }
         return;
     }
@@ -321,6 +348,8 @@ function actualizarUIRegistroInicial() {
     const bloqueMovimientoPersona = document.getElementById("bloqueMovimientoInicialPersona");
     const labelFecha = document.getElementById("labelFechaMovimientoInicial");
     const labelHora = document.getElementById("labelHoraMovimientoInicial");
+    const fechaInput = document.getElementById("fechaIngreso");
+    const horaInput = document.getElementById("horaIngreso");
     const btnRegistrar = document.getElementById("btnRegistrarOcurrencia");
 
     if (bloqueMovimientoPersona) {
@@ -335,6 +364,13 @@ function actualizarUIRegistroInicial() {
     const movimiento = (tipo === "Persona" || tipo === "Vehicular") ? obtenerMovimientoInicialPersona() : "Ingreso";
     const esSalida = movimiento === "Salida";
     const esCosasEncargadas = tipo === "CosasEncargadas";
+    const esEventos = tipo === "Eventos";
+    const mostrarFechaHora = !esEventos;
+
+    if (labelFecha) labelFecha.style.display = mostrarFechaHora ? "block" : "none";
+    if (fechaInput) fechaInput.style.display = mostrarFechaHora ? "block" : "none";
+    if (labelHora) labelHora.style.display = mostrarFechaHora ? "block" : "none";
+    if (horaInput) horaInput.style.display = mostrarFechaHora ? "block" : "none";
 
     if (labelFecha) {
         labelFecha.textContent = esCosasEncargadas
@@ -349,6 +385,12 @@ function actualizarUIRegistroInicial() {
     }
 
     if (btnRegistrar) {
+        if (esEventos) {
+            btnRegistrar.className = "btn-success btn-block";
+            btnRegistrar.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar EVENTO';
+            return;
+        }
+
         if (esCosasEncargadas) {
             btnRegistrar.className = "btn-success btn-block";
             btnRegistrar.innerHTML = '<img src="/images/check-lg.svg" class="icon-white"> Registrar INFORMACION';
@@ -443,7 +485,7 @@ async function inicializarDesdeVehiculoEmpresaEspecial() {
 
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = "Modo especial activo: este registro cerrar� el pendiente de Vehiculo MP.";
+            mensaje.innerText = "Modo especial activo: este registro cerrará el pendiente de Vehiculo MP.";
         }
     } catch (error) {
         if (mensaje) {
@@ -461,16 +503,20 @@ async function consultarPersonaPorDni(dni) {
 function cambiarTipoOcurrencia() {
     const tipo = obtenerTipoOcurrenciaSeleccionado();
     const bloquePersona = document.getElementById("bloquePersona");
+    const bloqueEventos = document.getElementById("bloqueEventos");
     const bloqueVehicular = document.getElementById("bloqueVehicular");
     const bloqueEncapsulado = document.getElementById("bloqueEncapsulado");
     const bloqueCosasEncargadas = document.getElementById("bloqueCosasEncargadas");
+    const bloqueAcompanantes = document.getElementById("bloqueAcompanantesOcurrencia");
 
-    if (!bloquePersona || !bloqueVehicular || !bloqueEncapsulado || !bloqueCosasEncargadas) return;
+    if (!bloquePersona || !bloqueEventos || !bloqueVehicular || !bloqueEncapsulado || !bloqueCosasEncargadas) return;
 
     bloquePersona.style.display = tipo === "Persona" ? "block" : "none";
+    bloqueEventos.style.display = tipo === "Eventos" ? "block" : "none";
     bloqueVehicular.style.display = tipo === "Vehicular" ? "block" : "none";
     bloqueEncapsulado.style.display = tipo === "Encapsulado" ? "block" : "none";
     bloqueCosasEncargadas.style.display = tipo === "CosasEncargadas" ? "block" : "none";
+    if (bloqueAcompanantes) bloqueAcompanantes.style.display = tipo === "Persona" ? "block" : "none";
 
     if (tipo !== "Persona") {
         personaEncontrada = null;
@@ -480,6 +526,19 @@ function cambiarTipoOcurrencia() {
         if (nombreInput) {
             nombreInput.disabled = false;
             nombreInput.placeholder = "Nombre o descripcion de la persona";
+        }
+    }
+
+    if (tipo !== "Eventos") {
+        eventoPersonaEncontrada = null;
+        const eventoInfo = document.getElementById("evento-persona-info");
+        const eventoNombreLabel = document.getElementById("evento-persona-nombre");
+        const eventoNombre = document.getElementById("eventoNombre");
+        if (eventoInfo) eventoInfo.style.display = "none";
+        if (eventoNombreLabel) eventoNombreLabel.textContent = "";
+        if (eventoNombre) {
+            eventoNombre.disabled = false;
+            eventoNombre.placeholder = "Nombre o descripcion";
         }
     }
 
@@ -656,7 +715,7 @@ function construirDescripcionPorTipo() {
         const ocurrencia = leerValor("ocurrencia");
 
         if (!ocurrencia) {
-            return { ok: false, error: "La descripcion de ocurrencia es obligatoria" };
+            return { ok: false, error: "Falta completar: Descripcion de ocurrencia" };
         }
 
         if (!validarDniOpcional(dni)) {
@@ -664,8 +723,36 @@ function construirDescripcionPorTipo() {
         }
 
         if (!nombre) {
-            return { ok: false, error: "Nombre es obligatorio para ocurrencias de tipo Persona" };
+            return { ok: false, error: "Falta completar: Nombre" };
         }
+
+        return {
+            ok: true,
+            tipo,
+            dni,
+            nombre,
+            ocurrencia
+        };
+    }
+
+    if (tipo === "Eventos") {
+        const dni = leerValor("eventoDni");
+        const nombre = leerValor("eventoNombre");
+
+        if (!dni && !nombre) {
+            return { ok: false, error: "Falta completar: DNI o Nombre" };
+        }
+
+        if (!validarDniOpcional(dni)) {
+            return { ok: false, error: "DNI debe tener 8 digitos numericos" };
+        }
+
+        const ocurrencia = [
+            "[TIPO: EVENTOS]",
+            `DNI: ${dni || "S/N"}`,
+            `Nombre: ${nombre || "S/N"}`,
+            "Observacion: "
+        ].join(" | ");
 
         return {
             ok: true,
@@ -689,8 +776,16 @@ function construirDescripcionPorTipo() {
             return { ok: false, error: "DNI debe tener 8 digitos numericos" };
         }
 
-        if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
-            return { ok: false, error: "Complete todos los campos obligatorios de Vehicular" };
+        const faltantesVehicular = window.obtenerCamposFaltantes([
+            { label: "Placa", value: placa },
+            { label: "Chofer", value: chofer },
+            { label: "Empresa/Proveedor", value: empresa },
+            { label: "Procedencia", value: procedencia },
+            { label: "Destino", value: destino },
+            { label: "Observacion", value: observacion }
+        ]);
+        if (faltantesVehicular.length) {
+            return { ok: false, error: `Falta completar: ${faltantesVehicular.join(", ")}` };
         }
 
         const ocurrencia = [
@@ -727,8 +822,17 @@ function construirDescripcionPorTipo() {
             return { ok: false, error: "DNI debe tener 8 digitos numericos" };
         }
 
-        if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
-            return { ok: false, error: "Complete todos los campos obligatorios de Encapsulado" };
+        const faltantesEncapsulado = window.obtenerCamposFaltantes([
+            { label: "Tracto placa", value: tractoPlaca },
+            { label: "Plataforma placa", value: plataformaPlaca },
+            { label: "Chofer", value: chofer },
+            { label: "Empresa/Proveedor", value: empresa },
+            { label: "Procedencia", value: procedencia },
+            { label: "Destino", value: destino },
+            { label: "Observacion", value: observacion }
+        ]);
+        if (faltantesEncapsulado.length) {
+            return { ok: false, error: `Falta completar: ${faltantesEncapsulado.join(", ")}` };
         }
 
         const ocurrencia = [
@@ -762,8 +866,14 @@ function construirDescripcionPorTipo() {
         return { ok: false, error: "DNI es obligatorio y debe tener 8 digitos numericos" };
     }
 
-    if (!nombre || !empresa || !queEncarga || !aQuienDeja) {
-        return { ok: false, error: "Complete todos los campos obligatorios de Cosas encargadas" };
+    const faltantesCosas = window.obtenerCamposFaltantes([
+        { label: "Nombre", value: nombre },
+        { label: "Empresa/Proveedor", value: empresa },
+        { label: "Que encarga", value: queEncarga },
+        { label: "A quien deja encargado", value: aQuienDeja }
+    ]);
+    if (faltantesCosas.length) {
+        return { ok: false, error: `Falta completar: ${faltantesCosas.join(", ")}` };
     }
 
     const ocurrencia = [
@@ -787,6 +897,7 @@ function construirDescripcionPorTipo() {
 function limpiarFormularioPorTipo() {
     const ids = [
         "dni", "nombre", "ocurrencia",
+        "eventoDni", "eventoNombre",
         "vehiculoDni", "vehiculoPlaca", "vehiculoChofer", "vehiculoEmpresa", "vehiculoProcedencia", "vehiculoDestino", "vehiculoObservacion",
         "encapsuladoDni", "encapsuladoTractoPlaca", "encapsuladoPlataformaPlaca", "encapsuladoChofer", "encapsuladoEmpresa", "encapsuladoProcedencia", "encapsuladoDestino", "encapsuladoObservacion",
         "cosasDni", "cosasNombre", "cosasEmpresa", "cosasQueEncarga", "cosasAQuien"
@@ -804,6 +915,17 @@ function limpiarFormularioPorTipo() {
     if (nombreInput) {
         nombreInput.disabled = false;
         nombreInput.placeholder = "Nombre o descripcion de la persona";
+    }
+
+    eventoPersonaEncontrada = null;
+    const eventoInfo = document.getElementById("evento-persona-info");
+    const eventoNombreLabel = document.getElementById("evento-persona-nombre");
+    const eventoNombre = document.getElementById("eventoNombre");
+    if (eventoInfo) eventoInfo.style.display = "none";
+    if (eventoNombreLabel) eventoNombreLabel.textContent = "";
+    if (eventoNombre) {
+        eventoNombre.disabled = false;
+        eventoNombre.placeholder = "Nombre o descripcion";
     }
     habilitarEdicionNombreCosas();
 
@@ -846,6 +968,7 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     if (tipoRaw === "VEHICULAR") detalleBase.tipo = "Vehicular";
     if (tipoRaw === "ENCAPSULADO") detalleBase.tipo = "Encapsulado";
     if (tipoRaw === "COSAS ENCARGADAS") detalleBase.tipo = "CosasEncargadas";
+    if (tipoRaw === "EVENTOS") detalleBase.tipo = "Eventos";
 
     const extraer = (clave) => {
         const prefijo = `${clave.toLowerCase()}:`;
@@ -864,7 +987,12 @@ function parsearDetalleOcurrencia(ocurrenciaTexto) {
     detalleBase.destino = extraer("Destino");
     detalleBase.queEncarga = extraer("Que encarga");
     detalleBase.aQuienDeja = extraer("A quien deja encargado");
-    detalleBase.observacion = extraer("Observacion") || (detalleBase.tipo === "Persona" ? raw : "");
+    const observacionExtraida = extraer("Observacion");
+    if (observacionExtraida) {
+        detalleBase.observacion = observacionExtraida;
+    } else {
+        detalleBase.observacion = detalleBase.tipo === "Persona" ? raw : "";
+    }
 
     return detalleBase;
 }
@@ -955,7 +1083,9 @@ function construirDetalleTipoHtml(detalle) {
     }
 
     if (!partes.length || tipo !== "Persona") {
-        pushIf("Observacion", detalle?.observacion);
+        if (tipo !== "Eventos") {
+            pushIf("Observacion", detalle?.observacion);
+        }
     }
 
     return partes.length ? `<div class="detalle-lista">${partes.join("")}</div>` : "-";
@@ -1129,6 +1259,47 @@ function manejarResultadoPersonaOcurrencias(persona, dni) {
     }
 }
 
+function manejarResultadoEventoOcurrencias(persona, dni) {
+    if (obtenerTipoOcurrenciaSeleccionado() !== "Eventos") return;
+
+    const eventoInfo = document.getElementById("evento-persona-info");
+    const eventoNombreLabel = document.getElementById("evento-persona-nombre");
+    const nombreInput = document.getElementById("eventoNombre");
+
+    if (!dni || dni.length !== 8 || isNaN(dni)) {
+        if (eventoInfo) eventoInfo.style.display = "none";
+        if (eventoNombreLabel) eventoNombreLabel.textContent = "";
+        eventoPersonaEncontrada = null;
+        if (nombreInput) {
+            nombreInput.disabled = false;
+            nombreInput.value = "";
+            nombreInput.placeholder = "Nombre o descripcion";
+        }
+        return;
+    }
+
+    if (persona) {
+        eventoPersonaEncontrada = persona;
+        if (eventoNombreLabel) eventoNombreLabel.textContent = eventoPersonaEncontrada.nombre;
+        if (eventoInfo) eventoInfo.style.display = "block";
+
+        if (nombreInput) {
+            nombreInput.value = eventoPersonaEncontrada.nombre || "";
+            nombreInput.disabled = true;
+            nombreInput.placeholder = "(Ya registrado)";
+        }
+    } else {
+        eventoPersonaEncontrada = null;
+        if (eventoInfo) eventoInfo.style.display = "none";
+        if (eventoNombreLabel) eventoNombreLabel.textContent = "";
+        if (nombreInput) {
+            nombreInput.disabled = false;
+            nombreInput.placeholder = "Nombre o descripcion";
+            nombreInput.focus();
+        }
+    }
+}
+
 async function buscarPersonaPorDni() {
     const dni = document.getElementById("dni")?.value?.trim() || "";
     try {
@@ -1184,6 +1355,13 @@ function inicializarAutocompleteNombreDniOcurrencias() {
     });
 
     habilitarAutocompletePersona({
+        dniId: "eventoDni",
+        nombreId: "eventoNombre",
+        minChars: 2,
+        onDniResolved: manejarResultadoEventoOcurrencias
+    });
+
+    habilitarAutocompletePersona({
         dniId: "vehiculoDni",
         nombreId: "vehiculoChofer",
         minChars: 2,
@@ -1206,7 +1384,7 @@ function inicializarAutocompleteNombreDniOcurrencias() {
 }
 
 async function registrarIngreso() {
-    const horaIngresoInput = document.getElementById("horaIngreso").value;
+    const horaIngresoInput = document.getElementById("horaIngreso")?.value || "";
     const fechaIngresoInput = document.getElementById("fechaIngreso")?.value || obtenerFechaLocalISO();
     const mensaje = document.getElementById("mensaje");
     const datos = construirDescripcionPorTipo();
@@ -1230,14 +1408,20 @@ async function registrarIngreso() {
             : "Ingreso";
         const esSalidaInicial = movimientoInicial === "Salida";
 
+        const esEvento = datos.tipo === "Eventos";
+
         if (esSalidaInicial) {
-            body.horaSalida = horaIngresoInput
-                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
-                : ahoraLocalDateTime();
+            body.horaSalida = esEvento
+                ? ahoraLocalDateTime()
+                : (horaIngresoInput
+                    ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
+                    : ahoraLocalDateTime());
         } else {
-            body.horaIngreso = horaIngresoInput
-                ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
-                : ahoraLocalDateTime();
+            body.horaIngreso = esEvento
+                ? ahoraLocalDateTime()
+                : (horaIngresoInput
+                    ? construirDateTimeLocal(fechaIngresoInput, horaIngresoInput)
+                    : ahoraLocalDateTime());
         }
 
         if (datos.dni) body.dni = datos.dni;
@@ -1310,7 +1494,11 @@ async function registrarIngreso() {
         const tipo = obtenerTipoOcurrenciaSeleccionado();
         const foco = tipo === "Persona"
             ? "dni"
-            : (tipo === "Vehicular" ? "vehiculoDni" : (tipo === "Encapsulado" ? "encapsuladoDni" : "cosasDni"));
+            : (tipo === "Eventos"
+                ? "eventoDni"
+                : (tipo === "Vehicular"
+                    ? "vehiculoDni"
+                    : (tipo === "Encapsulado" ? "encapsuladoDni" : "cosasDni")));
         document.getElementById(foco)?.focus();
 
     } catch (error) {
@@ -1355,6 +1543,164 @@ function irASalidaDesdePayload(payloadCodificado) {
     } catch (error) {
         console.error("Error al abrir complemento de ocurrencias:", error);
     }
+}
+
+function construirOcurrenciaEvento(dni, nombre, observacion) {
+    const dniTexto = String(dni || "").trim() || "S/N";
+    const nombreTexto = String(nombre || "").trim() || "S/N";
+    const obsTexto = String(observacion || "").trim();
+    return [
+        "[TIPO: EVENTOS]",
+        `DNI: ${dniTexto}`,
+        `Nombre: ${nombreTexto}`,
+        `Observacion: ${obsTexto}`
+    ].join(" | ");
+}
+
+function obtenerObservacionEventoValor(salidaId, fallback) {
+    const input = document.getElementById(`evento-observacion-${salidaId}`);
+    if (input && typeof input.value === "string") return input.value.trim();
+    return String(fallback || "").trim();
+}
+
+async function guardarObservacionEventoDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        const salidaId = Number(datos?.id || 0);
+        if (!Number.isFinite(salidaId) || salidaId <= 0) {
+            throw new Error("No se encontro referencia de ocurrencia.");
+        }
+
+        const observacion = obtenerObservacionEventoValor(salidaId, datos?.observacion || "");
+        const ocurrencia = construirOcurrenciaEvento(datos?.dni, datos?.nombre, observacion);
+
+        const response = await fetchAuth(`${API_BASE}/ocurrencias/${salidaId}/horario`, {
+            method: "PUT",
+            body: JSON.stringify({ ocurrencia })
+        });
+
+        if (!response || !response.ok) {
+            const error = response ? await readApiError(response) : "No se pudo guardar la observacion";
+            throw new Error(error);
+        }
+
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "success";
+            mensaje.innerText = "Observacion guardada correctamente.";
+        }
+
+        cargarActivos();
+    } catch (error) {
+        const mensaje = document.getElementById("mensaje");
+        if (mensaje) {
+            mensaje.className = "error";
+            mensaje.innerText = getPlainErrorMessage(error);
+        }
+    }
+}
+
+function abrirModalSalidaEventoDesdePayload(payloadCodificado) {
+    try {
+        const datos = JSON.parse(decodeURIComponent(payloadCodificado || ""));
+        abrirModalSalidaEvento(datos);
+    } catch (error) {
+        console.error("Error al abrir salida de evento:", error);
+    }
+}
+
+function abrirModalSalidaEvento(datos) {
+    const salidaId = Number(datos?.id || 0);
+    if (!Number.isFinite(salidaId) || salidaId <= 0) return;
+
+    const { fecha, hora } = obtenerFechaHoraInputOcurrencia();
+    const overlay = document.createElement("div");
+    overlay.className = "app-dialog-overlay";
+
+    const box = document.createElement("div");
+    box.className = "app-dialog-box";
+
+    const header = document.createElement("div");
+    header.className = "app-dialog-header";
+    header.textContent = "Registrar salida de evento";
+
+    const body = document.createElement("div");
+    body.className = "app-dialog-body";
+    body.innerHTML = `
+        <label style="display:block;font-weight:600;margin-bottom:6px;">Fecha de salida</label>
+        <input type="date" id="evento-salida-fecha" class="app-dialog-input" value="${fecha}">
+        <label style="display:block;font-weight:600;margin:12px 0 6px;">Hora de salida</label>
+        <input type="time" id="evento-salida-hora" class="app-dialog-input" value="${hora}">
+    `;
+
+    const error = document.createElement("div");
+    error.style.color = "#b91c1c";
+    error.style.fontSize = "0.85rem";
+    error.style.marginTop = "8px";
+    body.appendChild(error);
+
+    const actions = document.createElement("div");
+    actions.className = "app-dialog-actions";
+
+    const cleanup = () => {
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    };
+
+    const btnCancelar = document.createElement("button");
+    btnCancelar.className = "app-dialog-btn app-dialog-btn-secondary";
+    btnCancelar.textContent = "Cancelar";
+    btnCancelar.addEventListener("click", cleanup);
+
+    const btnAceptar = document.createElement("button");
+    btnAceptar.className = "app-dialog-btn app-dialog-btn-primary";
+    btnAceptar.textContent = "Registrar salida";
+    btnAceptar.addEventListener("click", async () => {
+        const fechaInput = body.querySelector("#evento-salida-fecha");
+        const horaInput = body.querySelector("#evento-salida-hora");
+        const fechaValor = fechaInput?.value || "";
+        const horaValor = horaInput?.value || "";
+
+        if (!fechaValor || !horaValor) {
+            error.textContent = "Debe completar fecha y hora de salida.";
+            return;
+        }
+
+        try {
+            const observacion = obtenerObservacionEventoValor(salidaId, datos?.observacion || "");
+            const ocurrencia = construirOcurrenciaEvento(datos?.dni, datos?.nombre, observacion);
+
+            const response = await fetchAuth(`${API_BASE}/ocurrencias/${salidaId}/horario`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    horaSalida: construirDateTimeLocal(fechaValor, horaValor),
+                    ocurrencia
+                })
+            });
+
+            if (!response || !response.ok) {
+                const errorMsg = response ? await readApiError(response) : "No se pudo registrar la salida";
+                throw new Error(errorMsg);
+            }
+
+            cleanup();
+            const mensaje = document.getElementById("mensaje");
+            if (mensaje) {
+                mensaje.className = "success";
+                mensaje.innerText = "Salida registrada correctamente.";
+            }
+            cargarActivos();
+        } catch (errorSal) {
+            error.textContent = getPlainErrorMessage(errorSal);
+        }
+    });
+
+    actions.appendChild(btnCancelar);
+    actions.appendChild(btnAceptar);
+    box.appendChild(header);
+    box.appendChild(body);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
 }
 
 function irAVehiculoEmpresaEspecial(salidaOcurrenciaId, modoVehiculo) {
@@ -1423,7 +1769,7 @@ async function registrarAcompananteRapidoDesdeOcurrencia(salidaOcurrenciaId) {
         const data = await response.json();
         if (mensaje) {
             mensaje.className = "success";
-            mensaje.innerText = `Acompa�ante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
+            mensaje.innerText = `Acompañante ${data?.dni || dniLimpio} registrado (${data?.movimiento || "movimiento"}).`;
         }
 
         cargarActivos();
@@ -1523,6 +1869,7 @@ async function cargarActivos() {
             const ocurrencia = datos.ocurrencia || '-';
             const detalleOcurrencia = parsearDetalleOcurrencia(ocurrencia);
             const esCosasEncargadas = esRegistroCosasEncargadas(detalleOcurrencia, o);
+            const esEvento = detalleOcurrencia.tipo === "Eventos";
 
             const tieneIngreso = o.horaIngreso !== null && o.horaIngreso !== undefined;
             const pendienteDe = tieneIngreso ? 'Salida' : 'Ingreso';
@@ -1541,7 +1888,10 @@ async function cargarActivos() {
                 : (o.dni || '-');
 
             const nombreCompleto = o.nombreCompleto || datos.nombre || '-';
-            const detalleTipoHtml = construirDetalleTipoHtml(detalleOcurrencia);
+            let detalleTipoHtml = construirDetalleTipoHtml(detalleOcurrencia);
+            if (esEvento && detalleTipoHtml.trim() === "-") {
+                detalleTipoHtml = "";
+            }
             
             const fechaIngresoParam = o.fechaIngreso || '';
             const horaIngresoParam = o.horaIngreso || '';
@@ -1550,6 +1900,12 @@ async function cargarActivos() {
             const guardiaSalida = datos.guardiaSalida || '-';
             const ladoInicial = tieneIngreso ? "Ingreso" : "Salida";
             const horaInicialIso = tieneIngreso ? (o.horaIngreso || o.fechaIngreso) : (o.horaSalida || o.fechaSalida);
+            const payloadEvento = encodeURIComponent(JSON.stringify({
+                id: o.id,
+                dni: o.dni || '',
+                nombre: nombreCompleto || '',
+                observacion: detalleOcurrencia.observacion || ''
+            }));
             const payloadEdicion = encodeURIComponent(JSON.stringify({
                 id: o.id,
                 dni: o.dni || '',
@@ -1565,6 +1921,45 @@ async function cargarActivos() {
             html += `<td>${construirFechaHoraCelda(fechaInicial, horaInicial)}</td>`;
             html += `<td>${guardiaInicial}</td>`;
             html += `<td>${formatearTipoOcurrencia(detalleOcurrencia.tipo)}</td>`;
+                if (esEvento) {
+                    const obsSafe = escaparAtributoHtml(detalleOcurrencia.observacion || "");
+                    detalleTipoHtml += `
+                    <div style="margin:0;max-width:170px;display:flex;gap:3px;align-items:center;">
+                        
+                        <textarea 
+                            id="evento-observacion-${o.id}" 
+                            rows="1"
+                            style="
+                                width:100%;
+                                min-width:90px;
+                                height:22px;
+                                line-height:1;
+                                margin:0;
+                                padding:1px 3px;
+                                resize:none;
+                                overflow:hidden;
+                                font-size:12px;
+                            "
+                        >${obsSafe}</textarea>
+
+                        <button 
+                            onclick="guardarObservacionEventoDesdePayload('${payloadEvento}')"
+                            style="
+                                margin:0;
+                                padding:2px 5px;
+                                font-size:11px;
+                                height:22px;
+                                line-height:1;
+                                white-space:nowrap;
+                            "
+                        >
+                            Guardar
+                        </button>
+
+                    </div>
+                    `;
+                }
+
                 html += `<td class="cell-wrap" style="max-width: 280px;">${detalleTipoHtml}</td>`;
                 html += `<td><button onclick="abrirImagenesRegistroModal(${o.id})" class="btn-inline btn-small">Ver imagenes</button></td>`;
             html += '<td style="vertical-align:middle;">';
@@ -1575,37 +1970,41 @@ async function cargarActivos() {
                 } else {
                     html += `<button onclick="abrirModalEditarInicialOcurrenciaDesdePayload('${payloadEdicion}')" class="btn-warning btn-small btn-inline">Editar</button>`;
                     const claseBotonPendiente = pendienteDe === 'Ingreso' ? 'btn-success btn-small btn-inline' : 'btn-danger btn-small btn-inline';
-                    const payloadSalida = encodeURIComponent(JSON.stringify({
-                        salidaId: o.id,
-                        dni: o.dni || '',
-                        nombre: nombreCompleto || '',
-                        ocurrencia: ocurrencia || '',
-                        fechaIngreso: fechaIngresoParam,
-                        horaIngreso: horaIngresoParam,
-                        guardiaIngreso: guardiaInicial,
-                        fechaSalida: fechaSalidaParam,
-                        horaSalida: horaSalidaParam,
-                        guardiaSalida,
-                        modo
-                    }));
-                    html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
-                    if ((detalleOcurrencia.tipo || "Persona") === "Persona") {
-                        const modoVehiculo = pendienteDe === "Ingreso" ? "ingreso" : "salida";
-                        const textoVehiculo = pendienteDe === "Ingreso" ? "Ingreso con Veh. MP" : "Salida con Veh. MP";
-                        html += `<button onclick="irAVehiculoEmpresaEspecial(${o.id}, '${modoVehiculo}')" class="btn-warning btn-small btn-inline">${textoVehiculo}</button>`;
-                    }
-                    const tipoDetalle = (detalleOcurrencia.tipo || "Persona");
-                    if ((tipoDetalle === "Vehicular" || tipoDetalle === "Persona") && pendienteDe === "Ingreso") {
-                        const payloadVp = encodeURIComponent(JSON.stringify({
-                            salidaOcurrenciaId: o.id,
-                            dni: o.dni || "",
-                            nombre: nombreCompleto || "",
-                            proveedor: detalleOcurrencia.empresa || "",
-                            placa: detalleOcurrencia.placa || "",
-                            procedencia: detalleOcurrencia.procedencia || "",
-                            observacion: detalleOcurrencia.observacion || ""
+                    if (esEvento) {
+                        html += `<button onclick="abrirModalSalidaEventoDesdePayload('${payloadEvento}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
+                    } else {
+                        const payloadSalida = encodeURIComponent(JSON.stringify({
+                            salidaId: o.id,
+                            dni: o.dni || '',
+                            nombre: nombreCompleto || '',
+                            ocurrencia: ocurrencia || '',
+                            fechaIngreso: fechaIngresoParam,
+                            horaIngreso: horaIngresoParam,
+                            guardiaIngreso: guardiaInicial,
+                            fechaSalida: fechaSalidaParam,
+                            horaSalida: horaSalidaParam,
+                            guardiaSalida,
+                            modo
                         }));
-                        html += `<button onclick="registrarIngresoVehiculoProveedorDesdePayload('${payloadVp}')" class="btn-warning btn-small btn-inline">Ingreso con Veh. Proveedor</button>`;
+                        html += `<button onclick="irASalidaDesdePayload('${payloadSalida}')" class="${claseBotonPendiente}">Registrar ${pendienteDe}</button>`;
+                        if ((detalleOcurrencia.tipo || "Persona") === "Persona") {
+                            const modoVehiculo = pendienteDe === "Ingreso" ? "ingreso" : "salida";
+                            const textoVehiculo = pendienteDe === "Ingreso" ? "Ingreso con Veh. MP" : "Salida con Veh. MP";
+                            html += `<button onclick="irAVehiculoEmpresaEspecial(${o.id}, '${modoVehiculo}')" class="btn-warning btn-small btn-inline">${textoVehiculo}</button>`;
+                        }
+                        const tipoDetalle = (detalleOcurrencia.tipo || "Persona");
+                        if ((tipoDetalle === "Vehicular" || tipoDetalle === "Persona") && pendienteDe === "Ingreso") {
+                            const payloadVp = encodeURIComponent(JSON.stringify({
+                                salidaOcurrenciaId: o.id,
+                                dni: o.dni || "",
+                                nombre: nombreCompleto || "",
+                                proveedor: detalleOcurrencia.empresa || "",
+                                placa: detalleOcurrencia.placa || "",
+                                procedencia: detalleOcurrencia.procedencia || "",
+                                observacion: detalleOcurrencia.observacion || ""
+                            }));
+                            html += `<button onclick="registrarIngresoVehiculoProveedorDesdePayload('${payloadVp}')" class="btn-warning btn-small btn-inline">Ingreso con Veh. Proveedor</button>`;
+                        }
                     }
                 }
             html += '</div>';

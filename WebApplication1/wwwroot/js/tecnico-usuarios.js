@@ -2,7 +2,6 @@
 
 (function () {
     const ENDPOINT = `${API_BASE}/tecnico/usuarios`;
-    const ENDPOINT_ROLES = `${ENDPOINT}/roles`;
 
     const body = document.getElementById("tablaUsuariosBody");
     const formCrear = document.getElementById("formCrearUsuario");
@@ -13,7 +12,6 @@
     const modal = document.getElementById("modalEditar");
     const formEditar = document.getElementById("formEditarUsuario");
     const btnCancelarEditar = document.getElementById("btnCancelarEditar");
-    const rolesSugeridos = document.getElementById("rolesSugeridos");
 
     let usuarios = [];
 
@@ -100,19 +98,12 @@
         renderTabla();
     }
 
-    async function cargarRolesSugeridos() {
-        if (!rolesSugeridos) return;
+    function fijarRolSelect(id, valor) {
+        const select = document.getElementById(id);
+        if (!select) return;
 
-        const response = await fetchAuth(ENDPOINT_ROLES);
-        if (!response || !response.ok) return;
-
-        const roles = await response.json();
-        if (!Array.isArray(roles)) return;
-
-        rolesSugeridos.innerHTML = roles
-            .filter((r) => typeof r === "string" && r.trim().length > 0)
-            .map((r) => `<option value="${escapeHtml(r)}"></option>`)
-            .join("");
+        const opciones = Array.from(select.options).map((o) => o.value);
+        select.value = opciones.includes(valor) ? valor : "Guardia";
     }
 
     async function crearUsuario(event) {
@@ -139,10 +130,9 @@
 
         alert("Usuario creado correctamente");
         formCrear.reset();
-        document.getElementById("crearRol").value = "Guardia";
+        fijarRolSelect("crearRol", "Guardia");
         document.getElementById("crearActivo").checked = true;
         await cargarUsuarios();
-        await cargarRolesSugeridos();
     }
 
     function abrirEditor(id) {
@@ -153,7 +143,7 @@
         document.getElementById("editarUsuarioLogin").value = usuario.usuarioLogin || "";
         document.getElementById("editarNombreCompleto").value = usuario.nombreCompleto || "";
         document.getElementById("editarDni").value = usuario.dni || "";
-        document.getElementById("editarRol").value = usuario.rol || "Guardia";
+        fijarRolSelect("editarRol", usuario.rol || "Guardia");
         document.getElementById("editarPassword").value = "";
 
         if (typeof modal.showModal === "function") {
@@ -191,7 +181,6 @@
 
         alert("Usuario actualizado");
         await cargarUsuarios();
-        await cargarRolesSugeridos();
     }
 
     async function cambiarEstado(id) {
@@ -265,8 +254,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
         if (!verificarModoTecnico()) return;
         enlazarEventos();
-        document.getElementById("crearRol").value = "Guardia";
-        await cargarRolesSugeridos();
+        fijarRolSelect("crearRol", "Guardia");
         await cargarUsuarios();
     });
 })();

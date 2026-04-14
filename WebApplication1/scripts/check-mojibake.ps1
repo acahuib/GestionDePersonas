@@ -20,7 +20,7 @@ $files = Get-ChildItem -Path $targetRoot -Recurse -File -Include *.html,*.js
 $findings = New-Object System.Collections.Generic.List[string]
 
 foreach ($file in $files) {
-    $content = Get-Content -Raw -Path $file.FullName
+    $content = Get-Content -Raw -Path $file.FullName -Encoding utf8
     foreach ($pattern in $patterns) {
         if ($content -match [regex]::Escape($pattern)) {
             $relative = $file.FullName.Substring($projectRoot.Length + 1)

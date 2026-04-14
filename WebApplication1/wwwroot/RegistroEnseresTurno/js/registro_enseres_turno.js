@@ -451,7 +451,7 @@ async function cargarUltimoRegistroEnseres() {
             cargarPlantillaBaseEnseres();
             if (mensaje) {
                 mensaje.className = "";
-                mensaje.innerText = "No hay registro previo con enseres. Se carg� la plantilla base.";
+                mensaje.innerText = "No hay registro previo con enseres. Se cargó la plantilla base.";
             }
             return;
         }
@@ -573,7 +573,7 @@ async function registrarEnseres() {
 
     if (objetos.length === 0) {
         mensaje.className = "error";
-        mensaje.innerText = "Debe registrar al menos un �tem";
+        mensaje.innerText = "Debe registrar al menos un ítem";
         return;
     }
 
@@ -583,7 +583,7 @@ async function registrarEnseres() {
 
     if (tieneErroresItems) {
         mensaje.className = "error";
-        mensaje.innerText = "Revise los �tems: nombre obligatorio y cantidad no negativa";
+        mensaje.innerText = "Revise los ítems: nombre obligatorio y cantidad no negativa";
         return;
     }
 

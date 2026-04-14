@@ -1,3 +1,5 @@
+// Script frontend para torre.
+
 const TORRE_TIPOS_OPERACION = {
     Proveedor: "Proveedores",
     VehiculosProveedores: "Vehiculos Proveedores",
@@ -5,9 +7,9 @@ const TORRE_TIPOS_OPERACION = {
     HabitacionProveedor: "Habitacion Proveedor",
     HotelProveedor: "Hotel Proveedor",
     Ocurrencias: "Ocurrencias",
-    PersonalLocal: "Personal Local",
+    PersonalLocal: "Cuaderno Personal Mina",
     ControlBienes: "Control Bienes",
-    DiasLibre: "Dias Libres",
+    DiasLibre: "Dias Libre",
     OficialPermisos: "Oficial Permisos",
     SalidasPermisosPersonal: "Permisos Personal",
     RegistroInformativoEnseresTurno: "Enseres por Turno",
@@ -15,13 +17,15 @@ const TORRE_TIPOS_OPERACION = {
 };
 
 const TORRE_TIPOS = Object.keys(TORRE_TIPOS_OPERACION);
-const TORRE_REGISTROS_POR_PAGINA = 50;
+const TORRE_REGISTROS_POR_PAGINA = 20;
 const TORRE_AUTO_REFRESH_MS = 15000;
 
 let torreRegistros = [];
-let torreFiltrados = [];
+let torreRegistrosFiltrados = [];
 let torrePaginaActual = 1;
+let torreAutoRefresh = null;
 let torreDebounce = null;
+let torreTipoActivo = "";
 
 function torreNormalizarTipoRegistro(valor) {
     const txt = String(valor || "").trim().toLowerCase();
@@ -33,15 +37,6 @@ function torreNormalizarTipoPersonaLocal(valor) {
     if (txt === "retornando") return "Retornando";
     if (txt === "normal") return "Normal";
     return "";
-}
-
-function torreEscapeHtml(value) {
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&#39;");
 }
 
 function torreVerificarAcceso() {
@@ -57,232 +52,56 @@ function torreVerificarAcceso() {
     return true;
 }
 
+function torreEscapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function torreCargarNombreUsuario() {
     const nombre = localStorage.getItem("nombreCompleto") || "Torre";
     const el = document.getElementById("nombreUsuario");
     if (el) el.textContent = nombre;
 }
 
-function torreFormatearFechaHora(raw) {
-    if (!raw) return { fecha: "-", hora: "-", ts: 0 };
-    const dt = new Date(raw);
-    if (Number.isNaN(dt.getTime())) return { fecha: "-", hora: "-", ts: 0 };
+function torreRenderizarTabs() {
+    const tabs = document.getElementById("tabsCuadernos");
+    if (!tabs) return;
 
-    return {
-        fecha: dt.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" }),
-        hora: dt.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
-        ts: dt.getTime()
-    };
-}
+    tabs.innerHTML = TORRE_TIPOS.map((tipo) => {
+        const activo = tipo === torreTipoActivo ? "active" : "";
+        const label = TORRE_TIPOS_OPERACION[tipo] || tipo;
+        return `<button type="button" class="tab-cuaderno ${activo}" data-tab-cuaderno="${torreEscapeHtml(tipo)}">${torreEscapeHtml(label)}</button>`;
+    }).join("");
 
-function torreParseDatos(datos) {
-    if (!datos) return {};
-    if (typeof datos === "string") {
-        try {
-            return JSON.parse(datos);
-        } catch {
-            return {};
-        }
-    }
-    return datos;
-}
-
-function torreObtenerMovimiento(registro) {
-    if (registro.tipoOperacion === "RegistroInformativoEnseresTurno") return "Info";
-
-    const tieneIngreso = Boolean(registro.horaIngresoRaw);
-    const tieneSalida = Boolean(registro.horaSalidaRaw);
-
-    if (tieneIngreso && !tieneSalida) return "Entrada";
-    if (!tieneIngreso && tieneSalida) return "Salida";
-    if (tieneIngreso && tieneSalida) return "Salida";
-    return "";
-}
-
-function torreBadgeMovimientoClass(mov) {
-    const v = String(mov || "").toLowerCase();
-    if (v === "entrada") return "tc-badge tc-badge-entrada";
-    if (v === "salida") return "tc-badge tc-badge-salida";
-    if (v === "info") return "tc-badge tc-badge-info";
-    return "tc-badge tc-badge-vacio";
-}
-
-function torreExtraerGuardia(datos) {
-    return datos.guardiaIngreso || datos.guardiaSalida || datos.guardiaSalidaAlmuerzo || datos.guardiaEntradaAlmuerzo || datos.agenteNombre || "-";
-}
-
-function torreArmarResumen(datos) {
-    const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
-    const tipoCierre = String(datos?.tipoCierreAdministrativo || "").trim().toLowerCase();
-    const motivoCierre = String(datos?.motivoCierreAdministrativo || "").trim().toLowerCase();
-    const esSalidaDiasLibres = cierreAdministrativo && (tipoCierre === "salidadiaslibres" || motivoCierre.includes("dias libre"));
-    const camposClave = [
-        datos.procedencia,
-        datos.destino,
-        datos.placa,
-        datos.ocurrencia,
-        datos.observacion,
-        datos.observaciones,
-        datos.motivoCierreAdministrativo,
-        datos.cuarto,
-        datos.turno,
-        datos.tipoPersonaLocal,
-        datos.tipo
-    ].filter((v) => v !== undefined && v !== null && String(v).trim() !== "");
-
-    if (cierreAdministrativo && !camposClave.length) {
-        camposClave.push(esSalidaDiasLibres ? "Salida de dias libres" : "Cierre administrativo");
-    }
-
-    if (!camposClave.length) return "Sin resumen";
-
-    const unido = camposClave.map((v) => String(v).replace(/\s+/g, " ").trim()).join(" | ");
-    return unido.length > 180 ? `${unido.slice(0, 180)}...` : unido;
-}
-
-function torreExtraerDetalles(datos) {
-    const cierreAdministrativo = datos?.cierreAdministrativo === true || String(datos?.cierreAdministrativo || "").toLowerCase() === "true";
-    const tipoCierre = String(datos?.tipoCierreAdministrativo || "").trim().toLowerCase();
-    const motivoCierre = String(datos?.motivoCierreAdministrativo || "").trim().toLowerCase();
-    const esSalidaDiasLibres = cierreAdministrativo && (tipoCierre === "salidadiaslibres" || motivoCierre.includes("dias libre"));
-
-    const detalleMap = {
-        tipoRegistro: "Tipo ruta",
-        proveedor: "Proveedor",
-        placa: "Placa",
-        procedencia: "Procedencia",
-        destino: "Destino",
-        origen: "Origen",
-        origenSalida: "Origen salida",
-        destinoSalida: "Destino salida",
-        origenIngreso: "Origen ingreso",
-        destinoIngreso: "Destino ingreso",
-        kmSalida: "Km salida",
-        kmIngreso: "Km ingreso",
-        observacion: "Observacion",
-        observaciones: "Observaciones",
-        ocurrencia: "Ocurrencia",
-        cuarto: "Cuarto",
-        turno: "Turno",
-        quienAutoriza: "Autoriza",
-        deDonde: "De donde",
-        tipoPersonaLocal: "Tipo personal",
-        motivoCierreAdministrativo: "Motivo cierre",
-        observacionesCierreAdministrativo: "Obs. cierre",
-        guardiaCierreAdministrativo: "Guardia cierre"
-    };
-
-    const detalles = [];
-    if (cierreAdministrativo) {
-        detalles.push(esSalidaDiasLibres ? "Estado: Salida de dias libres" : "Estado: Cerrado administrativamente");
-    }
-
-    Object.entries(detalleMap).forEach(([k, lbl]) => {
-        const val = datos[k];
-        if (val === undefined || val === null || String(val).trim() === "") return;
-        detalles.push(`${lbl}: ${String(val)}`);
+    tabs.querySelectorAll("[data-tab-cuaderno]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const tipo = btn.getAttribute("data-tab-cuaderno") || "";
+            if (!tipo || tipo === torreTipoActivo) return;
+            torreTipoActivo = tipo;
+            torrePaginaActual = 1;
+            torreRenderizarTabs();
+            const filtroTipo = document.getElementById("filtroTipo");
+            if (filtroTipo) filtroTipo.value = tipo;
+            torreSincronizarFiltroTipoRegistro();
+            torreAplicarFiltros();
+        });
     });
-
-    if (datos.fechaCierreAdministrativo) {
-        const fecha = new Date(datos.fechaCierreAdministrativo);
-        const fechaTexto = Number.isNaN(fecha.getTime())
-            ? String(datos.fechaCierreAdministrativo)
-            : `${fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })} ${fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`;
-        detalles.push(`Fecha cierre: ${fechaTexto}`);
-    }
-
-    if (Array.isArray(datos.bienes) && datos.bienes.length) {
-        detalles.push(`Bienes: ${datos.bienes.map((b) => `${b.cantidad || 1}x ${b.descripcion || "-"}`).join("; ")}`);
-    }
-
-    if (Array.isArray(datos.objetos) && datos.objetos.length) {
-        detalles.push(`Objetos: ${datos.objetos.map((o) => `${o.nombre || "-"}: ${o.cantidad || 0}`).join("; ")}`);
-    }
-
-    return detalles;
 }
 
-function torreNormalizarRegistro(item, tipoPorDefecto) {
-    const datos = torreParseDatos(item.datos);
-    const tipoOperacion = item.tipoOperacion || tipoPorDefecto || "SinTipo";
-    const tipoLabel = TORRE_TIPOS_OPERACION[tipoOperacion] || tipoOperacion;
+function torreRenderizarFiltroTipo() {
+    const select = document.getElementById("filtroTipo");
+    if (!select) return;
 
-    const fechaRefRaw = item.horaIngreso || item.horaSalida || item.fechaIngreso || item.fechaSalida || datos.fecha || item.fechaCreacion;
-    const fh = torreFormatearFechaHora(fechaRefRaw);
-
-    const registro = {
-        id: item.id,
-        tipoOperacion,
-        tipoLabel,
-        dni: item.dni || "-",
-        nombre: item.nombreCompleto || datos.nombre || "-",
-        fechaRef: fh.fecha,
-        horaRef: fh.hora,
-        ordenFecha: fh.ts,
-        fechaRefRaw,
-        horaIngresoRaw: item.horaIngreso || datos.horaIngreso || null,
-        horaSalidaRaw: item.horaSalida || datos.horaSalida || null,
-        guardia: torreExtraerGuardia(datos),
-        tipoRegistro: tipoOperacion === "VehiculoEmpresa" ? torreNormalizarTipoRegistro(datos.tipoRegistro) : "",
-        tipoPersonaLocal: tipoOperacion === "PersonalLocal" ? torreNormalizarTipoPersonaLocal(datos.tipoPersonaLocal) : "",
-        resumen: torreArmarResumen(datos),
-        detalles: torreExtraerDetalles(datos),
-        datos
-    };
-
-    registro.movimiento = torreObtenerMovimiento(registro);
-    return registro;
-}
-
-async function torreCargarHistorial() {
-    const body = document.getElementById("torreBody");
-    if (body && !torreRegistros.length) {
-        body.innerHTML = '<tr><td colspan="8">Cargando registros...</td></tr>';
-    }
-
-    const resultados = await Promise.all(
-        TORRE_TIPOS.map(async (tipo) => {
-            const response = await fetchAuth(`${API_BASE}/salidas/tipo/${tipo}`);
-            if (!response || !response.ok) return [];
-            const data = await response.json();
-            return (Array.isArray(data) ? data : []).map((item) => torreNormalizarRegistro(item, tipo));
-        })
-    );
-
-    torreRegistros = resultados.flat().sort((a, b) => (b.ordenFecha || 0) - (a.ordenFecha || 0));
-    torreAplicarFiltros();
-    torreActualizarHora();
-}
-
-function torreActualizarHora() {
-    const el = document.getElementById("ultimaActualizacion");
-    if (!el) return;
-    const ahora = new Date();
-    el.textContent = `Ultima actualizacion: ${ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}`;
-}
-
-function torreRenderFiltroTipo() {
-    const sel = document.getElementById("filtroTipo");
-    if (!sel) return;
-
-    sel.innerHTML = [
+    select.innerHTML = [
         '<option value="">Todos</option>',
         ...TORRE_TIPOS.map((tipo) => `<option value="${torreEscapeHtml(tipo)}">${torreEscapeHtml(TORRE_TIPOS_OPERACION[tipo] || tipo)}</option>`)
     ].join("");
-}
 
-function torreActualizarKpis(items) {
-    const entradas = items.filter((r) => r.movimiento === "Entrada").length;
-    const salidas = items.filter((r) => r.movimiento === "Salida").length;
-
-    const set = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = String(value);
-    };
-
-    set("kpiTotal", items.length);
-    set("kpiEntradas", entradas);
-    set("kpiSalidas", salidas);
+    select.value = torreTipoActivo || "";
 }
 
 function torreSincronizarFiltroTipoRegistro() {
@@ -304,18 +123,205 @@ function torreSincronizarFiltroTipoRegistro() {
     if (!habilitarPersonalLocal) filtroPersonal.value = "";
 }
 
+function torreFormatearFecha(valor) {
+    if (!valor) return "-";
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return "-";
+    return fecha.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function torreFormatearHora(valor) {
+    if (!valor) return "-";
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return "-";
+    return fecha.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function torreFechaIsoLocal(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function torreParseFechaLocal(valor) {
+    if (!valor) return null;
+    if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : valor;
+
+    const texto = String(valor).trim();
+    if (!texto) return null;
+
+    const isoIntento = new Date(texto);
+    if (!Number.isNaN(isoIntento.getTime())) return isoIntento;
+
+    const match = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+    if (!match) return null;
+
+    const dia = Number(match[1]);
+    const mes = Number(match[2]);
+    const anio = Number(match[3]);
+    const hora = match[4] ? Number(match[4]) : 0;
+    const minuto = match[5] ? Number(match[5]) : 0;
+    const fecha = new Date(anio, mes - 1, dia, hora, minuto, 0, 0);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
+
+
+function torreParseDatos(datos) {
+    if (!datos) return {};
+    if (typeof datos === "string") {
+        try {
+            return JSON.parse(datos);
+        } catch {
+            return {};
+        }
+    }
+    return datos;
+}
+
+function torreNormalizarRegistro(item, tipoPorDefecto) {
+    const datos = torreParseDatos(item.datos);
+
+    const fechaIngresoRaw = item.fechaIngreso || datos.fechaIngreso;
+    const fechaSalidaRaw = item.fechaSalida || datos.fechaSalida;
+    const horaIngresoRaw = item.horaIngreso || datos.horaIngreso;
+    const horaSalidaRaw = item.horaSalida || datos.horaSalida;
+
+    const fechaRefRaw = fechaIngresoRaw || fechaSalidaRaw || datos.fecha || item.fechaCreacion || null;
+    const fechaRef = fechaRefRaw ? torreFormatearFecha(fechaRefRaw) : "-";
+    const horaRef = horaIngresoRaw
+        ? torreFormatearHora(horaIngresoRaw)
+        : horaSalidaRaw
+            ? torreFormatearHora(horaSalidaRaw)
+            : item.fechaCreacion
+                ? torreFormatearHora(item.fechaCreacion)
+                : "-";
+
+    const tipoOperacion = item.tipoOperacion || tipoPorDefecto || "SinTipo";
+    const tipoLabel = TORRE_TIPOS_OPERACION[tipoOperacion] || tipoOperacion;
+
+    const registro = {
+        id: item.id,
+        tipoOperacion,
+        tipoLabel,
+        dni: item.dni || "-",
+        nombre: item.nombreCompleto || datos.nombre || "-",
+        fechaRef,
+        horaRef,
+        fechaIngreso: fechaIngresoRaw ? torreFormatearFecha(fechaIngresoRaw) : "-",
+        horaIngreso: horaIngresoRaw ? torreFormatearHora(horaIngresoRaw) : "-",
+        fechaSalida: fechaSalidaRaw ? torreFormatearFecha(fechaSalidaRaw) : "-",
+        horaSalida: horaSalidaRaw ? torreFormatearHora(horaSalidaRaw) : "-",
+        tipoRegistro: tipoOperacion === "VehiculoEmpresa" ? torreNormalizarTipoRegistro(datos.tipoRegistro) : "",
+        tipoPersonaLocal: tipoOperacion === "PersonalLocal" ? torreNormalizarTipoPersonaLocal(datos.tipoPersonaLocal) : "",
+        datos,
+        fechaFiltro: torreParseFechaLocal(fechaRefRaw) || torreParseFechaLocal(item.fechaCreacion),
+        ordenFecha: fechaRefRaw ? new Date(fechaRefRaw).getTime() : 0
+    };
+
+
+    const detalleMap = {
+        proveedor: "Proveedor",
+        placa: "Placa",
+        procedencia: "Procedencia",
+        destino: "Destino",
+        origen: "Origen",
+        origenSalida: "Origen salida",
+        destinoSalida: "Destino salida",
+        origenIngreso: "Origen ingreso",
+        destinoIngreso: "Destino ingreso",
+        kmSalida: "Km salida",
+        kmIngreso: "Km ingreso",
+        observacion: "Observacion",
+        observaciones: "Observaciones",
+        ocurrencia: "Ocurrencia",
+        cuarto: "Cuarto",
+        turno: "Turno",
+        agenteNombre: "Guardia",
+        agenteDni: "DNI guardia",
+        quienAutoriza: "Autoriza",
+        personal: "Personal",
+        numeroBoleta: "Nro boleta",
+        tipoPersonaLocal: "Tipo personal",
+        area: "Area",
+        deDonde: "De donde"
+    };
+
+    const detalles = [];
+
+    Object.entries(detalleMap).forEach(([key, label]) => {
+        const valor = datos[key];
+        if (valor === undefined || valor === null || String(valor).trim() === "") return;
+        detalles.push({ key: label, value: String(valor) });
+    });
+
+    if (Array.isArray(datos.bienes) && datos.bienes.length > 0) {
+        const texto = datos.bienes
+            .map((b) => `${b.cantidad || 1}x ${b.descripcion || "-"}`)
+            .join(" | ");
+        detalles.push({ key: "Bienes", value: texto });
+    }
+
+    if (Array.isArray(datos.objetos) && datos.objetos.length > 0) {
+        const texto = datos.objetos
+            .map((o) => `${o.nombre || "-"}: ${o.cantidad || 0}`)
+            .join(" | ");
+        detalles.push({ key: "Objetos", value: texto });
+    }
+
+    registro.detalles = detalles;
+    return registro;
+}
+
+async function torreCargarHistorial() {
+    const lista = document.getElementById("listaRegistros");
+    if (!lista) return;
+
+    if (!torreRegistros.length) {
+        lista.innerHTML = '<article class="registro-card loading-card">Cargando registros...</article>';
+    }
+
+    const solicitudes = TORRE_TIPOS.map(async (tipo) => {
+        const response = await fetchAuth(`${API_BASE}/salidas/tipo/${tipo}`);
+        if (!response || !response.ok) {
+            return [];
+        }
+
+        const data = await response.json();
+        return (Array.isArray(data) ? data : []).map((item) => torreNormalizarRegistro(item, tipo));
+    });
+
+    const resultados = await Promise.all(solicitudes);
+    torreRegistros = resultados.flat();
+    torreSincronizarFiltroTipoRegistro();
+    torreAplicarFiltros();
+    torreActualizarHora();
+}
+
+function torreActualizarKpis(items) {
+    const entradas = items.filter((r) => r.horaIngreso && r.horaIngreso !== "-").length;
+    const salidas = items.filter((r) => r.horaSalida && r.horaSalida !== "-").length;
+
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    };
+
+    set("kpiTotal", items.length);
+    set("kpiEntradas", entradas);
+    set("kpiSalidas", salidas);
+}
+
 function torreAplicarFiltros() {
-    const tipo = document.getElementById("filtroTipo")?.value || "";
-    const movimiento = document.getElementById("filtroMovimiento")?.value || "";
-    const tipoRegistro = document.getElementById("filtroTipoRegistro")?.value || "";
-    const tipoPersonaLocal = document.getElementById("filtroTipoPersonaLocal")?.value || "";
-    const texto = String(document.getElementById("busquedaTexto")?.value || "").trim().toLowerCase();
+    const texto = (document.getElementById("busquedaTexto")?.value || "").trim().toLowerCase();
     const fechaInicio = document.getElementById("fechaInicio")?.value || "";
     const fechaFin = document.getElementById("fechaFin")?.value || "";
+    const tipoRegistro = document.getElementById("filtroTipoRegistro")?.value || "";
+    const tipoPersonaLocal = document.getElementById("filtroTipoPersonaLocal")?.value || "";
 
-    torreFiltrados = torreRegistros.filter((item) => {
-        if (tipo && item.tipoOperacion !== tipo) return false;
-        if (movimiento && item.movimiento !== movimiento) return false;
+    torreRegistrosFiltrados = torreRegistros.filter((item) => {
+        if (torreTipoActivo && item.tipoOperacion !== torreTipoActivo) return false;
         if (tipoRegistro) {
             if (item.tipoOperacion !== "VehiculoEmpresa") return false;
             if (item.tipoRegistro !== tipoRegistro) return false;
@@ -324,51 +330,43 @@ function torreAplicarFiltros() {
             if (item.tipoOperacion !== "PersonalLocal") return false;
             if (item.tipoPersonaLocal !== tipoPersonaLocal) return false;
         }
-
         if (texto) {
-            const blob = `${item.dni} ${item.nombre} ${item.tipoLabel} ${item.resumen} ${JSON.stringify(item.datos || {})}`.toLowerCase();
+            const blob = `${item.dni} ${item.nombre} ${item.tipoLabel} ${JSON.stringify(item.datos || {})}`.toLowerCase();
             if (!blob.includes(texto)) return false;
         }
 
         if (fechaInicio || fechaFin) {
-            const ts = item.ordenFecha || 0;
-            if (!ts) return false;
-
-            if (fechaInicio) {
-                const minTs = new Date(`${fechaInicio}T00:00:00`).getTime();
-                if (ts < minTs) return false;
-            }
-
-            if (fechaFin) {
-                const max = new Date(`${fechaFin}T23:59:59`).getTime();
-                if (ts > max) return false;
-            }
+            if (!(item.fechaFiltro instanceof Date) || Number.isNaN(item.fechaFiltro.getTime())) return false;
+            const baseIso = torreFechaIsoLocal(item.fechaFiltro);
+            if (!baseIso) return false;
+            if (fechaInicio && baseIso < fechaInicio) return false;
+            if (fechaFin && baseIso > fechaFin) return false;
         }
 
         return true;
     });
 
+    torreRegistrosFiltrados.sort((a, b) => (b.ordenFecha || 0) - (a.ordenFecha || 0));
     torrePaginaActual = 1;
-    torreActualizarKpis(torreFiltrados);
-    torreRenderizarTabla();
+    torreActualizarKpis(torreRegistrosFiltrados);
+    torreRenderizar();
 }
 
 async function torreDescargarExcelSeleccion() {
-    if (!torreFiltrados.length) {
+    if (!torreRegistrosFiltrados.length) {
         alert("No hay registros para exportar.");
         return;
     }
 
     const tipo = document.getElementById("filtroTipo")?.value || "";
-    const movimiento = document.getElementById("filtroMovimiento")?.value || "";
     const tipoRegistro = document.getElementById("filtroTipoRegistro")?.value || "";
     const tipoPersonaLocal = document.getElementById("filtroTipoPersonaLocal")?.value || "";
     const texto = String(document.getElementById("busquedaTexto")?.value || "").trim();
     const fechaInicio = document.getElementById("fechaInicio")?.value || "";
     const fechaFin = document.getElementById("fechaFin")?.value || "";
 
-    const pageSize = Math.min(5000, Math.max(1, torreFiltrados.length));
-    if (torreFiltrados.length > 5000) {
+    const pageSize = Math.min(5000, Math.max(1, torreRegistrosFiltrados.length));
+    if (torreRegistrosFiltrados.length > 5000) {
         alert("Se exportaran solo los primeros 5000 registros filtrados.");
     }
 
@@ -376,7 +374,6 @@ async function torreDescargarExcelSeleccion() {
     params.set("page", "1");
     params.set("pageSize", String(pageSize));
     if (tipo) params.set("tipoOperacion", tipo);
-    if (movimiento) params.set("tipoMovimiento", movimiento);
     if (texto) params.set("texto", texto);
     if (fechaInicio) params.set("fechaInicio", fechaInicio);
     if (fechaFin) params.set("fechaFin", fechaFin);
@@ -405,53 +402,76 @@ async function torreDescargarExcelSeleccion() {
     URL.revokeObjectURL(url);
 }
 
-function torreRenderizarTabla() {
-    const body = document.getElementById("torreBody");
+function torreRenderizar() {
+    const lista = document.getElementById("listaRegistros");
     const resumen = document.getElementById("resumenResultados");
     const infoPagina = document.getElementById("infoPagina");
+    const infoPaginaBottom = document.getElementById("infoPaginaBottom");
     const btnPrev = document.getElementById("btnPrev");
     const btnNext = document.getElementById("btnNext");
+    const btnPrevBottom = document.getElementById("btnPrevBottom");
+    const btnNextBottom = document.getElementById("btnNextBottom");
 
-    if (!body || !resumen || !infoPagina || !btnPrev || !btnNext) return;
+    if (!lista || !resumen || !infoPagina || !btnPrev || !btnNext) return;
 
-    const total = torreFiltrados.length;
+    const total = torreRegistrosFiltrados.length;
     const totalPaginas = Math.max(1, Math.ceil(total / TORRE_REGISTROS_POR_PAGINA));
     if (torrePaginaActual > totalPaginas) torrePaginaActual = totalPaginas;
 
-    const from = (torrePaginaActual - 1) * TORRE_REGISTROS_POR_PAGINA;
-    const pageItems = torreFiltrados.slice(from, from + TORRE_REGISTROS_POR_PAGINA);
+    const inicio = (torrePaginaActual - 1) * TORRE_REGISTROS_POR_PAGINA;
+    const pagina = torreRegistrosFiltrados.slice(inicio, inicio + TORRE_REGISTROS_POR_PAGINA);
 
-    if (!pageItems.length) {
-        body.innerHTML = '<tr><td colspan="8">No hay registros para los filtros seleccionados.</td></tr>';
+    if (!pagina.length) {
+        lista.innerHTML = '<article class="registro-card loading-card">No hay registros para los filtros seleccionados.</article>';
     } else {
-        body.innerHTML = pageItems.map((item) => {
-            const badgeMov = torreBadgeMovimientoClass(item.movimiento);
-            const detallesHtml = item.detalles.length
-                ? `<details class="tc-detail"><summary>Ver detalle</summary><ul>${item.detalles.map((d) => `<li>${torreEscapeHtml(d)}</li>`).join("")}</ul></details>`
-                : "Sin detalle";
+        lista.innerHTML = pagina.map((item) => {
+            const detalleHtml = item.detalles.length
+                ? item.detalles.map((d) => `
+                    <div class="detalle-item">
+                        <span class="k">${torreEscapeHtml(d.key)}:</span>
+                        <span class="v">${torreEscapeHtml(String(d.value))}</span>
+                    </div>
+                `).join("")
+                : '<div class="detalle-item"><span class="k">Detalle:</span> <span class="v">Sin datos adicionales</span></div>';
 
             return `
-                <tr>
-                    <td>${torreEscapeHtml(item.fechaRef)} ${torreEscapeHtml(item.horaRef)}</td>
-                    <td><span class="tc-badge tc-badge-tipo">${torreEscapeHtml(item.tipoLabel)}</span></td>
-                    <td><span class="${badgeMov}">${torreEscapeHtml(item.movimiento || "-")}</span></td>
-                    <td>${torreEscapeHtml(item.dni)}</td>
-                    <td>${torreEscapeHtml(item.nombre)}</td>
-                    <td>${torreEscapeHtml(item.guardia)}</td>
-                    <td>
-                        <div>${torreEscapeHtml(item.resumen)}</div>
-                        ${detallesHtml}
-                    </td>
-                    <td><button type="button" class="tc-btn tc-btn-soft" data-ver-imagenes="${item.id}">Ver</button></td>
-                </tr>
+                <article class="registro-card">
+                    <div class="registro-head">
+                        <span class="badge badge-tipo">${torreEscapeHtml(item.tipoLabel)}</span>
+                        <span class="registro-fecha">${torreEscapeHtml(item.fechaRef)} ${torreEscapeHtml(item.horaRef)}</span>
+                    </div>
+                    <div class="registro-core">
+                        <div class="campo"><span class="k">DNI:</span><span class="v">${torreEscapeHtml(item.dni)}</span></div>
+                        <div class="campo"><span class="k">Nombre:</span><span class="v">${torreEscapeHtml(item.nombre)}</span></div>
+                        <div class="campo"><span class="k">Ingreso:</span><span class="v">${torreEscapeHtml(item.fechaIngreso)} ${torreEscapeHtml(item.horaIngreso)}</span></div>
+                        <div class="campo"><span class="k">Salida:</span><span class="v">${torreEscapeHtml(item.fechaSalida)} ${torreEscapeHtml(item.horaSalida)}</span></div>
+                    </div>
+                    <div class="detalle-item"><button type="button" class="btn btn-soft" data-ver-imagenes="${item.id}">Ver imagenes</button></div>
+                    <div class="detalle-grid">${detalleHtml}</div>
+                </article>
             `;
         }).join("");
     }
 
-    resumen.textContent = `${total} registros visibles`;
-    infoPagina.textContent = `Pagina ${torrePaginaActual} de ${totalPaginas}`;
-    btnPrev.disabled = torrePaginaActual <= 1;
-    btnNext.disabled = torrePaginaActual >= totalPaginas || total === 0;
+    const tituloTipo = TORRE_TIPOS_OPERACION[torreTipoActivo] || torreTipoActivo || "Todos";
+    resumen.textContent = `${total} registros encontrados en ${tituloTipo}`;
+    const textoPagina = `Pagina ${torrePaginaActual} de ${totalPaginas}`;
+    infoPagina.textContent = textoPagina;
+    if (infoPaginaBottom) infoPaginaBottom.textContent = textoPagina;
+    const deshabilitarPrev = torrePaginaActual <= 1;
+    const deshabilitarNext = torrePaginaActual >= totalPaginas || total === 0;
+    btnPrev.disabled = deshabilitarPrev;
+    btnNext.disabled = deshabilitarNext;
+    if (btnPrevBottom) btnPrevBottom.disabled = deshabilitarPrev;
+    if (btnNextBottom) btnNextBottom.disabled = deshabilitarNext;
+}
+
+function torreActualizarHora() {
+    const el = document.getElementById("ultimaActualizacion");
+    if (!el) return;
+
+    const ahora = new Date();
+    el.textContent = `Ult. act: ${ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 }
 
 function torreAbrirImagenesSoloLectura(item) {
@@ -470,95 +490,112 @@ function torreAbrirImagenesSoloLectura(item) {
 function torreConfigurarEventos() {
     const btnBuscar = document.getElementById("btnBuscar");
     const btnLimpiar = document.getElementById("btnLimpiar");
-    const btnDescargar = document.getElementById("btnDescargar");
     const btnRecargar = document.getElementById("btnRecargar");
+    const btnDescargar = document.getElementById("btnDescargar");
     const btnPrev = document.getElementById("btnPrev");
     const btnNext = document.getElementById("btnNext");
-    const body = document.getElementById("torreBody");
+    const btnPrevBottom = document.getElementById("btnPrevBottom");
+    const btnNextBottom = document.getElementById("btnNextBottom");
+    const busqueda = document.getElementById("busquedaTexto");
+    const lista = document.getElementById("listaRegistros");
+    const filtroTipo = document.getElementById("filtroTipo");
+    const filtroTipoRegistro = document.getElementById("filtroTipoRegistro");
+    const filtroTipoPersonaLocal = document.getElementById("filtroTipoPersonaLocal");
 
     if (btnBuscar) btnBuscar.addEventListener("click", torreAplicarFiltros);
+    if (btnRecargar) btnRecargar.addEventListener("click", torreCargarHistorial);
+    if (btnDescargar) btnDescargar.addEventListener("click", torreDescargarExcelSeleccion);
 
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener("click", () => {
-            const ids = ["filtroTipo", "filtroMovimiento", "filtroTipoRegistro", "filtroTipoPersonaLocal", "busquedaTexto", "fechaInicio", "fechaFin"];
-            ids.forEach((id) => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                if (id === "busquedaTexto") {
-                    el.value = "";
-                } else {
-                    el.value = "";
-                }
-            });
-            torreSincronizarFiltroTipoRegistro();
-            torreAplicarFiltros();
-        });
-    }
-
-    if (btnDescargar) {
-        btnDescargar.addEventListener("click", torreDescargarExcelSeleccion);
-    }
-
-    if (btnRecargar) {
-        btnRecargar.addEventListener("click", async () => {
-            btnRecargar.disabled = true;
-            try {
-                await torreCargarHistorial();
-            } finally {
-                btnRecargar.disabled = false;
-            }
-        });
-    }
-
-    const filtroTipo = document.getElementById("filtroTipo");
-    if (filtroTipo) {
-        filtroTipo.addEventListener("change", () => {
-            torreSincronizarFiltroTipoRegistro();
-            torreAplicarFiltros();
-        });
-    }
-
-    ["filtroMovimiento", "filtroTipoRegistro", "filtroTipoPersonaLocal", "fechaInicio", "fechaFin"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("change", torreAplicarFiltros);
-    });
-
-    const busqueda = document.getElementById("busquedaTexto");
-    if (busqueda) {
-        busqueda.addEventListener("input", () => {
-            if (torreDebounce) clearTimeout(torreDebounce);
-            torreDebounce = setTimeout(() => torreAplicarFiltros(), 220);
-        });
-    }
-
-    if (btnPrev) {
-        btnPrev.addEventListener("click", () => {
-            if (torrePaginaActual <= 1) return;
-            torrePaginaActual -= 1;
-            torreRenderizarTabla();
-        });
-    }
-
-    if (btnNext) {
-        btnNext.addEventListener("click", () => {
-            const totalPaginas = Math.max(1, Math.ceil(torreFiltrados.length / TORRE_REGISTROS_POR_PAGINA));
-            if (torrePaginaActual >= totalPaginas) return;
-            torrePaginaActual += 1;
-            torreRenderizarTabla();
-        });
-    }
-
-    if (body) {
-        body.addEventListener("click", (e) => {
+    if (lista) {
+        lista.addEventListener("click", (e) => {
             const target = e.target;
             if (!(target instanceof HTMLElement)) return;
             const btn = target.closest("[data-ver-imagenes]");
             if (!btn) return;
             const id = Number(btn.getAttribute("data-ver-imagenes"));
             if (!Number.isFinite(id) || id <= 0) return;
-            const item = torreFiltrados.find((r) => r.id === id);
+            const item = torreRegistrosFiltrados.find((r) => r.id === id);
             if (!item) return;
             torreAbrirImagenesSoloLectura(item);
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener("click", () => {
+            document.getElementById("busquedaTexto").value = "";
+            document.getElementById("fechaInicio").value = "";
+            document.getElementById("fechaFin").value = "";
+            if (filtroTipo) filtroTipo.value = "";
+            if (filtroTipoRegistro) filtroTipoRegistro.value = "";
+            if (filtroTipoPersonaLocal) filtroTipoPersonaLocal.value = "";
+            torreTipoActivo = "";
+            torreRenderizarTabs();
+            torreSincronizarFiltroTipoRegistro();
+            torreAplicarFiltros();
+        });
+    }
+
+    if (filtroTipo) {
+        filtroTipo.addEventListener("change", () => {
+            torreTipoActivo = filtroTipo.value || "";
+            torrePaginaActual = 1;
+            torreRenderizarTabs();
+            torreSincronizarFiltroTipoRegistro();
+            torreAplicarFiltros();
+        });
+    }
+
+    if (filtroTipoRegistro) {
+        filtroTipoRegistro.addEventListener("change", torreAplicarFiltros);
+    }
+
+    if (filtroTipoPersonaLocal) {
+        filtroTipoPersonaLocal.addEventListener("change", torreAplicarFiltros);
+    }
+
+    ["fechaInicio", "fechaFin"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("change", torreAplicarFiltros);
+    });
+
+    if (busqueda) {
+        busqueda.addEventListener("input", () => {
+            if (torreDebounce) clearTimeout(torreDebounce);
+            torreDebounce = setTimeout(() => torreAplicarFiltros(), 260);
+        });
+    }
+
+    if (btnPrev) {
+        btnPrev.addEventListener("click", () => {
+            if (torrePaginaActual <= 1) return;
+            torrePaginaActual--;
+            torreRenderizar();
+        });
+    }
+
+    if (btnPrevBottom) {
+        btnPrevBottom.addEventListener("click", () => {
+            if (torrePaginaActual <= 1) return;
+            torrePaginaActual--;
+            torreRenderizar();
+        });
+    }
+
+    if (btnNext) {
+        btnNext.addEventListener("click", () => {
+            const totalPaginas = Math.max(1, Math.ceil(torreRegistrosFiltrados.length / TORRE_REGISTROS_POR_PAGINA));
+            if (torrePaginaActual >= totalPaginas) return;
+            torrePaginaActual++;
+            torreRenderizar();
+        });
+    }
+
+    if (btnNextBottom) {
+        btnNextBottom.addEventListener("click", () => {
+            const totalPaginas = Math.max(1, Math.ceil(torreRegistrosFiltrados.length / TORRE_REGISTROS_POR_PAGINA));
+            if (torrePaginaActual >= totalPaginas) return;
+            torrePaginaActual++;
+            torreRenderizar();
         });
     }
 }
@@ -567,12 +604,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (!torreVerificarAcceso()) return;
 
     torreCargarNombreUsuario();
-    torreRenderFiltroTipo();
+    torreRenderizarFiltroTipo();
+    torreRenderizarTabs();
     torreSincronizarFiltroTipoRegistro();
     torreConfigurarEventos();
     await torreCargarHistorial();
 
-    setInterval(() => {
+    torreAutoRefresh = setInterval(() => {
         torreCargarHistorial();
     }, TORRE_AUTO_REFRESH_MS);
 });

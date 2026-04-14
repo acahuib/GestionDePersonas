@@ -10,6 +10,9 @@ let registrosEnseres = [];
 const registrosPorPaginaPersonas = 20;
 let paginaPersonasActual = 1;
 let personasDentroActuales = [];
+let personasDentroFiltradas = [];
+let ultimosMovimientosActuales = [];
+let ultimosMovimientosFiltrados = [];
 
 function setErrorCell(elementId, message) {
     const el = document.getElementById(elementId);
@@ -59,7 +62,7 @@ async function cargarEstadisticas() {
         const hoy = new Date();
         const fechaInicio = hoy.toISOString().split('T')[0];
         
-        console.log('?? Cargando estad�sticas para:', fechaInicio);
+        console.log('?? Cargando estadísticas para:', fechaInicio);
         
         const token = localStorage.getItem('token');
         const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=1000`;
@@ -76,7 +79,7 @@ async function cargarEstadisticas() {
         if (!response.ok) {
             const errorText = await readApiError(response);
             console.error('? Error response:', errorText);
-            throw new Error(errorText || 'Error al cargar estad�sticas');
+            throw new Error(errorText || 'Error al cargar estadísticas');
         }
         
         const data = await response.json();
@@ -100,8 +103,8 @@ async function cargarEstadisticas() {
         document.getElementById('salidasHoy').textContent = salidas;
         
     } catch (error) {
-        console.error('? Error al cargar estad�sticas:', error);
-        const mensaje = error?.message || "Error al cargar estad�sticas";
+        console.error('? Error al cargar estadísticas:', error);
+        const mensaje = error?.message || "Error al cargar estadísticas";
         setErrorCell('movimientosHoy', mensaje);
         setErrorCell('ingresosHoy', mensaje);
         setErrorCell('salidasHoy', mensaje);
@@ -115,7 +118,7 @@ async function cargarPersonasDentro() {
         const fechaInicio = '2020-01-01'; // Fecha antigua para obtener todo el historial
         
         const token = localStorage.getItem('token');
-        const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=10000`;
+        const url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=50000`;
         
         console.log('?? URL personas dentro:', url);
         console.log('?? Token presente:', !!token);
@@ -137,7 +140,7 @@ async function cargarPersonasDentro() {
         const data = await response.json();
         const movimientos = data.movimientos || [];
         
-        console.log('?? Procesando', movimientos.length, 'movimientos hist�ricos...');
+        console.log('?? Procesando', movimientos.length, 'movimientos históricos...');
         
         const ultimoMovimientoPorDni = {};
         
@@ -154,7 +157,7 @@ async function cargarPersonasDentro() {
             }
         });
         
-        console.log('?? DNIs �nicos:', Object.keys(ultimoMovimientoPorDni).length);
+        console.log('?? DNIs únicos:', Object.keys(ultimoMovimientoPorDni).length);
         
         const personasDentro = [];
         
@@ -185,8 +188,7 @@ async function cargarPersonasDentro() {
         document.getElementById('totalDentro').textContent = personasDentro.length;
         
         personasDentroActuales = personasDentro;
-        paginaPersonasActual = 1;
-        renderizarTablaPersonasDentro();
+        aplicarFiltroPersonasDentro(true);
         
     } catch (error) {
         console.error('? Error al cargar personas dentro:', error);
@@ -203,7 +205,7 @@ async function cargarUltimosMovimientos() {
         const filtroTipo = document.getElementById('filtroTipo').value;
         
         const token = localStorage.getItem('token');
-        let url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=${paginaActual}&pageSize=${registrosPorPagina}`;
+        let url = `${API_BASE}/reportes/dashboard?fechaInicio=${fechaInicio}&page=1&pageSize=50000`;
         
         if (filtroTipo) {
             url += `&tipoMovimiento=${filtroTipo}`;
@@ -222,12 +224,12 @@ async function cargarUltimosMovimientos() {
         
         const data = await response.json();
         const movimientos = data.movimientos || [];
-        
-        renderizarTablaUltimosMovimientos(movimientos);
-        
-        document.getElementById('paginaActual').textContent = `P�gina ${paginaActual}`;
-        document.getElementById('btnAnterior').disabled = paginaActual === 1;
-        document.getElementById('btnSiguiente').disabled = movimientos.length < registrosPorPagina;
+
+        ultimosMovimientosActuales = movimientos;
+        aplicarFiltroUltimosMovimientos(true);
+
+        const paginacion = document.getElementById('paginacionMovimientos');
+        if (paginacion) paginacion.style.display = 'none';
         
     } catch (error) {
         console.error('Error al cargar ultimos movimientos:', error);
@@ -239,20 +241,20 @@ async function cargarUltimosMovimientos() {
 function renderizarTablaPersonasDentro() {
     const tbody = document.getElementById('tablaPersonasDentro');
 
-    if (!personasDentroActuales || personasDentroActuales.length === 0) {
+    if (!personasDentroFiltradas || personasDentroFiltradas.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay personas dentro actualmente</td></tr>';
         const paginaTexto = document.getElementById('paginaPersonasActual');
-        if (paginaTexto) paginaTexto.textContent = 'P�gina 0 de 0';
+        if (paginaTexto) paginaTexto.textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionPersonasDentro();
         return;
     }
 
-    const totalPaginas = Math.max(1, Math.ceil(personasDentroActuales.length / registrosPorPaginaPersonas));
+    const totalPaginas = Math.max(1, Math.ceil(personasDentroFiltradas.length / registrosPorPaginaPersonas));
     if (paginaPersonasActual > totalPaginas) paginaPersonasActual = totalPaginas;
 
     const inicio = (paginaPersonasActual - 1) * registrosPorPaginaPersonas;
     const fin = inicio + registrosPorPaginaPersonas;
-    const personasPagina = personasDentroActuales.slice(inicio, fin);
+    const personasPagina = personasDentroFiltradas.slice(inicio, fin);
     
     tbody.innerHTML = personasPagina.map(p => `
         <tr>
@@ -265,7 +267,7 @@ function renderizarTablaPersonasDentro() {
     `).join('');
 
     const paginaTexto = document.getElementById('paginaPersonasActual');
-    if (paginaTexto) paginaTexto.textContent = `P�gina ${paginaPersonasActual} de ${totalPaginas}`;
+    if (paginaTexto) paginaTexto.textContent = `Página ${paginaPersonasActual} de ${totalPaginas}`;
     actualizarEstadoPaginacionPersonasDentro();
 }
 
@@ -283,8 +285,8 @@ function actualizarEstadoPaginacionPersonasDentro() {
     const btnSiguiente = document.getElementById('btnPersonasSiguiente');
     if (!btnAnterior || !btnSiguiente) return;
 
-    const totalPaginas = Math.max(1, Math.ceil(personasDentroActuales.length / registrosPorPaginaPersonas));
-    const sinDatos = !personasDentroActuales.length;
+    const totalPaginas = Math.max(1, Math.ceil(personasDentroFiltradas.length / registrosPorPaginaPersonas));
+    const sinDatos = !personasDentroFiltradas.length;
 
     btnAnterior.disabled = sinDatos || paginaPersonasActual <= 1;
     btnSiguiente.disabled = sinDatos || paginaPersonasActual >= totalPaginas;
@@ -318,6 +320,42 @@ function renderizarTablaUltimosMovimientos(movimientos) {
             <td>${obtenerEstadoCuaderno(m)}</td>
         </tr>
     `).join('');
+}
+
+function filtrarUltimosMovimientos() {
+    aplicarFiltroUltimosMovimientos(false);
+}
+
+function aplicarFiltroUltimosMovimientos(resetPagina) {
+    const input = document.getElementById('buscadorMovimientos');
+    const termino = (input?.value || '').trim().toLowerCase();
+
+    if (!termino) {
+        ultimosMovimientosFiltrados = [...ultimosMovimientosActuales];
+    } else {
+        ultimosMovimientosFiltrados = ultimosMovimientosActuales.filter(m => {
+            const dni = (m.dni || '').toString().toLowerCase();
+            const nombre = (m.nombrePersona || '').toLowerCase();
+            const tipoPersona = (m.tipoPersona || '').toLowerCase();
+            const tipoMovimiento = (m.tipoMovimiento || '').toLowerCase();
+            const tipoMovimientoDetalle = (m.tipoMovimientoDetalle || '').toLowerCase();
+            const tipoOperacion = (m.tipoOperacion || '').toLowerCase();
+            const estado = obtenerEstadoCuaderno(m).toLowerCase();
+
+            return dni.includes(termino)
+                || nombre.includes(termino)
+                || tipoPersona.includes(termino)
+                || tipoMovimiento.includes(termino)
+                || tipoMovimientoDetalle.includes(termino)
+                || tipoOperacion.includes(termino)
+                || estado.includes(termino);
+        });
+    }
+
+    renderizarTablaUltimosMovimientos(ultimosMovimientosFiltrados);
+
+    const paginacion = document.getElementById('paginacionMovimientos');
+    if (paginacion) paginacion.style.display = 'none';
 }
 
 function getMovimientoBadge(tipoMovimiento) {
@@ -361,10 +399,13 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
         }
 
         renderizarTablaEnseresTurnoAdmin();
+
+        const paginacion = document.getElementById('paginacionEnseres');
+        if (paginacion) paginacion.style.display = 'none';
     } catch (error) {
         console.error('Error al cargar enseres por turno:', error);
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error al cargar registros: ${error?.message || "-"}</td></tr>`;
-        document.getElementById('paginaEnseresActual').textContent = 'P�gina 0 de 0';
+        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
     }
 }
@@ -372,13 +413,11 @@ async function cargarRegistrosEnseresTurno(resetPagina = true) {
 function renderizarTablaEnseresTurnoAdmin() {
     const tbody = document.getElementById('tablaEnseresTurnoAdmin');
 
-    const inicio = (paginaEnseresActual - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
-    const registrosPagina = registrosEnseres.slice(inicio, fin);
+    const registrosPagina = registrosEnseres;
 
     if (!registrosEnseres || registrosEnseres.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay registros informativos</td></tr>';
-        document.getElementById('paginaEnseresActual').textContent = 'P�gina 0 de 0';
+        document.getElementById('paginaEnseresActual').textContent = 'Página 0 de 0';
         actualizarEstadoPaginacionEnseres();
         return;
     }
@@ -408,7 +447,7 @@ function renderizarTablaEnseresTurnoAdmin() {
         `;
     }).join('');
 
-    document.getElementById('paginaEnseresActual').textContent = `P�gina ${paginaEnseresActual} de ${totalPaginasEnseres} (${registrosEnseres.length} registros)`;
+    document.getElementById('paginaEnseresActual').textContent = `${registrosEnseres.length} registros`;
     actualizarEstadoPaginacionEnseres();
 }
 
@@ -513,7 +552,7 @@ function cambiarPagina(direccion) {
 }
 
 function cerrarSesion() {
-    if (confirm('�Est�s seguro de cerrar sesi�n?')) {
+    if (confirm('¿Estás seguro de cerrar sesión?')) {
         if (intervalId) {
             clearInterval(intervalId);
         }
@@ -525,6 +564,32 @@ function cerrarSesion() {
         
         window.location.href = '/login.html';
     }
+}
+
+function filtrarPersonasDentro() {
+    aplicarFiltroPersonasDentro(false);
+}
+
+function aplicarFiltroPersonasDentro(resetPagina) {
+    const input = document.getElementById('buscadorPersonasDentro');
+    const termino = (input?.value || '').trim().toLowerCase();
+
+    if (!termino) {
+        personasDentroFiltradas = [...personasDentroActuales];
+    } else {
+        personasDentroFiltradas = personasDentroActuales.filter(p => {
+            const dni = (p.dni || '').toString().toLowerCase();
+            const nombre = (p.nombre || '').toLowerCase();
+            const tipo = (p.tipoRegistro || '').toLowerCase();
+            return dni.includes(termino) || nombre.includes(termino) || tipo.includes(termino);
+        });
+    }
+
+    if (resetPagina || paginaPersonasActual !== 1) {
+        paginaPersonasActual = 1;
+    }
+
+    renderizarTablaPersonasDentro();
 }
 
 

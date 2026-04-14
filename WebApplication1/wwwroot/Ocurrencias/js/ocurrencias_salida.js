@@ -179,8 +179,16 @@ function construirOcurrenciaDesdeDetalle(detalle) {
         const destino = leerTexto('edit-vehiculo-destino');
         const observacion = leerTexto('edit-vehiculo-observacion');
 
-        if (!placa || !chofer || !empresa || !procedencia || !destino || !observacion) {
-            throw new Error('Complete todos los campos de detalle vehicular para guardar');
+        const faltantesVehicular = window.obtenerCamposFaltantes([
+            { label: "Placa", value: placa },
+            { label: "Chofer", value: chofer },
+            { label: "Empresa/Proveedor", value: empresa },
+            { label: "Procedencia", value: procedencia },
+            { label: "Destino", value: destino },
+            { label: "Observacion", value: observacion }
+        ]);
+        if (faltantesVehicular.length) {
+            throw new Error(`Falta completar: ${faltantesVehicular.join(", ")}`);
         }
 
         return [
@@ -204,8 +212,17 @@ function construirOcurrenciaDesdeDetalle(detalle) {
         const destino = leerTexto('edit-encapsulado-destino');
         const observacion = leerTexto('edit-encapsulado-observacion');
 
-        if (!tractoPlaca || !plataformaPlaca || !chofer || !empresa || !procedencia || !destino || !observacion) {
-            throw new Error('Complete todos los campos de detalle encapsulado para guardar');
+        const faltantesEncapsulado = window.obtenerCamposFaltantes([
+            { label: "Tracto placa", value: tractoPlaca },
+            { label: "Plataforma placa", value: plataformaPlaca },
+            { label: "Chofer", value: chofer },
+            { label: "Empresa/Proveedor", value: empresa },
+            { label: "Procedencia", value: procedencia },
+            { label: "Destino", value: destino },
+            { label: "Observacion", value: observacion }
+        ]);
+        if (faltantesEncapsulado.length) {
+            throw new Error(`Falta completar: ${faltantesEncapsulado.join(", ")}`);
         }
 
         return [
@@ -269,7 +286,7 @@ function cargarDatos() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontr� el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 
@@ -306,7 +323,7 @@ async function registrarSalida() {
     if (!salidaId) {
         const mensaje = document.getElementById('mensaje');
         mensaje.className = 'error';
-        mensaje.innerText = 'No se encontr� el ID del registro de ingreso';
+        mensaje.innerText = 'No se encontró el ID del registro de ingreso';
         return;
     }
 

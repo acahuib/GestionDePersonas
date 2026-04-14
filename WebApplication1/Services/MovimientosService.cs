@@ -99,7 +99,7 @@ namespace WebApplication1.Services
         {
             return puntoControlId switch
             {
-                GARITA_ID => "Garita",
+                GARITA_ID => "Registro sin cuaderno",
                 COMEDOR_ID => "Comedor",
                 QUIMICO_ID => "Quimico",
                 _ => $"Punto de control {puntoControlId}"
