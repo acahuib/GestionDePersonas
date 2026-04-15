@@ -765,7 +765,13 @@ namespace WebApplication1.Controllers
                     .OrderByDescending(o => o.FechaCreacion)
                     .ToListAsync();
 
-                var vinculados = new List<(OperacionDetalle Registro, JsonElement Root)>();
+                var vinculados = new List<(
+                    OperacionDetalle Registro,
+                    string? Nombre,
+                    string? Ocurrencia,
+                    string? GuardiaIngreso,
+                    string? GuardiaSalida
+                )>();
                 foreach (var candidato in candidatos)
                 {
                     try
@@ -792,7 +798,26 @@ namespace WebApplication1.Controllers
                         }
                         if (salidaRef != salidaReferenciaId) continue;
 
-                        vinculados.Add((candidato, root));
+                        var nombreActual = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null
+                            ? n.GetString()
+                            : null;
+                        var ocurrenciaActual = root.TryGetProperty("ocurrencia", out var oc) && oc.ValueKind != JsonValueKind.Null
+                            ? oc.GetString()
+                            : null;
+                        var guardiaIngresoActual = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
+                            ? gi.GetString()
+                            : null;
+                        var guardiaSalidaActual = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
+                            ? gs.GetString()
+                            : null;
+
+                        vinculados.Add((
+                            candidato,
+                            nombreActual,
+                            ocurrenciaActual,
+                            guardiaIngresoActual,
+                            guardiaSalidaActual
+                        ));
                     }
                     catch
                     {
@@ -805,33 +830,21 @@ namespace WebApplication1.Controllers
                     .ToHashSet();
 
                 var completados = 0;
-                foreach (var (registro, root) in vinculados)
+                foreach (var vinculado in vinculados)
                 {
+                    var registro = vinculado.Registro;
                     if (idsSeleccionados.Count > 0 && !idsSeleccionados.Contains(registro.Id))
                         continue;
 
                     var puedeCompletar = esIngreso ? !registro.HoraIngreso.HasValue : !registro.HoraSalida.HasValue;
                     if (!puedeCompletar) continue;
 
-                    var guardiaIngresoActual = root.TryGetProperty("guardiaIngreso", out var gi) && gi.ValueKind != JsonValueKind.Null
-                        ? gi.GetString()
-                        : null;
-                    var guardiaSalidaActual = root.TryGetProperty("guardiaSalida", out var gs) && gs.ValueKind != JsonValueKind.Null
-                        ? gs.GetString()
-                        : null;
-                    var nombreActual = root.TryGetProperty("nombre", out var n) && n.ValueKind != JsonValueKind.Null
-                        ? n.GetString()
-                        : null;
-                    var ocurrenciaActual = root.TryGetProperty("ocurrencia", out var oc) && oc.ValueKind != JsonValueKind.Null
-                        ? oc.GetString()
-                        : null;
-
                     var datosActualizados = new
                     {
-                        nombre = nombreActual,
-                        guardiaIngreso = esIngreso ? guardiaNombre : guardiaIngresoActual,
-                        guardiaSalida = esIngreso ? guardiaSalidaActual : guardiaNombre,
-                        ocurrencia = ocurrenciaActual
+                        nombre = vinculado.Nombre,
+                        guardiaIngreso = esIngreso ? guardiaNombre : vinculado.GuardiaIngreso,
+                        guardiaSalida = esIngreso ? vinculado.GuardiaSalida : guardiaNombre,
+                        ocurrencia = vinculado.Ocurrencia
                     };
 
                     await _salidasService.ActualizarSalidaDetalle(
