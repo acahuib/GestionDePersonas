@@ -125,11 +125,6 @@ namespace WebApplication1.Controllers
                     estaAbierto = false;
                     motivo = "Permiso registrado";
                 }
-                else if (salida.TipoOperacion == "SalidasPermisosPersonal")
-                {
-                    estaAbierto = !datos.ContainsKey("horaIngreso") || string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());
-                    motivo = estaAbierto ? "Falta registrar horaIngreso" : "Cerrado";
-                }
                 else if (salida.TipoOperacion == "Ocurrencias")
                 {
                     bool tieneIngreso = datos.ContainsKey("horaIngreso") && !string.IsNullOrEmpty(datos["horaIngreso"]?.ToString());

@@ -13,6 +13,8 @@ namespace WebApplication1.Controllers
     [Authorize(Roles = "Admin,Guardia,Tecnico")]
     public class PersonasController : ControllerBase
     {
+        private static readonly int[] PuntosControlInternos = { 2, 9 };
+
         private sealed class MovimientoEstadoInfo
         {
             public int Id { get; init; }
@@ -148,7 +150,7 @@ namespace WebApplication1.Controllers
 
             var movimientos = await _context.Movimientos
                 .AsNoTracking()
-                .Where(m => dnis.Contains(m.Dni) && m.PuntoControlId == 1)
+                .Where(m => dnis.Contains(m.Dni))
                 .OrderByDescending(m => m.FechaHora)
                 .Select(m => new MovimientoEstadoInfo
                 {
@@ -180,6 +182,12 @@ namespace WebApplication1.Controllers
                     DatosJSON = o.DatosJSON
                 })
                 .ToListAsync();
+
+            var operacionesPorMovimientoId = operacionesMovimiento
+                .GroupBy(o => o.MovimientoId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.FechaCreacion).ToList());
 
             var operacionPorMovimientoId = operacionesMovimiento
                 .GroupBy(o => o.MovimientoId)
@@ -258,6 +266,16 @@ namespace WebApplication1.Controllers
                 {
                     if (EsOperacionInformativa(operacion))
                     {
+                        if (operacionesPorMovimientoId.TryGetValue(movimientoId.Value, out var opsMovimiento))
+                        {
+                            var opAlternativa = opsMovimiento.FirstOrDefault(op => !EsOperacionInformativa(op)
+                                && !string.IsNullOrWhiteSpace(op.TipoOperacion));
+                            if (opAlternativa != null)
+                            {
+                                return MapearCuaderno(opAlternativa.TipoOperacion!);
+                            }
+                        }
+
                         var alternativo = movimientosDni.FirstOrDefault(m =>
                             operacionPorMovimientoId.TryGetValue(m.Id, out var op)
                             && !string.IsNullOrWhiteSpace(op.TipoOperacion)
@@ -291,6 +309,9 @@ namespace WebApplication1.Controllers
                 {
                     var tipoMov = NormalizarTipoMovimiento(m.TipoMovimiento);
                     if (tipoMov != "Entrada" && tipoMov != "Salida") return false;
+
+                    if (m.PuntoControlId.HasValue && PuntosControlInternos.Contains(m.PuntoControlId.Value))
+                        return false;
 
                     if (operacionPorMovimientoId.TryGetValue(m.Id, out var op)
                         && !string.IsNullOrWhiteSpace(op.TipoOperacion))

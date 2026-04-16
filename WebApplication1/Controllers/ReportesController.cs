@@ -129,6 +129,12 @@ namespace WebApplication1.Controllers
                 TipoOperacion = salidasPorMovimiento.ContainsKey(m.Id)
                     ? ObtenerTipoOperacionDashboard(salidasPorMovimiento[m.Id])
                     : null,
+                Destino = salidasPorMovimiento.ContainsKey(m.Id)
+                    ? ObtenerDestinoDashboard(salidasPorMovimiento[m.Id])
+                    : null,
+                Procedencia = salidasPorMovimiento.ContainsKey(m.Id)
+                    ? ObtenerProcedenciaDashboard(salidasPorMovimiento[m.Id])
+                    : null,
                 PuntoControlId = m.PuntoControlId
             }).ToList();
 
@@ -172,6 +178,44 @@ namespace WebApplication1.Controllers
             }
 
             return false;
+        }
+
+        private static string? ObtenerDestinoDashboard(Models.OperacionDetalle? detalle)
+        {
+            if (detalle == null || string.IsNullOrWhiteSpace(detalle.DatosJSON))
+                return null;
+
+            if (!TryParseJson(detalle.DatosJSON, out var root))
+                return null;
+
+            var destino = LeerString(root, "destino");
+            if (!string.IsNullOrWhiteSpace(destino))
+                return destino.Trim();
+
+            var destinoIngreso = LeerString(root, "destinoIngreso");
+            if (!string.IsNullOrWhiteSpace(destinoIngreso))
+                return destinoIngreso.Trim();
+
+            var destinoSalida = LeerString(root, "destinoSalida");
+            if (!string.IsNullOrWhiteSpace(destinoSalida))
+                return destinoSalida.Trim();
+
+            return null;
+        }
+
+        private static string? ObtenerProcedenciaDashboard(Models.OperacionDetalle? detalle)
+        {
+            if (detalle == null || string.IsNullOrWhiteSpace(detalle.DatosJSON))
+                return null;
+
+            if (!TryParseJson(detalle.DatosJSON, out var root))
+                return null;
+
+            var procedencia = LeerString(root, "procedencia");
+            if (!string.IsNullOrWhiteSpace(procedencia))
+                return procedencia.Trim();
+
+            return null;
         }
 
         private static string ObtenerTipoMovimientoDetalleDashboard(Models.Movimiento movimiento, Models.OperacionDetalle? detalle)

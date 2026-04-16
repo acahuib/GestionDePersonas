@@ -115,8 +115,38 @@ namespace WebApplication1.Services
                 .Select(o => o.TipoOperacion)
                 .FirstOrDefaultAsync();
 
-            if (!string.IsNullOrWhiteSpace(tipoOperacion))
+            if (!string.IsNullOrWhiteSpace(tipoOperacion)
+                && !string.Equals(tipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase))
                 return FormatearTipoOperacion(tipoOperacion);
+
+            if (string.Equals(tipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase))
+            {
+                var movimientoAlternativo = await _context.Movimientos
+                    .AsNoTracking()
+                    .Where(m => m.Dni == movimiento.Dni && m.Id != movimiento.Id)
+                    .OrderByDescending(m => m.FechaHora)
+                    .ThenByDescending(m => m.Id)
+                    .Select(m => new { m.Id, m.PuntoControlId })
+                    .FirstOrDefaultAsync();
+
+                if (movimientoAlternativo != null)
+                {
+                    var tipoAlternativo = await _context.OperacionDetalle
+                        .AsNoTracking()
+                        .Where(o => o.MovimientoId == movimientoAlternativo.Id)
+                        .OrderByDescending(o => o.FechaCreacion)
+                        .Select(o => o.TipoOperacion)
+                        .FirstOrDefaultAsync();
+
+                    if (!string.IsNullOrWhiteSpace(tipoAlternativo)
+                        && !string.Equals(tipoAlternativo, "ControlBienes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return FormatearTipoOperacion(tipoAlternativo);
+                    }
+
+                    return FormatearPuntoControl(movimientoAlternativo.PuntoControlId);
+                }
+            }
 
             return FormatearPuntoControl(movimiento.PuntoControlId);
         }

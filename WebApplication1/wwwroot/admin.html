@@ -62,6 +62,44 @@
 
         <!-- Contenido Principal -->
         <div class="main-content">
+            <!-- Cuaderno de Proveedores - Destinos -->
+            <section class="data-section">
+                <div class="section-header">
+                    <h2>📒 Cuaderno de Proveedores - Destinos</h2>
+                    <button onclick="actualizarDashboard()" class="btn-refresh"><img src="images/arrow-clockwise.svg" class="icon-white" alt="Actualizar">Actualizar</button>
+                </div>
+                <div class="summary-grid-cuadernos">
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="todos">
+                        <h4>Proveedores dentro</h4>
+                        <div class="summary-number" id="proveedoresDentroTotal">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="recepcion">
+                        <h4>Recepcion</h4>
+                        <div class="summary-number" id="proveedoresRecepcion">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="balanza">
+                        <h4>Balanza</h4>
+                        <div class="summary-number" id="proveedoresBalanza">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="area comercial">
+                        <h4>Area Comercial</h4>
+                        <div class="summary-number" id="proveedoresComercial">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="lab quimico">
+                        <h4>Lab. Quimico</h4>
+                        <div class="summary-number" id="proveedoresLab">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="transerv">
+                        <h4>Transerv.</h4>
+                        <div class="summary-number" id="proveedoresTranserv">--</div>
+                    </div>
+                    <div class="summary-card-cuaderno proveedores-card" data-destino="en espera">
+                        <h4>En espera</h4>
+                        <div class="summary-number" id="proveedoresEspera">--</div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Personas Actualmente Dentro -->
             <section class="data-section">
                 <div class="section-header">
@@ -201,6 +239,16 @@
         <footer class="dashboard-footer">
             <p>Sistema de Control de Garita © 2026 | Dashboard Administrativo</p>
         </footer>
+    </div>
+
+    <div class="proveedores-modal-backdrop" id="proveedoresModalBackdrop" style="display:none;">
+        <div class="proveedores-modal" role="dialog" aria-modal="true">
+            <div class="proveedores-modal-header">
+                <h3 id="proveedoresModalTitulo">Detalle de proveedores</h3>
+                <button type="button" class="btn-modal-close" onclick="cerrarModalProveedores()">X</button>
+            </div>
+            <div class="proveedores-modal-body" id="proveedoresModalBody"></div>
+        </div>
     </div>
 
     <script src="js/api.js"></script>

@@ -72,6 +72,98 @@ namespace WebApplication1.Controllers
             return Ok(guardias);
         }
 
+        [HttpGet("modo-tecnico/activos")]
+        [Authorize(Roles = "Tecnico")]
+        public async Task<IActionResult> ObtenerActivosModoTecnico([FromQuery] string? dni = null, [FromQuery] string? texto = null, [FromQuery] int take = 60)
+        {
+            take = Math.Clamp(take, 1, 200);
+
+            var query = _context.OperacionDetalle
+                .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(dni))
+            {
+                var dniNormalizado = new string(dni.Where(char.IsDigit).ToArray());
+                query = query.Where(o => o.Dni == dniNormalizado);
+            }
+
+            var candidateLimit = dni is not null ? Math.Clamp(take * 12, 120, 2000) : Math.Clamp(take * 8, 120, 1200);
+
+            var operaciones = await query
+                .OrderByDescending(o => o.HoraIngreso ?? o.HoraSalida ?? o.FechaCreacion)
+                .ThenByDescending(o => o.Id)
+                .Take(candidateLimit)
+                .ToListAsync();
+
+            var dnis = operaciones
+                .Select(o => o.Dni)
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Distinct()
+                .ToList();
+
+            var nombresPorDni = await _context.Personas
+                .AsNoTracking()
+                .Where(p => dnis.Contains(p.Dni))
+                .Select(p => new { p.Dni, p.Nombre })
+                .ToDictionaryAsync(p => p.Dni, p => p.Nombre);
+
+            var filtroTexto = texto?.Trim();
+
+            var resultado = operaciones
+                .Select(o =>
+                {
+                    var (horaIngreso, fechaIngreso, horaSalida, fechaSalida, datos) = ObtenerEstadoCronologicoReal(o);
+
+                    if (EsCierreTecnicoManual(datos))
+                        return null;
+
+                    var pendienteSalida = horaIngreso.HasValue && !horaSalida.HasValue;
+                    var pendienteIngreso = !horaIngreso.HasValue && horaSalida.HasValue;
+                    if (!pendienteSalida && !pendienteIngreso)
+                        return null;
+
+                    var detalle = ConstruirResumenActivo(o.TipoOperacion, datos);
+                    var nombre = !string.IsNullOrWhiteSpace(o.Dni) && nombresPorDni.TryGetValue(o.Dni, out var nombrePersona)
+                        ? nombrePersona
+                        : null;
+                    nombre = string.IsNullOrWhiteSpace(nombre)
+                        ? JsonElementHelper.GetString(datos, "nombre") ?? JsonElementHelper.GetString(datos, "nombreApellidos") ?? "-"
+                        : nombre;
+                    var pendiente = pendienteSalida ? "Salida" : "Ingreso";
+                    var fechaReferencia = horaIngreso ?? horaSalida ?? o.FechaCreacion;
+
+                    return new
+                    {
+                        id = o.Id,
+                        tipoOperacion = o.TipoOperacion,
+                        tipoOperacionLabel = TipoOperacionLabels.TryGetValue(o.TipoOperacion, out var label) ? label : o.TipoOperacion,
+                        dni = o.Dni,
+                        nombreCompleto = nombre,
+                        horaIngreso,
+                        fechaIngreso,
+                        horaSalida,
+                        fechaSalida,
+                        fechaCreacion = o.FechaCreacion,
+                        ladoPendiente = pendiente,
+                        detalle,
+                        fechaReferencia
+                    };
+                })
+                .Where(o => o != null)
+                .Select(o => o!)
+                .Where(o => string.IsNullOrWhiteSpace(filtroTexto)
+                    || (o.dni?.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (o.nombreCompleto?.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (o.tipoOperacionLabel?.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || (o.detalle?.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderByDescending(o => o.fechaReferencia)
+                .ThenByDescending(o => o.id)
+                .Take(take)
+                .ToList();
+
+            return Ok(resultado);
+        }
+
         private static readonly Dictionary<string, string> TipoOperacionLabels = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Proveedor", "Proveedores" },
@@ -84,7 +176,6 @@ namespace WebApplication1.Controllers
             { "ControlBienes", "Control Bienes" },
             { "DiasLibre", "Dias Libre" },
             { "OficialPermisos", "Oficial Permisos" },
-            { "SalidasPermisosPersonal", "Permisos Personal" },
             { "RegistroInformativoEnseresTurno", "Enseres por Turno" },
             { "Cancha", "Cancha" }
         };
@@ -105,7 +196,6 @@ namespace WebApplication1.Controllers
                 "Ocurrencias",
                 "ControlBienes",
                 "OficialPermisos",
-                "SalidasPermisosPersonal",
                 "RegistroInformativoEnseresTurno"
             };
 
@@ -128,9 +218,6 @@ namespace WebApplication1.Controllers
                     return BadRequest("TipoMovimiento debe ser 'Entrada' o 'Salida'.");
             }
 
-            if (dto.FechaHoraManual > DateTime.Now)
-                return BadRequest("FechaHoraManual no puede ser futura.");
-
             var dniNormalizado = dto.Dni.Trim();
             var persona = await _context.Personas.FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
             if (persona == null)
@@ -143,35 +230,18 @@ namespace WebApplication1.Controllers
                     _ => dto.TipoOperacion
                 };
 
-                if (string.Equals(dto.TipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
-                {
-                    var nombreFallback = $"MODO TECNICO {dniNormalizado}";
-                    if (!string.IsNullOrWhiteSpace(dto.Nombres) || !string.IsNullOrWhiteSpace(dto.Apellidos))
-                        nombreFallback = $"{dto.Nombres?.Trim()} {dto.Apellidos?.Trim()}".Trim();
+                var nombreFallback = $"MODO TECNICO {dniNormalizado}";
+                if (!string.IsNullOrWhiteSpace(dto.Nombres) || !string.IsNullOrWhiteSpace(dto.Apellidos))
+                    nombreFallback = $"{dto.Nombres?.Trim()} {dto.Apellidos?.Trim()}".Trim();
 
-                    persona = new Models.Persona
-                    {
-                        Dni = dniNormalizado,
-                        Nombre = nombreFallback,
-                        Tipo = tipoPersona
-                    };
-                    _context.Personas.Add(persona);
-                    await _context.SaveChangesAsync();
-                }
-                else
+                persona = new Models.Persona
                 {
-                    if (string.IsNullOrWhiteSpace(dto.Nombres) || string.IsNullOrWhiteSpace(dto.Apellidos))
-                        return BadRequest("Si el DNI no existe, debe ingresar Nombres y Apellidos.");
-
-                    persona = new Models.Persona
-                    {
-                        Dni = dniNormalizado,
-                        Nombre = $"{dto.Nombres.Trim()} {dto.Apellidos.Trim()}".Trim(),
-                        Tipo = tipoPersona
-                    };
-                    _context.Personas.Add(persona);
-                    await _context.SaveChangesAsync();
-                }
+                    Dni = dniNormalizado,
+                    Nombre = nombreFallback,
+                    Tipo = tipoPersona
+                };
+                _context.Personas.Add(persona);
+                await _context.SaveChangesAsync();
             }
 
             int? usuarioId = UserClaimsHelper.GetUserId(User);
@@ -205,22 +275,6 @@ namespace WebApplication1.Controllers
                     ? "Salida"
                     : "Info";
             var esControlBienes = string.Equals(dto.TipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase);
-
-            if (tipoMovimiento is "Entrada" or "Info")
-            {
-                await CerrarOperacionesPendientesModoTecnico(
-                    dniNormalizado,
-                    dto.FechaHoraManual,
-                    guardiaNombre,
-                    usuarioId,
-                    dto.Observacion);
-            }
-
-            if (string.Equals(dto.TipoOperacion, "DiasLibre", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!string.Equals(tipoMovimiento, "Salida", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest("DiasLibre en modo técnico solo permite TipoMovimiento='Salida'.");
-            }
 
             Models.Movimiento? movimiento = null;
             if (!esControlBienes)
@@ -517,6 +571,149 @@ namespace WebApplication1.Controllers
             });
         }
 
+        [HttpPut("modo-tecnico/activos/{id:int}/cerrar")]
+        [Authorize(Roles = "Tecnico")]
+        public async Task<IActionResult> CerrarActivoModoTecnico(int id, [FromBody] CerrarActivoModoTecnicoDto dto)
+        {
+            if (dto.FechaHoraCierre > DateTime.Now)
+                return BadRequest("La fecha/hora de cierre no puede ser futura.");
+
+            var operacion = await _context.OperacionDetalle.FirstOrDefaultAsync(o => o.Id == id);
+            if (operacion == null)
+                return NotFound("OperacionDetalle no encontrada.");
+
+            var (horaIngresoReal, fechaIngresoReal, horaSalidaReal, fechaSalidaReal, datosActuales) = ObtenerEstadoCronologicoReal(operacion);
+            if (EsCierreTecnicoManual(datosActuales))
+                return BadRequest("El registro ya fue cerrado técnicamente.");
+
+            var pendienteSalida = horaIngresoReal.HasValue && !horaSalidaReal.HasValue;
+            var pendienteIngreso = !horaIngresoReal.HasValue && horaSalidaReal.HasValue;
+            if (!pendienteSalida && !pendienteIngreso)
+                return BadRequest("El registro ya no está activo.");
+
+            int? usuarioId = UserClaimsHelper.GetUserId(User);
+            var usuarioLogin = User.FindFirst(ClaimTypes.Name)?.Value;
+            string guardiaNombre;
+            try
+            {
+                guardiaNombre = await ResolverGuardiaModoTecnicoAsync(dto.GuardiaUsuarioId, usuarioId, usuarioLogin);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            JsonObject datosJson;
+            try
+            {
+                datosJson = JsonNode.Parse(operacion.DatosJSON)?.AsObject() ?? new JsonObject();
+            }
+            catch
+            {
+                datosJson = new JsonObject();
+            }
+
+            var ladoOculto = pendienteSalida ? "Salida" : "Ingreso";
+            if (pendienteSalida)
+            {
+                if (!operacion.HoraIngreso.HasValue && horaIngresoReal.HasValue)
+                    operacion.HoraIngreso = horaIngresoReal;
+                if (!operacion.FechaIngreso.HasValue && fechaIngresoReal.HasValue)
+                    operacion.FechaIngreso = fechaIngresoReal;
+
+                operacion.HoraSalida = dto.FechaHoraCierre;
+                operacion.FechaSalida = dto.FechaHoraCierre.Date;
+                datosJson["horaSalida"] = dto.FechaHoraCierre;
+                datosJson["fechaSalida"] = dto.FechaHoraCierre.Date;
+                datosJson["guardiaSalida"] = guardiaNombre;
+                if (!string.IsNullOrWhiteSpace(dto.Observacion))
+                    datosJson["observacionSalida"] = dto.Observacion.Trim();
+            }
+            else
+            {
+                if (!operacion.HoraSalida.HasValue && horaSalidaReal.HasValue)
+                    operacion.HoraSalida = horaSalidaReal;
+                if (!operacion.FechaSalida.HasValue && fechaSalidaReal.HasValue)
+                    operacion.FechaSalida = fechaSalidaReal;
+
+                operacion.HoraIngreso = dto.FechaHoraCierre;
+                operacion.FechaIngreso = dto.FechaHoraCierre.Date;
+                datosJson["horaIngreso"] = dto.FechaHoraCierre;
+                datosJson["fechaIngreso"] = dto.FechaHoraCierre.Date;
+                datosJson["guardiaIngreso"] = guardiaNombre;
+                if (!string.IsNullOrWhiteSpace(dto.Observacion))
+                    datosJson["observacionIngreso"] = dto.Observacion.Trim();
+            }
+
+            datosJson["cierreTecnicoManual"] = true;
+            datosJson["ladoOcultoCierreTecnico"] = ladoOculto;
+            datosJson["fechaCierreTecnico"] = dto.FechaHoraCierre;
+            datosJson["guardiaCierreTecnico"] = guardiaNombre;
+            datosJson["estado"] = "Cerrado tecnico";
+            datosJson["observacionCierre"] = !string.IsNullOrWhiteSpace(dto.Observacion)
+                ? dto.Observacion.Trim()
+                : "Cierre tecnico manual desde modo tecnico.";
+
+            operacion.UsuarioId = usuarioId;
+            operacion.DatosJSON = datosJson.ToJsonString();
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Registro activo cerrado desde modo técnico",
+                id = operacion.Id,
+                tipoOperacion = operacion.TipoOperacion,
+                ladoOculto,
+                dni = operacion.Dni
+            });
+        }
+
+        private async Task<string> ResolverGuardiaModoTecnicoAsync(int? guardiaUsuarioId, int? usuarioId, string? usuarioLogin)
+        {
+            string? guardiaNombre = null;
+            if (guardiaUsuarioId.HasValue)
+            {
+                var guardiaSeleccionado = await _context.Usuarios
+                    .AsNoTracking()
+                    .Where(u => u.Id == guardiaUsuarioId.Value && u.Activo && u.Rol == "Guardia")
+                    .Select(u => u.NombreCompleto)
+                    .FirstOrDefaultAsync();
+
+                if (string.IsNullOrWhiteSpace(guardiaSeleccionado))
+                    throw new InvalidOperationException("Guardia seleccionado no válido.");
+
+                guardiaNombre = guardiaSeleccionado;
+            }
+
+            guardiaNombre ??= usuarioId.HasValue
+                ? await _context.Usuarios.Where(u => u.Id == usuarioId).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                : (!string.IsNullOrWhiteSpace(usuarioLogin)
+                    ? await _context.Usuarios.Where(u => u.UsuarioLogin == usuarioLogin).Select(u => u.NombreCompleto).FirstOrDefaultAsync()
+                    : null);
+            return guardiaNombre ?? "MODO_TECNICO";
+        }
+
+        private (DateTime? horaIngreso, DateTime? fechaIngreso, DateTime? horaSalida, DateTime? fechaSalida, JsonElement datos) ObtenerEstadoCronologicoReal(Models.OperacionDetalle operacion)
+        {
+            JsonElement datos;
+            try
+            {
+                datos = JsonDocument.Parse(operacion.DatosJSON).RootElement;
+            }
+            catch
+            {
+                datos = JsonDocument.Parse("{}").RootElement;
+            }
+
+            var horaIngreso = operacion.HoraIngreso ?? _salidasService.ObtenerHoraIngresoFromJson(operacion.DatosJSON);
+            var fechaIngreso = operacion.FechaIngreso ?? _salidasService.ObtenerFechaIngresoFromJson(operacion.DatosJSON);
+            var horaSalida = operacion.HoraSalida ?? _salidasService.ObtenerHoraSalidaFromJson(operacion.DatosJSON);
+            var fechaSalida = operacion.FechaSalida ?? _salidasService.ObtenerFechaSalidaFromJson(operacion.DatosJSON);
+
+            return (horaIngreso, fechaIngreso, horaSalida, fechaSalida, datos);
+        }
+
         private static string ObtenerTipoPersonaLocalDesdeDatos(Dictionary<string, object?> datos)
         {
             if (datos.TryGetValue("tipoPersonaLocal", out var tipoObj))
@@ -647,6 +844,81 @@ namespace WebApplication1.Controllers
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        private static string ConstruirResumenActivo(string tipoOperacion, JsonElement datos)
+        {
+            var partes = new List<string>();
+
+            void Agregar(string etiqueta, string? valor)
+            {
+                if (!string.IsNullOrWhiteSpace(valor))
+                    partes.Add($"{etiqueta}: {valor.Trim()}");
+            }
+
+            Agregar("Placa", JsonElementHelper.GetString(datos, "placa"));
+            Agregar("Proveedor", JsonElementHelper.GetString(datos, "proveedor"));
+            Agregar("Procedencia", JsonElementHelper.GetString(datos, "procedencia"));
+            Agregar("Destino", JsonElementHelper.GetString(datos, "destino"));
+            Agregar("Origen", JsonElementHelper.GetString(datos, "origen"));
+            Agregar("Origen ingreso", JsonElementHelper.GetString(datos, "origenIngreso"));
+            Agregar("Destino ingreso", JsonElementHelper.GetString(datos, "destinoIngreso"));
+            Agregar("Origen salida", JsonElementHelper.GetString(datos, "origenSalida"));
+            Agregar("Destino salida", JsonElementHelper.GetString(datos, "destinoSalida"));
+            Agregar("Conductor", JsonElementHelper.GetString(datos, "conductor"));
+            Agregar("Cuarto", JsonElementHelper.GetString(datos, "cuarto"));
+            Agregar("Ocurrencia", JsonElementHelper.GetString(datos, "ocurrencia"));
+            Agregar("Observacion", JsonElementHelper.GetString(datos, "observacion") ?? JsonElementHelper.GetString(datos, "observaciones"));
+
+            if (string.Equals(tipoOperacion, "PersonalLocal", StringComparison.OrdinalIgnoreCase))
+                Agregar("Tipo", JsonElementHelper.GetString(datos, "tipoPersonaLocal"));
+
+            if (string.Equals(tipoOperacion, "ControlBienes", StringComparison.OrdinalIgnoreCase)
+                && datos.TryGetProperty("bienes", out var bienes)
+                && bienes.ValueKind == JsonValueKind.Array)
+            {
+                var lista = bienes.EnumerateArray()
+                    .Select(b => $"{JsonElementHelper.GetInt(b, "cantidad") ?? 1}x {JsonElementHelper.GetString(b, "descripcion") ?? "Bien"}")
+                    .ToList();
+
+                if (lista.Count > 0)
+                    partes.Add($"Bienes: {string.Join("; ", lista)}");
+            }
+
+            return partes.Count > 0 ? string.Join(" | ", partes) : "Sin detalle adicional";
+        }
+
+        private static bool EsCierreTecnicoManual(JsonElement datos)
+        {
+            if (!datos.TryGetProperty("cierreTecnicoManual", out var value))
+                return false;
+
+            return value.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.String => string.Equals(value.GetString(), "true", StringComparison.OrdinalIgnoreCase),
+                _ => false
+            };
+        }
+
+        private static void AplicarVistaCierreTecnico(JsonElement datos, ref DateTime? horaIngreso, ref DateTime? fechaIngreso, ref DateTime? horaSalida, ref DateTime? fechaSalida)
+        {
+            if (!EsCierreTecnicoManual(datos))
+                return;
+
+            var ladoOculto = JsonElementHelper.GetString(datos, "ladoOcultoCierreTecnico");
+            if (string.Equals(ladoOculto, "Salida", StringComparison.OrdinalIgnoreCase))
+            {
+                horaSalida = null;
+                fechaSalida = null;
+                return;
+            }
+
+            if (string.Equals(ladoOculto, "Ingreso", StringComparison.OrdinalIgnoreCase))
+            {
+                horaIngreso = null;
+                fechaIngreso = null;
+            }
         }
 
         private static List<BienControlEstado> LeerBienesDesdeJson(string datosJson)
@@ -825,6 +1097,11 @@ namespace WebApplication1.Controllers
                 : null;
 
             var datosObj = JsonDocument.Parse(salida.DatosJSON).RootElement;
+            var horaIngreso = _salidasService.ObtenerHoraIngreso(salida);
+            var fechaIngreso = _salidasService.ObtenerFechaIngreso(salida);
+            var horaSalida = _salidasService.ObtenerHoraSalida(salida);
+            var fechaSalida = _salidasService.ObtenerFechaSalida(salida);
+            AplicarVistaCierreTecnico(datosObj, ref horaIngreso, ref fechaIngreso, ref horaSalida, ref fechaSalida);
 
             return Ok(new
             {
@@ -838,10 +1115,10 @@ namespace WebApplication1.Controllers
                 usuarioId = salida.UsuarioId,
                 dni = salida.Dni,
                 nombreCompleto,
-                horaIngreso = _salidasService.ObtenerHoraIngreso(salida),
-                fechaIngreso = _salidasService.ObtenerFechaIngreso(salida),
-                horaSalida = _salidasService.ObtenerHoraSalida(salida),
-                fechaSalida = _salidasService.ObtenerFechaSalida(salida)
+                horaIngreso,
+                fechaIngreso,
+                horaSalida,
+                fechaSalida
             });
         }
 
@@ -970,6 +1247,12 @@ namespace WebApplication1.Controllers
                         datosJson = JsonDocument.Parse("{}").RootElement;
                     }
 
+                    var horaIngreso = s.HoraIngreso ?? _salidasService.ObtenerHoraIngresoFromJson(s.DatosJSON);
+                    var fechaIngreso = s.FechaIngreso ?? _salidasService.ObtenerFechaIngresoFromJson(s.DatosJSON);
+                    var horaSalida = s.HoraSalida ?? _salidasService.ObtenerHoraSalidaFromJson(s.DatosJSON);
+                    var fechaSalida = s.FechaSalida ?? _salidasService.ObtenerFechaSalidaFromJson(s.DatosJSON);
+                    AplicarVistaCierreTecnico(datosJson, ref horaIngreso, ref fechaIngreso, ref horaSalida, ref fechaSalida);
+
                     return new
                     {
                         id = s.Id,
@@ -980,10 +1263,10 @@ namespace WebApplication1.Controllers
                         usuarioId = s.UsuarioId,
                         dni = s.Dni,
                         nombreCompleto = s.NombreCompleto,
-                        horaIngreso = s.HoraIngreso ?? _salidasService.ObtenerHoraIngresoFromJson(s.DatosJSON),
-                        fechaIngreso = s.FechaIngreso ?? _salidasService.ObtenerFechaIngresoFromJson(s.DatosJSON),
-                        horaSalida = s.HoraSalida ?? _salidasService.ObtenerHoraSalidaFromJson(s.DatosJSON),
-                        fechaSalida = s.FechaSalida ?? _salidasService.ObtenerFechaSalidaFromJson(s.DatosJSON)
+                        horaIngreso,
+                        fechaIngreso,
+                        horaSalida,
+                        fechaSalida
                     };
                 }).ToList();
 

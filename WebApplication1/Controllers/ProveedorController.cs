@@ -652,9 +652,6 @@ namespace WebApplication1.Controllers
                 if (dniNormalizado.Length != 8 || !dniNormalizado.All(char.IsDigit))
                     return BadRequest("DNI debe tener 8 dígitos numéricos.");
 
-                if (dto.FechaHoraIngresoManual > DateTime.Now)
-                    return BadRequest("La fecha/hora manual no puede ser futura.");
-
                 var persona = await _context.Personas
                     .FirstOrDefaultAsync(p => p.Dni == dniNormalizado);
 

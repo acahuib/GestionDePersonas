@@ -33,7 +33,6 @@ const CAMPOS_EDITABLES_POR_TIPO = {
     ControlBienes: ["bienes", "observacion"],
     DiasLibre: ["motivo", "observacion"],
     OficialPermisos: ["motivo", "observacion"],
-    SalidasPermisosPersonal: ["motivo", "observacion"],
     RegistroInformativoEnseresTurno: ["descripcion", "observacion", "detalle"],
     Cancha: ["numeroCancha", "observacion", "detalle"]
 };

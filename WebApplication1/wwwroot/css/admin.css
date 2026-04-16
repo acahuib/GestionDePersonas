@@ -360,6 +360,119 @@ body {
 }
 
 /* ===============================
+   RESUMEN CUADERNO PROVEEDORES
+   =============================== */
+.summary-grid-cuadernos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.summary-card-cuaderno {
+    background: #f8f9fb;
+    border: 1px solid #e6e8ef;
+    border-left: 4px solid #3498db;
+    padding: 16px 18px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card-cuaderno h4 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.proveedores-card {
+    cursor: pointer;
+}
+
+.proveedores-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.proveedores-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+}
+
+.proveedores-modal {
+    background: white;
+    border-radius: 12px;
+    width: min(720px, 90vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.proveedores-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.proveedores-modal-header h3 {
+    font-size: 1.2rem;
+    color: #1f2937;
+}
+
+.btn-modal-close {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-modal-close:hover {
+    background: #c0392b;
+}
+
+.proveedores-modal-body {
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+}
+
+.proveedores-lista {
+    display: grid;
+    gap: 12px;
+}
+
+.proveedor-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #f9fafb;
+}
+
+.proveedor-item h4 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+    color: #111827;
+}
+
+.proveedor-item p {
+    font-size: 0.9rem;
+    color: #4b5563;
+    margin-bottom: 4px;
+}
+
+/* ===============================
    HISTORIALES GRID
    =============================== */
 .historial-grid {

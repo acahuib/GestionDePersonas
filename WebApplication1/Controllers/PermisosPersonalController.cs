@@ -1,2 +1,0 @@
-﻿// Archivo backend para PermisosPersonalController.
-

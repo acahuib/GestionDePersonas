@@ -113,6 +113,49 @@
         .simple-field label { margin: 0; font-weight: 600; }
         .simple-field input { margin-top: 0; }
         .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12px; }
+        .active-tools { margin-top: 18px; }
+        .active-list { display: grid; gap: 12px; margin-top: 14px; }
+        .active-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+        .active-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .active-card-title { font-size: 16px; font-weight: 700; }
+        .active-card-meta { color: var(--muted); font-size: 13px; }
+        .active-card-detail { color: #1e293b; font-size: 14px; line-height: 1.45; }
+        .pending-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #ffedd5;
+            color: #c2410c;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .panel-actions-inline {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .panel-actions-inline button { width: auto; }
+        .empty-state {
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--muted);
+            background: #fff;
+        }
         @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -121,12 +164,13 @@
     <div class="topbar">
         <h2>Modo Tecnico - Registro Manual</h2>
         <div class="topbar-actions">
+            <button type="button" class="btn-users" onclick="window.location.href='/manual-activos.html'">Cerrar Activos</button>
             <button type="button" class="btn-users" onclick="window.location.href='/tecnico-usuarios.html'">Gestion de Usuarios</button>
             <button type="button" class="btn-users" onclick="window.location.href='/tecnico-personas.html'">Gestion de Personas</button>
             <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
         </div>
     </div>
-    <p class="subtitle">Formulario rapido para cargar datos del cuaderno fisico sin pelear con el formato.</p>
+    <p class="subtitle">Formulario rapido para destrabar atascos del cuaderno fisico. El modo tecnico no valida la secuencia normal de entrada y salida.</p>
 
     <form id="formManual">
         <div class="row">
@@ -137,7 +181,6 @@
                     <option value="VehiculosProveedores">VehiculosProveedores</option>
                     <option value="VehiculoEmpresa">VehiculoEmpresa</option>
                     <option value="PersonalLocal">Cuaderno de Asistencia Personal de Mina</option>
-                    <option value="SalidasPermisosPersonal">PermisosPersonal</option>
                     <option value="DiasLibre">DiasLibre</option>
                     <option value="HabitacionProveedor">HabitacionProveedor</option>
                     <option value="Ocurrencias">Ocurrencias</option>
@@ -191,17 +234,10 @@
         </div>
 
         <div class="panel" id="modoEdicionPanel">
-            <h3>Modo de edicion</h3>
-            <div class="hint">Modo normal habilitado para simplificar el registro tecnico.</div>
+            <h3>Campos del registro</h3>
+            <div class="hint">Solo se muestran los datos que corresponden al movimiento elegido.</div>
             <div id="simpleForm"></div>
             <div class="hint" id="simpleNotes"></div>
-        </div>
-
-        <div class="panel" id="simpleActionsPanel">
-            <h3>Acciones rapidas</h3>
-            <div class="actions">
-                <button type="button" id="btnResetTemplate">Restablecer plantilla</button>
-            </div>
         </div>
 
         <div id="personalLocalPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fafafa;">
@@ -243,6 +279,8 @@
     </form>
 
     <div class="response" id="response"></div>
+
+    </div>
 </div>
 
 <script src="js/api.js?v=20260408-techfix2"></script>
@@ -253,7 +291,6 @@ const templates = {
     VehiculosProveedores: { nombreApellidos: "", proveedor: "", placa: "", tipo: "", lote: "", cantidad: "", procedencia: "" },
     VehiculoEmpresa: { conductor: "", placa: "", kmSalida: null, kmIngreso: null, origenIngreso: "", destinoIngreso: "", origenSalida: "", destinoSalida: "" },
     PersonalLocal: { tipoPersonaLocal: "Normal", horaSalidaAlmuerzo: null, fechaSalidaAlmuerzo: null, horaEntradaAlmuerzo: null, fechaEntradaAlmuerzo: null },
-    SalidasPermisosPersonal: { nombre: "", deDonde: "", personal: "", quienAutoriza: "", observaciones: "" },
     DiasLibre: { numeroBoleta: "", del: "", al: "", trabaja: "" },
     HabitacionProveedor: { origen: "", cuarto: "", frazadas: 0 },
     Ocurrencias: { nombre: "", ocurrencia: "" },
@@ -265,6 +302,68 @@ const templates = {
     },
     OficialPermisos: { deDonde: "", tipo: "", quienAutoriza: "" },
     RegistroInformativoEnseresTurno: { turno: "", fecha: "", objetos: [{ nombre: "", cantidad: 1 }], observaciones: "" }
+};
+
+const simpleFieldDefinitions = {
+    Proveedor: [
+        { key: "procedencia", label: "Origen / procedencia" },
+        { key: "destino", label: "Destino" }
+    ],
+    VehiculosProveedores: [
+        { key: "nombreApellidos", label: "Nombre y apellidos" },
+        { key: "proveedor", label: "Proveedor" },
+        { key: "placa", label: "Placa" },
+        { key: "tipo", label: "Tipo" },
+        { key: "lote", label: "Lote" },
+        { key: "cantidad", label: "Cantidad", type: "number" },
+        { key: "procedencia", label: "Procedencia" }
+    ],
+    VehiculoEmpresa: [
+        { key: "conductor", label: "Conductor" },
+        { key: "placa", label: "Placa" },
+        { key: "kmIngreso", label: "Kilometraje de ingreso", type: "number", movements: ["Entrada"] },
+        { key: "origenIngreso", label: "Origen de ingreso", movements: ["Entrada"] },
+        { key: "destinoIngreso", label: "Destino de ingreso", movements: ["Entrada"] },
+        { key: "kmSalida", label: "Kilometraje de salida", type: "number", movements: ["Salida"] },
+        { key: "origenSalida", label: "Origen de salida", movements: ["Salida"] },
+        { key: "destinoSalida", label: "Destino de salida", movements: ["Salida"] }
+    ],
+    PersonalLocal: [
+        {
+            key: "tipoPersonaLocal",
+            label: "Tipo de persona",
+            type: "select",
+            options: [
+                { value: "Normal", label: "Normal" },
+                { value: "Retornando", label: "Retornando" }
+            ]
+        }
+    ],
+    DiasLibre: [
+        { key: "numeroBoleta", label: "Número de boleta" },
+        { key: "del", label: "Desde", type: "date" },
+        { key: "al", label: "Hasta", type: "date" },
+        { key: "trabaja", label: "Regresa a trabajar", type: "date" }
+    ],
+    HabitacionProveedor: [
+        { key: "origen", label: "Origen" },
+        { key: "cuarto", label: "Cuarto" },
+        { key: "frazadas", label: "Frazadas", type: "number" }
+    ],
+    Ocurrencias: [
+        { key: "nombre", label: "Nombre" },
+        { key: "ocurrencia", label: "Detalle de la ocurrencia", type: "textarea" }
+    ],
+    OficialPermisos: [
+        { key: "deDonde", label: "De dónde" },
+        { key: "tipo", label: "Tipo" },
+        { key: "quienAutoriza", label: "Quién autoriza" }
+    ],
+    RegistroInformativoEnseresTurno: [
+        { key: "turno", label: "Turno" },
+        { key: "fecha", label: "Fecha del turno", type: "date" },
+        { key: "observaciones", label: "Observaciones", type: "textarea" }
+    ]
 };
 
 const guides = {
@@ -303,16 +402,6 @@ const guides = {
             { key: "tipoPersonaLocal", label: "tipoPersonaLocal" },
             { key: "horaSalidaAlmuerzo", label: "horaSalidaAlmuerzo (opcional)", optional: true },
             { key: "horaEntradaAlmuerzo", label: "horaEntradaAlmuerzo (opcional)", optional: true }
-        ]
-    },
-    SalidasPermisosPersonal: {
-        descripcion: "Permisos personales. Debe incluir autorizacion.",
-        campos: [
-            { key: "nombre", label: "nombre" },
-            { key: "deDonde", label: "deDonde" },
-            { key: "personal", label: "personal" },
-            { key: "quienAutoriza", label: "quienAutoriza" },
-            { key: "observaciones", label: "observaciones (opcional)", optional: true }
         ]
     },
     DiasLibre: {
@@ -383,7 +472,6 @@ const simpleNotes = document.getElementById("simpleNotes");
 const tipoBadge = document.getElementById("tipoBadge");
 const tipoDescripcion = document.getElementById("tipoDescripcion");
 const tipoCampos = document.getElementById("tipoCampos");
-const btnResetTemplate = document.getElementById("btnResetTemplate");
 const fechaHoraManualInput = document.getElementById("fechaHoraManual");
 
 let dniExiste = null;
@@ -482,6 +570,13 @@ function formatearFechaHora(valor) {
     return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function prettifyFieldLabel(key) {
+    return String(key || "")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 async function cargarUltimoMovimiento(dni) {
     ultimoMovimiento = null;
     const resp = await fetchAuth(`${API_BASE}/consultas/ultimo-movimiento/${dni}`);
@@ -489,7 +584,7 @@ async function cargarUltimoMovimiento(dni) {
     if (resp.ok) {
         ultimoMovimiento = await resp.json();
         const fechaTexto = formatearFechaHora(ultimoMovimiento.fechaHora);
-        setDniHint(`Ultimo movimiento: ${ultimoMovimiento.tipoMovimiento} (${fechaTexto})`);
+        setDniHint(`Ultimo movimiento: ${ultimoMovimiento.tipoMovimiento} (${fechaTexto}). Solo referencia; no bloquea modo tecnico.`);
         return;
     }
 
@@ -498,6 +593,15 @@ async function cargarUltimoMovimiento(dni) {
 }
 
 function getSimpleFields(tipo) {
+    const movimiento = tipoMovimientoInput.value;
+    const configured = simpleFieldDefinitions[tipo];
+    if (Array.isArray(configured)) {
+        return {
+            fields: configured.filter((field) => !field.movements || field.movements.includes(movimiento)),
+            complex: []
+        };
+    }
+
     const template = templates[tipo] ?? {};
     const fields = [];
     const complex = [];
@@ -515,11 +619,33 @@ function getSimpleFields(tipo) {
 
         fields.push({
             key,
+            label: prettifyFieldLabel(key),
             type: typeof value === "number" ? "number" : "text"
         });
     });
 
     return { fields, complex };
+}
+
+function normalizarValorCampo(field, value) {
+    if (value === "") return null;
+
+    if (field.type === "number") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    if (field.type === "date") {
+        return dateToIsoDateStart(value);
+    }
+
+    return value;
+}
+
+function formatearValorCampoParaInput(field, value) {
+    if (value === null || value === undefined) return "";
+    if (field.type === "date") return isoToDate(value);
+    return String(value);
 }
 
 function renderSimpleForm() {
@@ -536,28 +662,45 @@ function renderSimpleForm() {
         wrapper.className = "simple-field";
 
         const label = document.createElement("label");
-        label.textContent = field.key;
+        label.textContent = field.label || prettifyFieldLabel(field.key);
 
-        const input = document.createElement("input");
-        input.type = field.type;
+        let input;
+        if (field.type === "textarea") {
+            input = document.createElement("textarea");
+        } else if (field.type === "select") {
+            input = document.createElement("select");
+            (field.options || []).forEach((option) => {
+                const optionEl = document.createElement("option");
+                optionEl.value = option.value;
+                optionEl.textContent = option.label;
+                input.appendChild(optionEl);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type || "text";
+        }
+
         input.dataset.key = field.key;
-        input.addEventListener("input", () => syncSimpleData(field.key, input.value, field.type));
+        input.addEventListener("input", () => syncSimpleData(field, input.value));
+        input.addEventListener("change", () => syncSimpleData(field, input.value));
 
         wrapper.appendChild(label);
         wrapper.appendChild(input);
         simpleForm.appendChild(wrapper);
     });
 
-    simpleNotes.textContent = complex.length
-        ? `Campos complejos gestionados automaticamente: ${complex.join(", ")}.`
-        : "";
+    const notas = [];
+    notas.push(`La fecha y hora del ${tipoMovimientoInput.value.toLowerCase()} se toma del campo superior.`);
+    if (complex.length) {
+        notas.push(`Campos complejos gestionados automaticamente: ${complex.join(", ")}.`);
+    }
+    simpleNotes.textContent = notas.join(" ");
 
     syncDataToSimple();
 }
 
-function syncSimpleData(key, value, type) {
-    const normalized = type === "number" && value !== "" ? Number(value) : (value || "");
-    datosEdicion[key] = normalized === "" ? null : normalized;
+function syncSimpleData(field, value) {
+    datosEdicion[field.key] = normalizarValorCampo(field, value);
     if (tipoOperacionInput.value === "PersonalLocal") {
         syncDataToPersonalLocalInputs();
     }
@@ -565,11 +708,14 @@ function syncSimpleData(key, value, type) {
 
 function syncDataToSimple() {
     const data = datosEdicion || {};
+    const { fields } = getSimpleFields(tipoOperacionInput.value);
+    const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
 
-    simpleForm.querySelectorAll("input[data-key]").forEach((input) => {
+    simpleForm.querySelectorAll("[data-key]").forEach((input) => {
         const key = input.dataset.key;
+        const field = fieldsByKey.get(key) || { key, type: "text" };
         const value = data[key];
-        input.value = value === null || value === undefined ? "" : String(value);
+        input.value = formatearValorCampoParaInput(field, value);
     });
 }
 
@@ -582,18 +728,25 @@ function configurarModoNormal() {
 function updateGuide() {
     const tipo = tipoOperacionInput.value;
     const guide = guides[tipo];
+    const { fields } = getSimpleFields(tipo);
     tipoBadge.textContent = `Tipo: ${tipo}`;
     tipoDescripcion.textContent = guide?.descripcion || "";
     tipoCampos.innerHTML = "";
 
-    if (!guide) return;
-
-    guide.campos.forEach((campo) => {
+    fields.forEach((campo) => {
         const li = document.createElement("li");
-        li.textContent = campo.label;
-        if (campo.optional) li.classList.add("hint");
+        li.textContent = campo.label || prettifyFieldLabel(campo.key);
         tipoCampos.appendChild(li);
     });
+
+    if (fields.length === 0 && guide?.campos) {
+        guide.campos.forEach((campo) => {
+            const li = document.createElement("li");
+            li.textContent = campo.label;
+            if (campo.optional) li.classList.add("hint");
+            tipoCampos.appendChild(li);
+        });
+    }
 }
 
 function syncPersonalLocalInputsToData() {
@@ -626,10 +779,7 @@ function refreshTemplate() {
     datosEdicion = JSON.parse(JSON.stringify(template));
     personalLocalPanel.style.display = tipo === "PersonalLocal" ? "block" : "none";
 
-    if (tipo === "DiasLibre") {
-        tipoMovimientoInput.value = "Salida";
-        tipoMovimientoInput.disabled = true;
-    } else if (tipo === "RegistroInformativoEnseresTurno") {
+    if (tipo === "RegistroInformativoEnseresTurno") {
         tipoMovimientoInput.value = "Info";
         tipoMovimientoInput.disabled = true;
     } else {
@@ -647,16 +797,16 @@ function refreshTemplate() {
 function setNamesLocked(locked) {
     nombresInput.disabled = locked;
     apellidosInput.disabled = locked;
-    nombresInput.required = !locked;
-    apellidosInput.required = !locked;
+    nombresInput.required = false;
+    apellidosInput.required = false;
 }
 
-function setDefaultFechaHora() {
-    if (!fechaHoraManualInput.value) {
+function setDefaultFechaHora(input = fechaHoraManualInput) {
+    if (!input.value) {
         const now = new Date();
         const pad = (n) => n.toString().padStart(2, "0");
         const value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        fechaHoraManualInput.value = value;
+        input.value = value;
     }
 }
 
@@ -668,19 +818,6 @@ function validarFechaHoraManual() {
     if (Number.isNaN(fecha.getTime()))
         return { ok: false, mensaje: "Fecha y hora manual invalida." };
 
-    if (fecha > new Date())
-        return { ok: false, mensaje: "Fecha y hora manual no puede ser futura." };
-
-    if (ultimoMovimiento?.fechaHora) {
-        const ultima = new Date(ultimoMovimiento.fechaHora);
-        if (!Number.isNaN(ultima.getTime()) && fecha > ultima) {
-            return {
-                ok: true,
-                advertencia: "La fecha manual es posterior al ultimo movimiento. Verifica si es correcto."
-            };
-        }
-    }
-
     return { ok: true };
 }
 
@@ -689,22 +826,12 @@ function validarFormulario() {
     if (!/^\d{8}$/.test(dni))
         return { ok: false, mensaje: "DNI debe tener 8 digitos." };
 
-    if (dniExiste === false) {
-        if (!nombresInput.value.trim() || !apellidosInput.value.trim())
-            return { ok: false, mensaje: "Debe completar nombres y apellidos para un DNI nuevo." };
-    }
-
     if (!guardiaUsuarioIdInput.value) {
         return { ok: false, mensaje: "Debe seleccionar un guardia de la lista." };
     }
 
     const fechaRes = validarFechaHoraManual();
     if (!fechaRes.ok) return { ok: false, mensaje: fechaRes.mensaje };
-
-    if (fechaRes.advertencia) {
-        const seguir = confirm(`${fechaRes.advertencia}\n\n¿Deseas continuar?`);
-        if (!seguir) return { ok: false, mensaje: "Operacion cancelada." };
-    }
 
     return { ok: true };
 }
@@ -716,6 +843,7 @@ function splitNombre(nombreCompleto) {
     if (partes.length <= 1) return { nombres: limpio, apellidos: "" };
     return { nombres: partes.slice(0, -2).join(" ") || partes[0], apellidos: partes.slice(-2).join(" ") };
 }
+
 
 async function validarDni() {
     const dni = normalizarDni(dniInput.value);
@@ -746,7 +874,7 @@ async function validarDni() {
         apellidosInput.value = "";
         setNamesLocked(false);
         dniExiste = false;
-        setDniHint("DNI no registrado. Debe completar nombres y apellidos.", true);
+        setDniHint("DNI no registrado. Puedes registrar igual; si no completas nombres se guardará como MODO TECNICO.", true);
         await cargarUltimoMovimiento(dni);
     } else {
         dniExiste = null;
@@ -773,12 +901,12 @@ async function buscarDniSugerencias() {
 }
 
 tipoOperacionInput.addEventListener("change", refreshTemplate);
+tipoMovimientoInput.addEventListener("change", refreshTemplate);
 dniInput.addEventListener("blur", validarDni);
 dniInput.addEventListener("input", () => {
     clearTimeout(debounceDni);
     debounceDni = setTimeout(buscarDniSugerencias, 250);
 });
-btnResetTemplate.addEventListener("click", refreshTemplate);
 
 Object.values(plFields).forEach(field => {
     field.addEventListener("change", syncPersonalLocalInputsToData);
@@ -821,11 +949,11 @@ document.getElementById("formManual").addEventListener("submit", async (e) => {
         return;
     }
 
-    document.getElementById("response").innerText = JSON.stringify(result, null, 2);
+    document.getElementById("response").innerText = `${result.mensaje || "Registro creado."}\nID: ${result.operacionId || "-"}\nTipo: ${result.tipoOperacion || tipoOperacionInput.value}\nMovimiento: ${result.tipoMovimiento || tipoMovimientoInput.value}\nDNI: ${result.dni || payload.dni}`;
 });
 
 refreshTemplate();
-setDefaultFechaHora();
+setDefaultFechaHora(fechaHoraManualInput);
 configurarModoNormal();
 cargarGuardiasModoTecnico();
 </script>

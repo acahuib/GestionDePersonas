@@ -434,6 +434,11 @@ namespace WebApplication1.Controllers
                     tipoMovimiento,
                     usuarioId);
 
+                var horaIngresoVehiculo = esSalidaVehiculo ? (DateTime?)null : horaOperacion;
+                var fechaIngresoVehiculo = esSalidaVehiculo ? (DateTime?)null : fechaOperacion;
+                var horaSalidaVehiculo = esSalidaVehiculo ? horaOperacion : horaOperacion;
+                var fechaSalidaVehiculo = esSalidaVehiculo ? fechaOperacion : fechaOperacion;
+
                 var salidaVehiculo = await _salidasService.CrearSalidaDetalle(
                     movimientoVehiculo.Id,
                     "VehiculoEmpresa",
@@ -457,13 +462,15 @@ namespace WebApplication1.Controllers
                                 ? "Cruce especial desde Ocurrencias Persona (salida con Vehiculo MP)."
                                 : "Cruce especial desde Ocurrencias Persona (ingreso con Vehiculo MP).")
                             : dto.Observacion,
-                        salidaOcurrenciaIdOrigen = salidaOcurrenciaId
+                        salidaOcurrenciaIdOrigen = salidaOcurrenciaId,
+                        cruceEspecialDesdeOcurrencias = true,
+                        cierreAutomaticoEspecial = !esSalidaVehiculo
                     },
                     usuarioId,
-                    esSalidaVehiculo ? null : horaOperacion,
-                    esSalidaVehiculo ? null : fechaOperacion,
-                    esSalidaVehiculo ? horaOperacion : null,
-                    esSalidaVehiculo ? fechaOperacion : null,
+                    horaIngresoVehiculo,
+                    fechaIngresoVehiculo,
+                    horaSalidaVehiculo,
+                    fechaSalidaVehiculo,
                     dniNormalizado
                 );
 

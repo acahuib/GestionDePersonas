@@ -12,6 +12,8 @@ namespace WebApplication1.DTOs
         public required string TipoMovimiento { get; set; }
         public string? TipoMovimientoDetalle { get; set; }
         public string? TipoOperacion { get; set; }
+        public string? Destino { get; set; }
+        public string? Procedencia { get; set; }
         public int PuntoControlId { get; set; }
     }
 }

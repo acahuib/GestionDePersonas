@@ -13,6 +13,27 @@ let personasDentroActuales = [];
 let personasDentroFiltradas = [];
 let ultimosMovimientosActuales = [];
 let ultimosMovimientosFiltrados = [];
+let proveedoresDentroActuales = [];
+const PROVEEDORES_SNAPSHOT_KEY = 'dashboardProveedoresSnapshot';
+const DESTINOS_PROVEEDORES = {
+    'recepcion': 'proveedoresRecepcion',
+    'balanza': 'proveedoresBalanza',
+    'area comercial': 'proveedoresComercial',
+    'lab quimico': 'proveedoresLab',
+    'laboratorio quimico': 'proveedoresLab',
+    'transerv': 'proveedoresTranserv',
+    'en espera': 'proveedoresEspera',
+    'espera': 'proveedoresEspera'
+};
+const DESTINO_LABELS = {
+    'todos': 'Proveedores dentro',
+    'recepcion': 'Recepcion',
+    'balanza': 'Balanza',
+    'area comercial': 'Area Comercial',
+    'lab quimico': 'Lab. Quimico',
+    'transerv': 'Transerv.',
+    'en espera': 'En espera'
+};
 
 function setErrorCell(elementId, message) {
     const el = document.getElementById(elementId);
@@ -21,13 +42,45 @@ function setErrorCell(elementId, message) {
     if (message) el.title = message;
 }
 
+function setTextIfExists(elementId, value) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.textContent = value;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     verificarAutenticacion();
     cargarNombreUsuario();
+    inicializarCardsProveedores();
+    cargarSnapshotProveedores();
     actualizarDashboard();
     
     intervalId = setInterval(actualizarDashboard, 30000);
 });
+
+function cargarSnapshotProveedores() {
+    const raw = localStorage.getItem(PROVEEDORES_SNAPSHOT_KEY);
+    if (!raw) return;
+
+    try {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data?.proveedores)) {
+            proveedoresDentroActuales = data.proveedores;
+            actualizarResumenProveedores(proveedoresDentroActuales);
+        }
+    } catch {
+    }
+}
+
+function guardarSnapshotProveedores(proveedores) {
+    try {
+        localStorage.setItem(PROVEEDORES_SNAPSHOT_KEY, JSON.stringify({
+            actualizado: new Date().toISOString(),
+            proveedores
+        }));
+    } catch {
+    }
+}
 
 function verificarAutenticacion() {
     const token = localStorage.getItem('token');
@@ -176,6 +229,9 @@ async function cargarPersonasDentro() {
                     dni: ultimoMov.dni,
                     nombre: ultimoMov.nombrePersona,
                     tipoRegistro: ultimoMov.tipoOperacion || 'N/A',
+                    tipoPersona: ultimoMov.tipoPersona || 'N/A',
+                    destino: ultimoMov.destino || '',
+                    procedencia: ultimoMov.procedencia || '',
                     fechaIngreso: fechaStr,
                     horaIngreso: horaStr,
                     tiempoDentro: calcularTiempoDentro(ultimoMov.fechaHora)
@@ -189,6 +245,9 @@ async function cargarPersonasDentro() {
         
         personasDentroActuales = personasDentro;
         aplicarFiltroPersonasDentro(true);
+        proveedoresDentroActuales = filtrarProveedores(personasDentro);
+        actualizarResumenProveedores(proveedoresDentroActuales);
+        guardarSnapshotProveedores(proveedoresDentroActuales);
         
     } catch (error) {
         console.error('? Error al cargar personas dentro:', error);
@@ -196,6 +255,119 @@ async function cargarPersonasDentro() {
         document.getElementById('tablaPersonasDentro').innerHTML = 
             `<tr><td colspan="5" class="error">Error al cargar datos: ${error?.message || "-"}</td></tr>`;
     }
+}
+
+function normalizarDestino(valor) {
+    return (valor || '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.]/g, '')
+        .replace(/\s+/g, ' ');
+}
+
+function esProveedorRegistro(persona) {
+    const tipoRegistro = (persona?.tipoRegistro || '').toLowerCase();
+    const tipoPersona = (persona?.tipoPersona || '').toLowerCase();
+    return tipoRegistro === 'proveedor' || tipoPersona === 'proveedor';
+}
+
+function filtrarProveedores(personasDentro) {
+    return (personasDentro || []).filter(persona => esProveedorRegistro(persona));
+}
+
+function actualizarResumenProveedores(proveedores) {
+    const contadores = {
+        total: 0,
+        proveedoresRecepcion: 0,
+        proveedoresBalanza: 0,
+        proveedoresComercial: 0,
+        proveedoresLab: 0,
+        proveedoresTranserv: 0,
+        proveedoresEspera: 0
+    };
+
+    (proveedores || []).forEach(persona => {
+        contadores.total += 1;
+
+        const destinoKey = normalizarDestino(persona.destino);
+        const destinoId = DESTINOS_PROVEEDORES[destinoKey];
+        if (destinoId && contadores[destinoId] !== undefined) {
+            contadores[destinoId] += 1;
+        }
+    });
+
+    setTextIfExists('proveedoresDentroTotal', contadores.total);
+    setTextIfExists('proveedoresRecepcion', contadores.proveedoresRecepcion);
+    setTextIfExists('proveedoresBalanza', contadores.proveedoresBalanza);
+    setTextIfExists('proveedoresComercial', contadores.proveedoresComercial);
+    setTextIfExists('proveedoresLab', contadores.proveedoresLab);
+    setTextIfExists('proveedoresTranserv', contadores.proveedoresTranserv);
+    setTextIfExists('proveedoresEspera', contadores.proveedoresEspera);
+}
+
+function inicializarCardsProveedores() {
+    const cards = document.querySelectorAll('.proveedores-card');
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            const destino = card.getAttribute('data-destino') || 'todos';
+            abrirModalProveedores(destino);
+        });
+    });
+
+    const backdrop = document.getElementById('proveedoresModalBackdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', (event) => {
+            if (event.target === backdrop) cerrarModalProveedores();
+        });
+    }
+}
+
+function obtenerProveedoresPorDestino(destinoClave) {
+    const claveNormalizada = normalizarDestino(destinoClave);
+    if (claveNormalizada === 'todos') return proveedoresDentroActuales;
+
+    return proveedoresDentroActuales.filter(persona => {
+        const destinoPersona = normalizarDestino(persona.destino);
+        return destinoPersona === claveNormalizada;
+    });
+}
+
+function abrirModalProveedores(destinoClave) {
+    const lista = obtenerProveedoresPorDestino(destinoClave);
+    const titulo = document.getElementById('proveedoresModalTitulo');
+    const body = document.getElementById('proveedoresModalBody');
+    const backdrop = document.getElementById('proveedoresModalBackdrop');
+
+    if (!titulo || !body || !backdrop) return;
+
+    const label = DESTINO_LABELS[normalizarDestino(destinoClave)] || 'Proveedores';
+    titulo.textContent = `${label} (${lista.length})`;
+
+    if (!lista.length) {
+        body.innerHTML = '<p class="empty">No hay proveedores en este destino.</p>';
+    } else {
+        body.innerHTML = `
+            <div class="proveedores-lista">
+                ${lista.map(p => `
+                    <div class="proveedor-item">
+                        <h4>${p.nombre || 'Sin nombre'}</h4>
+                        <p><strong>DNI:</strong> ${p.dni || '-'}</p>
+                        <p><strong>Procedencia:</strong> ${p.procedencia || '-'}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    backdrop.style.display = 'flex';
+}
+
+function cerrarModalProveedores() {
+    const backdrop = document.getElementById('proveedoresModalBackdrop');
+    if (backdrop) backdrop.style.display = 'none';
 }
 
 async function cargarUltimosMovimientos() {

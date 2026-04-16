@@ -68,7 +68,6 @@
         if (path.includes("/vehiculoempresa/")) return "VehiculoEmpresa";
         if (path.includes("/oficialpermisos/")) return "OficialPermisos";
         if (path.includes("/personallocal/")) return "PersonalLocal";
-        if (path.includes("/permisospersonal/")) return "SalidasPermisosPersonal";
         if (path.includes("/ocurrencias/")) return "Ocurrencias";
         if (path.includes("/diaslibre/")) return "DiasLibre";
         if (path.includes("/habitacionproveedor/")) return "HabitacionProveedor";

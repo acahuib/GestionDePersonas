@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Tecnico - Cerrar Activos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --accent: #0ea5e9;
+            --accent-dark: #0284c7;
+            --border: #e2e8f0;
+            --warn: #f97316;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top right, #e0f2fe 0%, #f3f4f6 55%);
+            color: var(--ink);
+            margin: 0;
+            padding: 28px 18px 40px;
+        }
+        .container {
+            max-width: 980px;
+            margin: auto;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(15, 23, 42, 0.05);
+        }
+        h2 {
+            margin: 0 0 8px;
+            font-size: 26px;
+            letter-spacing: -0.02em;
+        }
+        .subtitle { color: var(--muted); margin: 0 0 16px; }
+        label { display:block; margin-top: 12px; font-weight: 600; }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+        }
+        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(14, 165, 233, 0.2); border-color: var(--accent); }
+        textarea { min-height: 140px; font-family: "Consolas", "Courier New", monospace; }
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: var(--accent-dark); }
+        .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+        .response {
+            margin-top: 14px;
+            white-space: pre-wrap;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px dashed var(--border);
+        }
+        .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .panel {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+        }
+        .panel h3 { margin: 0 0 8px; font-size: 16px; }
+        .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+        .actions button { background: #0f172a; }
+        .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .topbar-actions { display:flex; align-items:center; gap:8px; }
+        .btn-users {
+            width: auto;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-users:hover { background: #1e293b; }
+        .btn-logout {
+            width: auto;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-logout:hover { background: #dc2626; }
+        .active-tools { margin-top: 18px; }
+        .active-list { display: grid; gap: 12px; margin-top: 14px; }
+        .active-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+        .active-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .active-card-title { font-size: 16px; font-weight: 700; }
+        .active-card-meta { color: var(--muted); font-size: 13px; }
+        .active-card-detail { color: #1e293b; font-size: 14px; line-height: 1.45; }
+        .pending-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #ffedd5;
+            color: #c2410c;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .panel-actions-inline {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .panel-actions-inline button { width: auto; }
+        .empty-state {
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--muted);
+            background: #fff;
+        }
+        @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topbar">
+        <h2>Modo Tecnico - Cerrar Activos</h2>
+        <div class="topbar-actions">
+            <button type="button" class="btn-users" onclick="window.location.href='/manual.html'">Registro Manual</button>
+            <button type="button" class="btn-users" onclick="window.location.href='/tecnico-usuarios.html'">Gestion de Usuarios</button>
+            <button type="button" class="btn-users" onclick="window.location.href='/tecnico-personas.html'">Gestion de Personas</button>
+            <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesion</button>
+        </div>
+    </div>
+    <p class="subtitle">Busca registros activos por DNI y cierralos sin entrar a cada cuaderno.</p>
+
+    <div class="panel">
+        <h3>Guardia responsable</h3>
+        <label>Guardia (lista de usuarios)</label>
+        <select id="guardiaUsuarioId" required>
+            <option value="">Cargando guardias...</option>
+        </select>
+        <div class="hint" id="guardiaHint">Selecciona el guardia que quedará en guardiaIngreso/guardiaSalida.</div>
+    </div>
+
+    <div class="panel active-tools" id="panelActivosTecnicos">
+        <h3>Cerrar registros activos</h3>
+        <div class="row">
+            <div>
+                <label for="activoFiltroDni">DNI a buscar</label>
+                <input id="activoFiltroDni" maxlength="8" placeholder="Opcional. Si lo dejas vacío, trae activos recientes." />
+            </div>
+            <div>
+                <label for="fechaHoraCierreManual">Fecha y hora de cierre</label>
+                <input type="datetime-local" id="fechaHoraCierreManual" required />
+            </div>
+        </div>
+
+        <label for="observacionCierreTecnico">Observación de cierre</label>
+        <textarea id="observacionCierreTecnico" style="min-height: 110px;">Cierre tecnico manual desde modo tecnico.</textarea>
+
+        <div class="actions">
+            <button type="button" id="btnBuscarActivos">Buscar activos</button>
+        </div>
+
+        <div class="hint" id="activosResumen">Sin búsqueda realizada.</div>
+        <div class="active-list" id="activosLista">
+            <div class="empty-state">Todavía no has buscado registros activos.</div>
+        </div>
+    </div>
+
+    <div class="response" id="response"></div>
+</div>
+
+<script src="js/api.js?v=20260408-techfix2"></script>
+<script src="js/auth.js?v=20260408-techfix2"></script>
+<script>
+const guardiaUsuarioIdInput = document.getElementById("guardiaUsuarioId");
+const guardiaHint = document.getElementById("guardiaHint");
+const activoFiltroDniInput = document.getElementById("activoFiltroDni");
+const fechaHoraCierreManualInput = document.getElementById("fechaHoraCierreManual");
+const observacionCierreTecnicoInput = document.getElementById("observacionCierreTecnico");
+const btnBuscarActivos = document.getElementById("btnBuscarActivos");
+const activosResumen = document.getElementById("activosResumen");
+const activosLista = document.getElementById("activosLista");
+const responseEl = document.getElementById("response");
+
+let activosTecnicos = [];
+
+function normalizarDni(valor) {
+    return (valor || "").replace(/\D/g, "").trim();
+}
+
+function setGuardiaHint(texto, isWarn) {
+    guardiaHint.textContent = texto || "";
+    guardiaHint.className = isWarn ? "hint warn" : "hint";
+}
+
+async function cargarGuardiasModoTecnico() {
+    const response = await fetchAuth(`${API_BASE}/salidas/modo-tecnico/guardias`);
+    if (!response || !response.ok) {
+        guardiaUsuarioIdInput.innerHTML = '<option value="">No se pudo cargar guardias</option>';
+        setGuardiaHint("No se pudo cargar la lista de guardias.", true);
+        return;
+    }
+
+    const guardias = await response.json();
+    if (!Array.isArray(guardias) || guardias.length === 0) {
+        guardiaUsuarioIdInput.innerHTML = '<option value="">No hay guardias activos</option>';
+        setGuardiaHint("No se encontraron usuarios con rol Guardia activos.", true);
+        return;
+    }
+
+    guardiaUsuarioIdInput.innerHTML = [
+        '<option value="">Seleccione un guardia...</option>',
+        ...guardias.map(g => {
+            const extra = [g.usuarioLogin, g.dni].filter(Boolean).join(" | ");
+            const label = extra ? `${g.nombreCompleto} (${extra})` : g.nombreCompleto;
+            return `<option value="${g.id}">${label}</option>`;
+        })
+    ].join("");
+
+    setGuardiaHint("Selecciona el guardia que quedará en guardiaIngreso/guardiaSalida.");
+}
+
+function formatearFechaHora(valor) {
+    if (!valor) return "-";
+    const date = new Date(valor);
+    if (Number.isNaN(date.getTime())) return "-";
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function validarFechaHoraLibre(input, label) {
+    const valor = input.value;
+    if (!valor) return { ok: false, mensaje: `${label} es requerida.` };
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) {
+        return { ok: false, mensaje: `${label} invalida.` };
+    }
+
+    return { ok: true, fecha };
+}
+
+function renderActivosTecnicos() {
+    if (!Array.isArray(activosTecnicos) || activosTecnicos.length === 0) {
+        activosLista.innerHTML = '<div class="empty-state">No hay registros activos con ese criterio.</div>';
+        return;
+    }
+
+    activosLista.innerHTML = activosTecnicos.map((item) => {
+        const fechaIngreso = formatearFechaHora(item.horaIngreso);
+        const fechaSalida = formatearFechaHora(item.horaSalida);
+        return `
+            <div class="active-card">
+                <div class="active-card-header">
+                    <div>
+                        <div class="active-card-title">${item.nombreCompleto || "Sin nombre"}</div>
+                        <div class="active-card-meta">${item.tipoOperacionLabel} | DNI ${item.dni || "-"} | ID ${item.id}</div>
+                    </div>
+                    <span class="pending-badge">Falta ${item.ladoPendiente}</span>
+                </div>
+                <div class="active-card-detail">${item.detalle || "Sin detalle adicional"}</div>
+                <div class="active-card-meta" style="margin-top:10px;">Ingreso: ${fechaIngreso} | Salida: ${fechaSalida}</div>
+                <div class="panel-actions-inline">
+                    <button type="button" data-action="cerrar-activo" data-id="${item.id}">Cerrar y sacar de activos</button>
+                </div>
+            </div>`;
+    }).join("");
+}
+
+async function confirmarAccionModoTecnico(mensaje, titulo) {
+    try {
+        if (window.appDialog && typeof window.appDialog.confirm === "function") {
+            return await window.appDialog.confirm(mensaje, titulo);
+        }
+    } catch {
+    }
+
+    return window.confirm(mensaje);
+}
+
+async function buscarActivosModoTecnico() {
+    const dni = normalizarDni(activoFiltroDniInput.value);
+    activoFiltroDniInput.value = dni;
+
+    const params = new URLSearchParams();
+    if (dni) params.set("dni", dni);
+    params.set("take", dni ? "100" : "40");
+
+    activosResumen.textContent = "Buscando activos...";
+    const response = await fetchAuth(`${API_BASE}/salidas/modo-tecnico/activos?${params.toString()}`);
+    if (!response) return;
+
+    if (!response.ok) {
+        activosTecnicos = [];
+        activosResumen.textContent = await readApiError(response);
+        renderActivosTecnicos();
+        return;
+    }
+
+    activosTecnicos = await response.json();
+    activosResumen.textContent = activosTecnicos.length
+        ? `${activosTecnicos.length} registro(s) activo(s) encontrado(s).`
+        : "No se encontraron activos.";
+    renderActivosTecnicos();
+}
+
+async function cerrarActivoModoTecnico(id) {
+    if (!guardiaUsuarioIdInput.value) {
+        responseEl.innerText = "Debe seleccionar un guardia antes de cerrar un activo.";
+        return;
+    }
+
+    const validacionFecha = validarFechaHoraLibre(fechaHoraCierreManualInput, "Fecha y hora de cierre");
+    if (!validacionFecha.ok) {
+        responseEl.innerText = validacionFecha.mensaje;
+        return;
+    }
+
+    const registro = activosTecnicos.find((item) => item.id === id);
+    const confirmado = await confirmarAccionModoTecnico(
+        `Se cerrará el registro activo ${id}${registro ? ` de ${registro.nombreCompleto || registro.dni}` : ""}.`,
+        "Cerrar activo"
+    );
+    if (!confirmado) return;
+
+    responseEl.innerText = `Cerrando registro ${id}...`;
+
+    const payload = {
+        guardiaUsuarioId: Number(guardiaUsuarioIdInput.value),
+        fechaHoraCierre: `${fechaHoraCierreManualInput.value}:00`,
+        observacion: observacionCierreTecnicoInput.value.trim() || null
+    };
+
+    const response = await fetchAuth(`${API_BASE}/salidas/modo-tecnico/activos/${id}/cerrar`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+    });
+
+    if (!response) return;
+
+    if (!response.ok) {
+        responseEl.innerText = await readApiError(response);
+        return;
+    }
+
+    const result = await response.json().catch(() => ({}));
+    responseEl.innerText = `${result.mensaje || "Registro activo cerrado."}\nID: ${result.id || id}`;
+    await buscarActivosModoTecnico();
+}
+
+function setDefaultFechaHora(input) {
+    if (!input.value) {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, "0");
+        const value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        input.value = value;
+    }
+}
+
+btnBuscarActivos.addEventListener("click", buscarActivosModoTecnico);
+activosLista.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest("button[data-action='cerrar-activo']");
+    if (!button) return;
+
+    event.preventDefault();
+    const id = Number(button.dataset.id);
+    if (Number.isFinite(id)) {
+        cerrarActivoModoTecnico(id);
+    }
+});
+
+setDefaultFechaHora(fechaHoraCierreManualInput);
+cargarGuardiasModoTecnico();
+</script>
+</body>
+</html>

@@ -11,7 +11,6 @@ const TORRE_TIPOS_OPERACION = {
     ControlBienes: "Control Bienes",
     DiasLibre: "Dias Libre",
     OficialPermisos: "Oficial Permisos",
-    SalidasPermisosPersonal: "Permisos Personal",
     RegistroInformativoEnseresTurno: "Enseres por Turno",
     Cancha: "Cancha"
 };
